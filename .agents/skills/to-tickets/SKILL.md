@@ -13,6 +13,14 @@ ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`.
 `.scratch/` is gitignored - tickets are working state, specs in
 `docs/specs/` are the durable artifacts.
 
+A done ticket gets an HTML change report beside it, same basename:
+`.scratch/<feature-slug>/issues/<NN>-<slug>.html`. The implement-spec
+merger writes it from the merged diff before Status flips to done;
+the ticket template carries the checkbox.
+
+Note: file-writing tools refuse paths under `.scratch/` (gitignored).
+Write ticket files via the shell instead (e.g. a heredoc).
+
 ## Process
 
 ### 1. Gather context
@@ -146,6 +154,8 @@ against the diff.
       file-size cap)
 - [ ] code-review pass on the diff is clean, review stamped before
       commit
+- [ ] Report written: `<NN>-<slug>.html` next to this ticket file
+      (the implement-spec merger writes it from the merged diff)
 - [ ] Ticket file Status updated to `done`; `.agents/memory/current.md`
       updated if repo state changed
 - [ ] No leftover artifacts (test resources, temp files, stray env)

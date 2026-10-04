@@ -41,6 +41,11 @@
     `--no-verify` or `-n`. Commit messages: subject and every line
     <= 120 chars (`scripts/check-commit-msg.sh`). Comments explain
     why, not what: one line, no narration blocks.
+12. A done spec ticket carries an HTML change report next to the
+    ticket file: `.scratch/<slug>/issues/<NN>-<slug>.html`. The
+    implement-spec merger writes it from the merged diff before
+    Status flips to done. The review stamp refuses a done ticket
+    whose report is missing.
 
 ## Project map
 

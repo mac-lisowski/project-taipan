@@ -111,3 +111,22 @@ taipan_diff_hash() {
     done
   } | taipan_hash
 }
+
+# Gap report for done tickets, one line per gap: "unchecked <file>"
+# for an unticked AC/DoD box, "report <file.html>" when a ticket
+# whose Definition of done opts into the report lacks a sibling
+# .html containing "<html". Run from the repo root. Shared by
+# review-stamp.sh (hard gate) and stop-nudge.sh (advisory) so the
+# policy cannot drift between the two.
+taipan_done_ticket_gaps() {
+  local f r
+  for f in .scratch/*/issues/*.md; do
+    [ -f "$f" ] || continue
+    grep -qiE '^[[:space:]#*-]*status:[*[:space:]]*done\b' "$f" || continue
+    grep -qE '^[[:space:]]*[-*] \[ \]' "$f" && printf 'unchecked %s\n' "$f"
+    if sed -n '/[Dd]efinition of [Dd]one/,$p' "$f" | grep -qi 'report written'; then
+      r="${f%.md}.html"
+      { [ -f "$r" ] && grep -qi '<html' "$r"; } || printf 'report %s\n' "$r"
+    fi
+  done
+}

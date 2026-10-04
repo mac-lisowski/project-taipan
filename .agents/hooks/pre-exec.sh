@@ -5,6 +5,103 @@ set -u
 input=$(cat)
 cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 0
 [ -z "$cmd" ] && exit 0
+# Heredoc bodies fed to cat/tee write-sinks are data, not commands:
+# prose inside a cat > f <<EOF payload (docs saying "git commit",
+# sample SQL with DROP TABLE) must not trip the gates. A body is
+# stripped only when every << opener on the line sits on a cat/tee
+# command and the line carries no pipe, substitution, backtick,
+# eval, or process substitution - executing sinks (bash <<EOF,
+# x|sh, eval "$(...)", tee >(sh)) run their bodies, so they keep
+# the flat match. << inside quotes, comments, or ${...} spans is
+# not an opener; delimiters must be plain word chars. An
+# unterminated body strips to end of input, matching what the
+# shell would read.
+cmd=$(printf '%s\n' "$cmd" | awk '
+BEGIN {
+  SQ = sprintf("%c", 39); DQ = sprintf("%c", 34)
+  BS = sprintf("%c", 92); TB = sprintf("%c", 9)
+  STOP = " " TB ";&|()<>$`"
+}
+{
+  if (ntags) {
+    # Only <<- tolerates an indented terminator; a wrong hit just
+    # ends stripping early, which re-checks more text. Safe side.
+    l = $0
+    if (dsh[1]) sub(/^[ \t]+/, "", l)
+    if (l == tag[1]) {
+      for (k = 1; k < ntags; k++) { tag[k] = tag[k + 1]; dsh[k] = dsh[k + 1] }
+      ntags--
+    }
+    next
+  }
+  print
+  line = $0
+  if (line ~ /[|`]/ || index(line, "$(") > 0 || line ~ /[<>][(]/) next
+  if (line ~ /(^|[^A-Za-z_])eval([^A-Za-z_]|$)/) next
+  # Every segment holding a bare << must be a cat/tee sink; one
+  # executing sink anywhere on the line means no stripping at all.
+  norm = line
+  gsub(/&&|\|\|/, ";", norm)
+  ns = split(norm, seg, /[;()]+/)
+  safe = 0
+  for (s = 1; s <= ns; s++) {
+    if (seg[s] ~ /<<[^<]|<<$/) {
+      if (seg[s] ~ /^[ \t]*(sudo[ \t]+)?(cat|tee)[ \t><]/) safe = 1
+      else { safe = 0; break }
+    }
+  }
+  if (!safe) next
+  # Find <<TAG openers outside quotes on the sink line. The delimiter
+  # is the full word with quote chars removed, mid-word quotes and
+  # escaped chars included.
+  n = length(line); qstate = 0
+  for (i = 1; i <= n; i++) {
+    c = substr(line, i, 1)
+    if (qstate == 1) { if (c == SQ) qstate = 0; continue }
+    if (qstate == 2) { if (c == BS) { i++; continue } if (c == DQ) qstate = 0; continue }
+    if (c == BS) { i++; continue }
+    if (c == SQ) { qstate = 1; continue }
+    if (c == DQ) { qstate = 2; continue }
+    if (c == "#") break
+    if (c == "$" && substr(line, i + 1, 1) == "{") {
+      # A << inside ${...} is not an opener; a phantom tag pulled
+      # from it can never terminate and would hide unchecked lines.
+      depth = 1
+      while (depth > 0 && ++i <= n) {
+        e = substr(line, i, 1)
+        if (e == "{") depth++
+        else if (e == "}") depth--
+        else if (e == SQ) { while (++i <= n && substr(line, i, 1) != SQ); }
+        else if (e == DQ) { while (++i <= n && substr(line, i, 1) != DQ); }
+      }
+      continue
+    }
+    if (c == "<" && substr(line, i + 1, 1) == "<" && substr(line, i + 2, 1) != "<" && substr(line, i - 1, 1) != "<") {
+      j = i + 2
+      dashed = 0
+      if (substr(line, j, 1) == "-") { j++; dashed = 1 }
+      while (j <= n && index(" " TB, substr(line, j, 1))) j++
+      delim = ""
+      while (j <= n) {
+        ch = substr(line, j, 1)
+        if (index(STOP, ch) == 0) {
+          if (ch == SQ || ch == DQ) {
+            j++
+            while (j <= n && substr(line, j, 1) != ch) { delim = delim substr(line, j, 1); j++ }
+            if (j <= n) j++
+            continue
+          }
+          if (ch == BS) { j++; if (j <= n) { delim = delim substr(line, j, 1); j++ } continue }
+          delim = delim ch; j++
+          continue
+        }
+        break
+      }
+      if (delim ~ /^[-._A-Za-z0-9]+$/) { tag[++ntags] = delim; dsh[ntags] = dashed }
+      i = j - 1
+    }
+  }
+}') || cmd=""
 # Match against a whitespace-flattened copy so multi-space or
 # line-continued spellings still hit the gates. Quoted forms like
 # git "commit" evade by design (README lists the gaps).

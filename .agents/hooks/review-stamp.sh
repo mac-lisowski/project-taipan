@@ -16,16 +16,25 @@ hash=$(taipan_diff_hash)
 [ -z "$hash" ] && { echo "cannot hash diff" >&2; exit 1; }
 
 # Done tickets must have every AC/DoD box ticked before a stamp.
-# Whether the ticks are honest is code-review's job (Spec axis).
+# Tickets whose DoD mentions "Report written" also need a sibling
+# .html next to the .md; older tickets without that line stay
+# exempt. Whether the ticks are honest is code-review's job
+# (Spec axis). The gap scan lives in mode-lib so the advisory copy
+# in stop-nudge.sh cannot drift from this gate.
 unchecked=""
-for f in .scratch/*/issues/*.md; do
-  [ -f "$f" ] || continue
-  grep -q '^\*\*Status:\*\* done' "$f" || continue
-  grep -qE '^[[:space:]]*- \[ \]' "$f" && unchecked="$unchecked $f"
-done
-[ -n "$unchecked" ] && {
-  echo "stamp refused: done ticket(s) with unchecked boxes:$unchecked" >&2
-  echo "verify the AC/DoD items, or flip Status back before stamping." >&2
+missing=""
+while IFS=' ' read -r kind path; do
+  case "$kind" in
+    unchecked) unchecked="$unchecked $path" ;;
+    report) missing="$missing $path" ;;
+  esac
+done < <(taipan_done_ticket_gaps)
+[ -n "$unchecked$missing" ] && {
+  [ -n "$unchecked" ] && \
+    echo "stamp refused: done ticket(s) with unchecked boxes:$unchecked" >&2
+  [ -n "$missing" ] && \
+    echo "stamp refused: done ticket(s) with no report file:$missing" >&2
+  echo "verify the AC/DoD items, write the report, or flip Status back before stamping." >&2
   exit 1
 }
 

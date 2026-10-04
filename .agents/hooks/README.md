@@ -24,7 +24,7 @@ defines hooks. Devin reads both, and every hook would fire twice.
 | `post-write.sh` | PostToolUse (write tools) | Em-dash check; `ruff check` on `.py`; 300-LOC warning on source files; comment-run warning (>3 consecutive comment lines after the first 10, `#`/`//`/`/*`/` *` counted, `.py`/`.ts`/`.tsx`/`.js`/`.jsx`); BFF-boundary warning on `apps/web/src` outside `app/api/`; `falsegreen`/`falsegreen-js` scan on test files + one-shot `test-smell-review` nudge. Then runs mode routing. Findings go to context. |
 | `post-exec.sh` | PostToolUse (`exec`/`Bash`) | After `db-revision`: remind to review the migration. Then runs mode routing. |
 | `session-start.sh` | SessionStart | Injects `.agents/memory/current.md`, the current activity mode, and the mode command; warns on broken skill symlinks. |
-| `stop-nudge.sh` | Stop | Once per session: if tree is dirty and memory untouched, tells the agent to update memory. |
+| `stop-nudge.sh` | Stop | Once per session per reason set: dirty tree with untouched memory, or done tickets with unchecked boxes / a missing HTML report (`taipan_done_ticket_gaps`, shared with `review-stamp.sh`). |
 
 ## Commit gate
 
@@ -62,6 +62,20 @@ flowchart LR
   command text, not parsed argv. A command containing a second commit
   after a separator is blocked outright: one commit per command, each
   with its own marker.
+- Heredoc bodies fed to `cat`/`tee` write-sinks are stripped before
+  matching: prose inside `cat > f <<EOF` payloads (docs saying
+  "git commit", sample SQL) does not trip the gates. The opener line
+  is still checked, and sinks that execute their body
+  (`bash <<EOF`, `<<EOF | sh`, `eval "$(...)"`, `$(...)`, backticks,
+  process substitution `>(...)`/`<(...)`) keep the flat match.
+  `<<` inside quotes, after `#`, inside `${...}`, or as part of
+  `<<<` is not an opener; delimiters must be plain word chars
+  (`[-._A-Za-z0-9]`), and only `<<-` tolerates an indented
+  terminator. Quoted strings elsewhere are not stripped, so
+  `echo 'git commit'` still blocks. Sinks narrower than bare
+  `cat`/`tee` (`FOO=1 cat`, `command cat`, `cat <<EOF || true`,
+  heredocs inside `if`/subshells) keep the strict flat match too:
+  safe direction, at the cost of rare false blocks.
 - `git -C <repo>`/`--git-dir` commits are blocked outright: the marker
   binds this repo's hash, not the foreign repo's. `cd` there and
   commit plainly. `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` hooksPath
@@ -149,7 +163,8 @@ edit needed; parent hooks already call `route.sh`.
 .agents/hooks/
   mode-lib.sh     shared helpers (sourced, not run directly)
   agent-mode.sh   mode CLI the agent calls via exec
-  review-stamp.sh writes the commit-gate marker for the current diff
+  review-stamp.sh writes the commit-gate marker; refuses while a done
+                  ticket has unchecked boxes or lacks its .html report
   route.sh        mode dispatcher, called by parent hooks
   hooks.d/        mode routes: hooks.d/<mode>/<event>.sh
     plan/pre-write.sh    warn once when editing code in plan mode

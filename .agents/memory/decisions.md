@@ -15,3 +15,4 @@ Why things are the way they are. One decision per file in
 - [Quality gates: LOC cap + BFF boundary](decisions/quality-gates.md)
 - [Docker build context is the repo root](decisions/docker-root-context.md)
 - [Specs live in docs/specs/, not an issue tracker](decisions/specs-as-files.md)
+- [Done tickets carry an HTML report](decisions/ticket-reports.md)
