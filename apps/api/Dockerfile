@@ -19,10 +19,12 @@ COPY pyproject.toml uv.lock ./
 COPY apps/api/pyproject.toml apps/api/pyproject.toml
 COPY apps/cli/pyproject.toml apps/cli/pyproject.toml
 COPY packages/core/pyproject.toml packages/core/pyproject.toml
+COPY packages/kms/pyproject.toml packages/kms/pyproject.toml
 RUN uv sync --frozen --no-dev --package api --no-install-workspace
 
 # Editable installs keep db_cli.py's parents[2] lookup of alembic.ini working.
 COPY packages/core packages/core
+COPY packages/kms packages/kms
 COPY apps/api apps/api
 RUN uv sync --frozen --no-dev --package api \
     && useradd --system --uid 10001 app && chown -R app:app /app
