@@ -36,7 +36,13 @@ uv sync                 # install all workspace members into .venv
 uv run pytest           # run all tests
 uv run ruff check .     # lint
 uv run cli              # run the cli app
+docker compose up -d    # Postgres + pgvector on :5432 (required for api, migrations, api tests)
+uv run db-upgrade       # apply Alembic migrations
 uv run api              # run the api app
+uv run db-revision -m "msg"  # autogen migration after model changes; always review the file
+uv run db-downgrade     # roll back one migration
+uv run db-current       # show applied revision
+uv run --env-file apps/api/.env api   # api with env overrides (see apps/api/.env.example)
 uv add --package <pkg> <dep>   # add dep to one member
 uv add <dep> --dev             # add shared dev dep
 ```

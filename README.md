@@ -31,8 +31,29 @@ Each app registers a command in its `pyproject.toml` under `[project.scripts]`.
 
 ```bash
 uv run cli                 # CLI app -> prints "Hello, world!"
+docker compose up -d       # Postgres + pgvector on localhost:5432 (needed by api)
+uv run db-upgrade          # apply migrations
 uv run api                 # API app -> FastAPI server on http://127.0.0.1:8000 (docs at /docs)
 ```
+
+## Database (api)
+
+Postgres 17 + pgvector via docker compose. Schema changes go through Alembic:
+
+```bash
+uv run db-revision -m "add orders"   # autogen migration from model changes
+uv run db-upgrade                    # apply migrations
+uv run db-downgrade                  # roll back one
+```
+
+Always read the generated file in `apps/api/alembic/versions/` before
+applying. Autogen misses renames and data migrations.
+
+API tests run against a real `app_test` database on the docker Postgres
+(recreated each run). If Postgres is not up, they skip.
+
+Env vars are registered in `apps/api/.env.example`. Copy to `.env` and run
+with `uv run --env-file apps/api/.env api`.
 
 ## Adding a new project
 

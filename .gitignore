@@ -16,3 +16,9 @@ dist/
 .vscode/
 .DS_Store
 .video_agent/
+
+# Local dev databases
+*.db
+
+# Env files (.env.example stays tracked)
+.env
