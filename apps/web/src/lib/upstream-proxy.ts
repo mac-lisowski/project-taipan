@@ -1,15 +1,9 @@
-// Owns the proxy policy for the BFF: URL building, path re-encoding,
-// header hygiene, timeout, the upstream fetch call, and the
-// browser-facing response build (drop list, redirect rewrites, cookie
-// host-binding). Env resolution stays in the route handler and arrives
-// as config, so tests can drive this seam with a plain Request and a
-// stub fetch.
+// Owns the BFF proxy policy: URL building, header hygiene, timeout, upstream fetch, response build. Env arrives as config so tests drive this seam.
 
 export type ProxyConfig = {
   // Base URL of the upstream API, resolved by the route handler.
   upstreamUrl: string;
-  // Browser-facing origin for the forwarding headers rebuilt below.
-  // Falls back to http plus the request Host.
+  // Browser-facing origin for the forwarding headers; falls back to http plus the request Host.
   publicOrigin?: string;
   // Upstream abort budget in ms. Default 30_000.
   timeoutMs?: number;
@@ -63,14 +57,22 @@ const NO_BODY_STATUS = new Set([101, 204, 205, 304]);
 
 // Same-origin redirects must land on the public origin, not the
 // internal one. Foreign origins and unparseable values pass through.
+const BASE_ORIGINS = new Map<string, string>();
+
 function rewriteLocation(
   location: string,
   baseUrl: string,
   publicOrigin: string,
 ): string {
   try {
+    // Resolve against baseUrl, not a memoized origin: relative locations need the base path.
     const upstream = new URL(location, baseUrl);
-    if (upstream.origin !== new URL(baseUrl).origin) return location;
+    let baseOrigin = BASE_ORIGINS.get(baseUrl);
+    if (!baseOrigin) {
+      baseOrigin = new URL(baseUrl).origin;
+      BASE_ORIGINS.set(baseUrl, baseOrigin);
+    }
+    if (upstream.origin !== baseOrigin) return location;
     return publicOrigin + upstream.pathname + upstream.search + upstream.hash;
   } catch {
     return location;

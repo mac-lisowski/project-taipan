@@ -1,11 +1,13 @@
 import { expect, test } from "vitest";
 import { proxyUpstream } from "./upstream-proxy";
-import { request, recordingFetch } from "./upstream-proxy.testsupport";
+import {
+  UPSTREAM,
+  request,
+  recordingFetch,
+} from "./upstream-proxy.testsupport";
 
 // Response-side policy: the module must return the final
 // browser-facing Response built from the upstream one.
-
-const UPSTREAM = "http://upstream.test";
 
 test("host-binds set-cookie and preserves order and count", async () => {
   const { fetchImpl } = recordingFetch(() => {
@@ -102,9 +104,7 @@ test("drops the response drop-list headers downstream", async () => {
 test("drops the body for no-body statuses", async () => {
   for (const status of [204, 304]) {
     const { fetchImpl } = recordingFetch(() => {
-      // The Response constructor forbids a body on these statuses, but
-      // the wire can still deliver one; force the status so the seam
-      // sees a body that must be dropped.
+      // Response forbids a body on these statuses, but the wire can deliver one; force the status so the seam sees a body.
       const res = new Response("x", { status: 200 });
       return Object.defineProperty(res, "status", { value: status });
     });

@@ -1,16 +1,15 @@
 import { expect, test, vi } from "vitest";
 import { proxyUpstream } from "./upstream-proxy";
 import {
+  UPSTREAM,
   type RecordedCall,
   request,
   recordingFetch,
   requireCall,
 } from "./upstream-proxy.testsupport";
 
-const UPSTREAM = "http://upstream.test";
-
 function requireHeaders(calls: RecordedCall[]): Headers {
-  const headers = calls[0]?.init.headers;
+  const headers = requireCall(calls).init.headers;
   if (!(headers instanceof Headers)) {
     throw new Error("upstream fetch was not called with Headers");
   }
@@ -172,9 +171,7 @@ test("sends no body for GET", async () => {
   expect(init.body).toBeUndefined();
 });
 
-// AbortSignal.timeout does not route through global setTimeout on this
-// Node, so fake timers cannot drive it; real timers with a short
-// budget keep the test fast without being flaky.
+// AbortSignal.timeout bypasses fake timers on this Node, so real timers with a short budget stay fast and stable.
 test("aborts the upstream fetch after timeoutMs", async () => {
   let signal: AbortSignal | undefined;
   const fetchImpl = ((_url: string | URL | Request, init?: RequestInit) => {
