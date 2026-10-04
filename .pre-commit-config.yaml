@@ -31,7 +31,7 @@ repos:
         stages: [pre-push]
       - id: web-checks
         name: web lint + typecheck (apps/web)
-        entry: bash -c 'cd apps/web && pnpm lint && pnpm exec tsc --noEmit'
+        entry: bash -c 'cd apps/web && pnpm lint && pnpm exec next typegen && pnpm exec tsc --noEmit'
         language: system
         pass_filenames: false
         stages: [pre-push]

@@ -38,7 +38,10 @@ graph LR
   `verbatimModuleSyntax`.
 - eslint - `no-explicit-any`, `consistent-type-imports`, `eqeqeq`
   are errors.
-- pre-push runs `pnpm lint` + `tsc --noEmit` for this app.
+- `tsc --noEmit` needs generated types first: run
+  `pnpm exec next typegen` after a clean checkout or `rm -rf .next`
+  (LayoutProps/PageProps live in `.next/types`).
+- pre-push runs `pnpm lint` + `next typegen` + `tsc --noEmit`.
 
 ## Files
 

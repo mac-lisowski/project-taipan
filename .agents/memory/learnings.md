@@ -37,5 +37,13 @@
 - GitHub Actions: `setup-node` with `cache: pnpm` runs pnpm during
   its own step to resolve cache paths, so pnpm must already exist.
   `corepack enable` in a later step is too late. Use
-  `pnpm/action-setup` BEFORE `setup-node`; it reads the
-  `packageManager` field from apps/web/package.json.
+  `pnpm/action-setup` BEFORE `setup-node`, and set its
+  `package_json_file: apps/web/package.json` - it defaults to the
+  repo-root package.json which does not exist here.
+- Next 16 emits `LayoutProps`/`PageProps` global types into
+  `.next/types` only. On a clean checkout `tsc --noEmit` fails
+  (TS2304). Run `pnpm exec next typegen` before `tsc`; it is fast.
+- Verify CI jobs locally with `act` before claiming they pass:
+  `DOCKER_HOST=unix:///run/user/1000/docker.sock act push -j <job>
+  -P ubuntu-latest=catthehacker/ubuntu:act-24.04
+  --container-daemon-socket /run/user/1000/docker.sock`.

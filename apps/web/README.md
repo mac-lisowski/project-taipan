@@ -10,7 +10,7 @@ pnpm install        # one-time, or after lockfile changes
 pnpm dev            # dev server on :3000; needs `uv run api` on :8000
 pnpm build          # production build (standalone output)
 pnpm lint           # eslint
-pnpm exec tsc --noEmit   # typecheck
+pnpm exec next typegen && pnpm exec tsc --noEmit   # typecheck (typegen first on clean checkout)
 ```
 
 Env: copy `.env.example` to `.env.local` to override. Only
