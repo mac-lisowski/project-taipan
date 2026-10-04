@@ -1,4 +1,4 @@
-from playground_core import greet
+from core import greet
 
 
 def main() -> None:

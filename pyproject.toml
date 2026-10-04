@@ -4,13 +4,15 @@ version = "0.1.0"
 description = "Monorepo for my Python projects"
 requires-python = ">=3.12"
 dependencies = [
-    "playground-core",
-    "playground-cli",
+    "api",
+    "core",
+    "cli",
 ]
 
 [tool.uv.sources]
-playground-core = { workspace = true }
-playground-cli = { workspace = true }
+api = { workspace = true }
+core = { workspace = true }
+cli = { workspace = true }
 
 # Workspace members: shared libraries live in packages/, runnable apps in apps/
 [tool.uv.workspace]

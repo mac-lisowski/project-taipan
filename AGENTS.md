@@ -25,9 +25,9 @@ docs/learnings/           study notes
 .agents/memory/           agent memory across sessions
 ```
 
-Naming rule: folder `packages/core` → package `playground-core` (hyphens,
-in `dependencies` + `[tool.uv.sources]`) → module `playground_core`
-(underscores, used in `import`).
+Naming rule: folder `packages/core` = package `core` (in `dependencies` +
+`[tool.uv.sources]`) = module `core` (dir in `src/`, used in `import`).
+All three use the same generic name, no repo prefix.
 
 ## Commands
 
@@ -35,7 +35,8 @@ in `dependencies` + `[tool.uv.sources]`) → module `playground_core`
 uv sync                 # install all workspace members into .venv
 uv run pytest           # run all tests
 uv run ruff check .     # lint
-uv run playground       # run the cli app
+uv run cli              # run the cli app
+uv run api              # run the api app
 uv add --package <pkg> <dep>   # add dep to one member
 uv add <dep> --dev             # add shared dev dep
 ```
