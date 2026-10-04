@@ -18,6 +18,8 @@ To master (not installed yet):
 - **Celery**: task queue; runs jobs in background workers (needs a broker like Redis).
 - **Redis**: in-memory key-value store; used for cache, queues, pub/sub.
 - **LangGraph**: framework for building stateful multi-step AI agents.
+- **LangChain**: framework for LLM apps: model wrappers, tools, integrations. LangGraph builds on it.
+- **MCP**: Model Context Protocol; standard way to expose tools and data to AI agents. You can build your own MCP server.
 - **OpenAI API**: HTTP API for LLMs (chat, embeddings, tools); also the base API other providers copy.
 - **MongoDB**: document database; stores JSON-like documents, no fixed schema.
 - **Postgres**: relational SQL database; the default choice for structured data.
@@ -33,6 +35,8 @@ To master (not installed yet):
 | Celery | advanced | [official docs](https://docs.celeryq.dev/en/stable/getting-started/introduction.html) |
 | Redis | advanced | [Redis University](https://university.redis.io/), [docs](https://redis.io/docs/latest/) |
 | LangGraph | advanced | [docs](https://langchain-ai.github.io/langgraph/), [LangChain Academy](https://academy.langchain.com/) |
+| LangChain | advanced | [docs](https://python.langchain.com/docs/introduction/), [LangChain Academy](https://academy.langchain.com/) |
+| MCP (build servers) | advanced | [official docs](https://modelcontextprotocol.io/docs/getting-started/intro), [Python SDK](https://github.com/modelcontextprotocol/python-sdk) |
 | OpenAI API | advanced | [platform docs](https://platform.openai.com/docs), [cookbook](https://github.com/openai/openai-cookbook) |
 | MongoDB | regular | [MongoDB University](https://learn.mongodb.com/) |
 | Postgres | regular | [official tutorial](https://www.postgresql.org/docs/current/tutorial.html), [pgexercises](https://pgexercises.com/) |
