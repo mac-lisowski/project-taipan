@@ -33,3 +33,5 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Editing live hook files is a loaded gun](learnings/hook-editing-lockout.md)
 - [Diff hash binds worktree content, not diff position](learnings/diff-hash-staging-invariance.md)
 - [Canonicalize paths via pwd -P, never string surgery](learnings/path-normalization-squeeze.md)
+- [Infisical SITE_URL needs https:// or it 502s](learnings/infisical-site-url.md)
+- [Infisical first boot slow; keep Postgres same-region](learnings/infisical-first-boot.md)
