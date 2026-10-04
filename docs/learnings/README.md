@@ -1,6 +1,29 @@
 # Learnings
 
-Topics to master. Level = target depth.
+## Glossary
+
+Used in this repo:
+
+- **uv**: Python package and venv manager; replaces pip, venv, pyenv.
+- **pyproject.toml**: the file that defines a Python project: name, deps, tool config.
+- **uv.lock**: pinned dependency versions; like package-lock.json.
+- **pytest**: test runner; finds `test_*.py` files and runs them.
+- **ruff**: linter (finds bugs/style issues) and formatter; replaces flake8+black+isort.
+- **pre-commit**: git hook manager; runs ruff/tests automatically on commit/push.
+- **.venv**: virtual environment; isolated Python install for this repo.
+
+To master (not installed yet):
+
+- **FastAPI**: web framework for building REST APIs with type hints.
+- **Celery**: task queue; runs jobs in background workers (needs a broker like Redis).
+- **Redis**: in-memory key-value store; used for cache, queues, pub/sub.
+- **LangGraph**: framework for building stateful multi-step AI agents.
+- **OpenAI API**: HTTP API for LLMs (chat, embeddings, tools); also the base API other providers copy.
+- **MongoDB**: document database; stores JSON-like documents, no fixed schema.
+- **Postgres**: relational SQL database; the default choice for structured data.
+- **Token cost optimisation**: techniques to cut LLM spend: prompt caching, smaller models, shorter prompts.
+
+## Topics to master. Level = target depth.
 
 | Topic | Level | Source |
 |---|---|---|

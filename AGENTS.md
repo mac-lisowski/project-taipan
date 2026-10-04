@@ -4,6 +4,7 @@
 
 1. Keep all output short. Follow STE100 (Simplified Technical English):
    short sentences, simple words, one idea per sentence. No essays.
+   No em dashes.
 2. Do not edit generated scaffold files unless asked.
 3. Use `uv run <cmd>` for all commands. Never activate `.venv` manually.
 

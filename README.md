@@ -13,7 +13,7 @@ Shared libraries live in `packages/`, runnable applications live in `apps/`.
 
 ## Everyday commands
 
-Run from the repo root — one lockfile, one virtualenv for everything:
+Run from the repo root - one lockfile, one virtualenv for everything:
 
 ```bash
 uv sync                    # install/update everything into .venv
@@ -28,7 +28,7 @@ uv add pytest --dev                          # add a shared dev dependency
 ## Adding a new project
 
 1. Create `packages/<name>/` (library) or `apps/<name>/` (application) with a
-   `pyproject.toml` and `src/<import_name>/__init__.py` — copy an existing one.
+   `pyproject.toml` and `src/<import_name>/__init__.py` - copy an existing one.
 2. Add it to the root `pyproject.toml` dependencies + `[tool.uv.sources]`
    (`<name> = { workspace = true }`).
 3. To depend on another workspace member, do the same in your project's
