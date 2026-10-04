@@ -25,6 +25,7 @@ jobs:
       shared: ${{ steps.filter.outputs.shared }}
       core: ${{ steps.filter.outputs.core }}
       api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
     steps:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
@@ -36,6 +37,9 @@ jobs:
               - '.python-version'
               - '.pre-commit-config.yaml'
               - '.github/workflows/**'
+              - 'scripts/**'
+            web:
+              - 'apps/web/**'
             core:
               - 'packages/core/**'
             api:
@@ -58,6 +62,27 @@ jobs:
           files=$(git grep -lP '\x{2014}' -- . ':!uv.lock' ':!skills-lock.json' ':!.agents/skills' ':!.devin' ':!.claude' ':!.grok' ':!.zcode') || rc=$?
           if [ "$rc" -gt 1 ]; then exit "$rc"; fi
           if [ -n "$files" ]; then printf 'em dash found in:\n%s\n' "$files"; exit 1; fi
+      - name: file size cap
+        run: scripts/check-file-size.sh
+      - name: BFF boundary checks
+        run: scripts/check-bff.sh
+
+  test-web:
+    needs: changes
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.web == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - run: corepack enable && pnpm -C apps/web install --frozen-lockfile
+      - run: pnpm -C apps/web lint
+      - run: pnpm -C apps/web exec tsc --noEmit
+      - run: pnpm -C apps/web build
+      - run: docker build apps/web
 
   test-core:
     needs: changes
@@ -94,14 +119,14 @@ jobs:
       - run: uv run pytest apps/api
 
   ci-done:
-    needs: [changes, lint, test-core, test-api]
+    needs: [changes, lint, test-core, test-api, test-web]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: verify required jobs passed
         run: |
           status=0
-          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "test-core:${{ needs.test-core.result }}" "test-api:${{ needs.test-api.result }}"; do
+          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "test-core:${{ needs.test-core.result }}" "test-api:${{ needs.test-api.result }}" "test-web:${{ needs.test-web.result }}"; do
             result="${pair##*:}"
             echo "${pair%%:*}: $result"
             case "$result" in success|skipped) ;; *) status=1 ;; esac

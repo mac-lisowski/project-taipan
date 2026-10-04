@@ -13,7 +13,8 @@ Shared libraries live in `packages/`, runnable applications live in `apps/`.
 │   └── core/             # library: core
 └── apps/
     ├── cli/              # app: cli (depends on core)
-    └── api/              # app: api (depends on core)
+    ├── api/              # app: api (depends on core)
+    └── web/              # Next.js frontend, pnpm - not a uv member
 ```
 
 ## Everyday commands
@@ -35,9 +36,11 @@ Each app registers a command in its `pyproject.toml` under `[project.scripts]`.
 
 ```bash
 uv run cli                 # CLI app -> prints "Hello, world!"
-docker compose up -d       # Postgres + pgvector on localhost:5432 (needed by api)
+docker compose up -d       # Postgres + pgvector :5432, redis :6379 (needed by api/web)
 uv run db-upgrade          # apply migrations
 uv run api                 # API app -> FastAPI server on http://127.0.0.1:8000 (docs at /docs)
+pnpm -C apps/web install   # one-time: web dependencies
+pnpm -C apps/web dev       # Next.js on http://localhost:3000
 ```
 
 ## Database (api)
@@ -61,6 +64,17 @@ API tests run against a real `app_test` database on the docker Postgres
 Env vars are registered in `apps/api/.env.example`. Copy to `.env` and run
 with `uv run --env-file apps/api/.env api`.
 
+## Frontend (web)
+
+`apps/web` is Next.js acting as the BFF: pages are server-rendered and
+a route handler proxies `/api/*` to FastAPI, forwarding the session
+cookie. The browser never talks to FastAPI directly.
+
+- `API_INTERNAL_URL` (server-only) lives in `apps/web/.env.example`.
+  Copy to `.env.local` for local overrides.
+- `apps/web/Dockerfile` builds a standalone production image.
+  Build context is `apps/web` itself.
+
 ## Adding a new project
 
 1. Create `packages/<name>/` (library) or `apps/<name>/` (application) with a
@@ -76,7 +90,11 @@ with `uv run --env-file apps/api/.env api`.
 - `src/` layout per package (import from `packages/core/src/core`).
 - Tests live under `tests/` inside each member that has them.
 - Python version pinned in `.python-version`; lockfile is `uv.lock`.
-- `pre-commit` runs ruff and an em-dash fixer on commit, pytest on push.
+- Source files are capped at 300 lines (`scripts/check-file-size.sh`);
+  the web BFF boundary is checked by `scripts/check-bff.sh`. Both run
+  in pre-commit and CI.
+- `pre-commit` runs ruff, an em-dash fixer, and the gate scripts on
+  commit; pytest and web lint/typecheck on push.
   Install hooks with `uv run pre-commit install` (commit hook) and
   `uv run pre-commit install --hook-type pre-push` (pytest on push).
   Also run `uv tool install pre-commit` once per machine so the hook's

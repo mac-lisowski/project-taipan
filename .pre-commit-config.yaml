@@ -13,9 +13,25 @@ repos:
         language: system
         types: [text]
         exclude: '^(\.agents/skills/|\.devin/|\.claude/|\.grok/|\.zcode/|uv\.lock$|skills-lock\.json$)'
+      - id: file-size
+        name: file size cap (300 LOC)
+        entry: scripts/check-file-size.sh
+        language: system
+        pass_filenames: false
+      - id: bff-boundary
+        name: BFF boundary checks (apps/web)
+        entry: scripts/check-bff.sh
+        language: system
+        pass_filenames: false
       - id: pytest
         name: pytest
         entry: uv run pytest
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      - id: web-checks
+        name: web lint + typecheck (apps/web)
+        entry: bash -c 'cd apps/web && pnpm lint && pnpm exec tsc --noEmit'
         language: system
         pass_filenames: false
         stages: [pre-push]
