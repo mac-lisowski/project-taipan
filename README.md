@@ -84,12 +84,9 @@ with `uv run --env-file apps/api/.env api`.
 ## Secrets (Infisical)
 
 Self-hosted Infisical runs in the dev compose stack on :8080 (UI + API).
-Its database (`infisical`) is created by `docker/initdb` on fresh
-volumes; on an existing volume run once:
-
-```bash
-docker compose exec db psql -U postgres -c 'CREATE DATABASE infisical'
-```
+It gets its own Postgres (`infisical-db` service, no host port) -
+same shape as the cloud deploy where it is a separate instance, not
+a database inside the app postgres.
 
 First run of a new instance needs an admin, org, and machine identity:
 

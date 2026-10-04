@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Dockerfile gate: build context for apps/*/Dockerfile* is the repo
-# root. Every COPY/ADD context source must resolve as a root-relative
+# Dockerfile gate: every Dockerfile whose build context is the repo
+# root is scanned. Every COPY/ADD context source must resolve as a root-relative
 # path. --from= copies (build stages) and ${VAR} sources are skipped;
 # .dockerignore can still exclude an existing file, so the CI docker
 # build remains the authority. RUN lines using `pnpm -C/--dir` are
@@ -19,7 +19,7 @@ check_src() { # $1=file $2=lineno $3=source
     || report "$1:$2 COPY/ADD source '$3' not found at repo root"
 }
 
-for df in apps/*/Dockerfile*; do
+for df in apps/*/Dockerfile* docker/*/Dockerfile* .devcontainer/Dockerfile*; do
   [ -f "$df" ] || continue
   lineno=0
   while IFS= read -r raw || [ -n "$raw" ]; do
