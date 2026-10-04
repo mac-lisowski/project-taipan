@@ -131,6 +131,16 @@ test("re-encodes segments so encoded separators cannot reshape the path", async 
   expect(requireCall(calls).url).toBe(`${UPSTREAM}/api/items/a%2Fb?x=1`);
 });
 
+// A no-op passthrough also emits a%2Fb; only the decode-then-encode round-trip turns a+b into a%2Bb.
+test("re-encodes a plus segment to its percent form upstream", async () => {
+  const { fetchImpl, calls } = recordingFetch();
+  await proxyUpstream(request("/api/items/a+b?x=1"), {
+    upstreamUrl: UPSTREAM,
+    fetchImpl,
+  });
+  expect(requireCall(calls).url).toBe(`${UPSTREAM}/api/items/a%2Bb?x=1`);
+});
+
 test("returns 400 and never fetches for a backslash segment", async () => {
   const { fetchImpl, calls } = recordingFetch();
   for (const path of ["/api/%5C", "/api/a%5Cb"]) {
