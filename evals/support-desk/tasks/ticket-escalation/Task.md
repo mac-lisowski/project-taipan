@@ -67,7 +67,7 @@ evaluated agent's workspace or image.
 - Setup, readiness, reset, and cleanup: fresh container per trial; isolation
   by replacement. Readiness = tickets.db exists and focal row is 'open'.
 - Relevant project World Skill references, scripts, or assets:
-  `.agents/skills/playground-world/SKILL.md` (container recipe, seed method,
+  `.agents/skills/taipan-world/SKILL.md` (container recipe, seed method,
   SQLite verification pattern).
 - Material differences from production: no production exists. Seed data is
   synthetic.

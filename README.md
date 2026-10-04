@@ -1,4 +1,4 @@
-# python-playground
+# project-taipan
 
 A Python monorepo managed with [uv workspaces](https://docs.astral.sh/uv/concepts/workspaces/).
 Shared libraries live in `packages/`, runnable applications live in `apps/`.

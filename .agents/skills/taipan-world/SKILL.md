@@ -1,9 +1,9 @@
 ---
-name: playground-world
-description: Use with eval-engineering when generating Task Specs or building evaluation Tasks for python-playground. Contains reusable project-specific knowledge about the uv workspace, the in-repo agent, Environment recipes, and verification patterns.
+name: taipan-world
+description: Use with eval-engineering when generating Task Specs or building evaluation Tasks for project-taipan. Contains reusable project-specific knowledge about the uv workspace, the in-repo agent, Environment recipes, and verification patterns.
 ---
 
-# python-playground World Knowledge
+# project-taipan World Knowledge
 
 Read `$eval-engineering` first. Use its broad references and examples as
 guidance. Use this skill for reusable knowledge about how that guidance applies

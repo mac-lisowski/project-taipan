@@ -1,5 +1,5 @@
 [project]
-name = "python-playground"
+name = "project-taipan"
 version = "0.1.0"
 description = "Monorepo for my Python projects"
 requires-python = ">=3.12"
