@@ -1,25 +1,33 @@
 # Current state
 
 - Last updated: 2026-10-05
-- Ticket-report pipeline (UNCOMMITTED): done spec tickets ship an
-  HTML change report at `.scratch/<slug>/issues/<NN>-<slug>.html`
-  (merger writes it in the main checkout from the merged diff +
-  implementer intent list). Wired: to-tickets template DoD checkbox,
-  implement-spec steps 4/5/8 + report template, AGENTS.md rule 12,
-  review-stamp.sh + stop-nudge.sh sibling check scoped to tickets
-  carrying the "Report written" line (old done tickets exempt),
-  robust status regex + `<html` content check. decisions/
-  ticket-reports.md.
-- pre-exec heredoc fix (UNCOMMITTED): cat/tee write-sink heredoc
-  bodies stripped before the flat match, so doc payloads containing
-  "git commit" no longer false-block. Executing sinks (bash <<EOF,
-  pipes, $(, eval, backticks) and quoted << are NOT stripped; quote
-  state + multi-tag queue handled in awk. 24-case battery green
-  (/tmp/px-battery2.sh, uncommitted). learnings/
-  hook-heredoc-false-positive.md.
-- bff-proxy-module tickets written: .scratch/bff-proxy-module/
-  issues/01 (vitest + request-side policy) and 02 (response-side +
-  adapter), both carrying the new report DoD line.
+- Ticket-report pipeline (committed 3415227, dev): done spec tickets
+  ship an HTML change report at `.scratch/<slug>/issues/<NN>-<slug>.html`
+  (merger writes it in the main checkout via shell - .scratch is
+  gitignored - from the merged diff + implementer intent list).
+  Wired: to-tickets template DoD checkbox, implement-spec steps 4/5/8
+  + report template, AGENTS.md rule 12, taipan_done_ticket_gaps in
+  mode-lib.sh shared by review-stamp.sh (hard gate) and stop-nudge.sh
+  (advisory), scoped to tickets whose DoD section mentions "report
+  written" (old done tickets exempt), `<html` content check,
+  per-reason nudge markers. decisions/ticket-reports.md.
+- pre-exec heredoc fix (committed 3415227, dev): cat/tee write-sink
+  heredoc bodies stripped before the flat match, so doc payloads
+  containing "git commit" no longer false-block. Executing sinks
+  (bash <<EOF, pipes, $(, ${..}-hidden <<, eval, backticks, >(<(
+  process substitution, <<<) are NOT stripped; delimiter must be
+  plain word chars; only <<- tolerates an indented terminator.
+  36-case battery green (/tmp/px-battery3.sh, uncommitted).
+  learnings/hook-heredoc-false-positive.md.
+- Branch feat/bff-proxy-module (from dev@3415227): implement-spec
+  for bff-proxy-module; .scratch/bff-proxy-module/issues/01 (vitest +
+  request-side policy) and 02 (response-side + adapter), both carry
+  the report DoD line. Worktree .worktrees/ticket-01 on branch
+  ticket/01-upstream-proxy exists (implementer); .worktrees/ now
+  gitignored.
+- Naming check (ephemeral): RDAP lookup of 24 candidate domains;
+  free: taipn.io, logigrid.io, kinet.io, parseflow.io,
+  threadlogic.io; the other 19 taken.
 - Done: apps/web shipped via PR #1 (merged to dev). Next.js 16 BFF
   verified e2e and in CI; standalone Dockerfile; strict tsconfig +
   eslint. FastAPI mounted under /api prefix; tests pass (7/7).
