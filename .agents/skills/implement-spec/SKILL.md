@@ -6,8 +6,12 @@ disable-model-invocation: true
 
 You have been provided a spec file (`docs/specs/<slug>/spec.md`). Its
 tickets live in `.scratch/<slug>/issues/` as one file per ticket
-(`<NN>-<slug>.md`), each listing its blocking edges and a Status line.
-No issue tracker is configured; ticket files are the source of truth.
+(`<NN>-<slug>.md`). Each ticket is a self-contained execution
+contract: Status, blocking edges, Parallel-with/Conflicts-with fields,
+context pointers, an implementation plan, the failing tests to write
+first, the repo gates to pass, acceptance criteria, and a Definition
+of done. No issue tracker is configured; ticket files are the source
+of truth.
 
 The goal is the entire spec implemented on a single **integration
 branch**, with every ticket file's Status updated to `done` as work
@@ -29,16 +33,19 @@ Communication to and from subagents should be sparse. Communicate primarily thro
 
 4. Use **implementer subagents** to implement each ticket, each in its own worktree on its own branch. Each implementer subagent:
    - confirms its worktree is based on the integration branch before starting, and resets onto it if not;
-   - calls the Skill tool with `tdd` to build the ticket;
+   - works the ticket's own Implementation plan and Context pointers - the ticket is the contract, not a hint;
+   - writes the ticket's named tests failing-first via `tdd`, then implements;
+   - leaves the ticket's Gates section green (`uv run pytest`, ruff, `uvx falsegreen`, file-size cap);
    - reviews the test files it wrote or edited with `test-smell-review` before reporting done;
+   - ticks only the acceptance-criteria boxes it verified (never speculatively); DoD items and Status flip happen at merge;
    - merges the integration branch tip into its own branch before reporting done
 
 5. Once an **implementer subagent** completes, merge its work to the integration branch with a **merger subagent**.
 
-6. If this changes the **frontier** of available tickets, kick off more **implementer subagents** to work on the new tickets. This allows for maximum concurrency.
+6. If this changes the **frontier** of available tickets, kick off more **implementer subagents** to work on the new tickets. This allows for maximum concurrency. Use each ticket's `Parallel with` field to pick simultaneous work; serialize tickets that declare `Conflicts with` on the same files.
 
 7. Once all tickets are complete, call the Skill tool with `code-review` on the integration branch. Fix all issues raised by the code review in a single **implementer subagent**.
 
-8. If a draft PR exists, mark it ready for review. Mark each ticket file's Status `done` as it merges, and report the integration branch.
+8. If a draft PR exists, mark it ready for review. As each ticket merges, tick its remaining Definition-of-done items and flip its Status to `done`. Report the integration branch.
 
 9. Clean up all **implementer subagent** worktrees.
