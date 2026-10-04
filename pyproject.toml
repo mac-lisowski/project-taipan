@@ -28,6 +28,8 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Vendored agent skills are third-party code; never lint or format them
+extend-exclude = [".agents/skills", ".claude", ".devin", ".grok", ".zcode"]
 
 [tool.pytest.ini_options]
 testpaths = ["packages", "apps"]
