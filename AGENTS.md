@@ -23,6 +23,10 @@
    the web BFF boundary (`scripts/check-bff.sh`), and Dockerfile COPY
    sources resolving at repo root (`scripts/check-docker.sh`). All run
    in pre-commit and CI. Do not weaken them to make a check pass.
+9. Tests must catch bugs. After writing or editing test files, review
+   them with the `test-smell-review` skill. Run
+   `uvx falsegreen <files>` first for the structural pass. A test that
+   cannot fail is bloat. Fix it or delete it.
 
 ## Project map
 

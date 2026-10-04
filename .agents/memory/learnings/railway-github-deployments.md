@@ -12,4 +12,9 @@ with zero GitHub records. GitHub env `project-taipan / dev`
 (branch policy: dev) holds secrets `RAILWAY_TOKEN` (project
 token) + `RAILWAY_PROJECT_ID` and vars `RAILWAY_ENVIRONMENT`,
 `RAILWAY_SERVICE_WEB`, `RAILWAY_SERVICE_API`; the `environment:`
-key must stay literal so env-scoped values resolve.
+key must stay literal so env-scoped values resolve. Service
+names were renamed to `project-taipan-web-dev` /
+`project-taipan-api-dev` (use service IDs in API calls, names
+break). `watchPatterns` also filter `railway up` deploys and a
+SKIPPED deploy hangs `--ci` forever: patterns cleared on api
+(serviceInstanceUpdate), deploy job has timeout-minutes: 15.

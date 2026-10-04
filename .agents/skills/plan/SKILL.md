@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Plan a feature before building it. Use when the user describes a feature to build and wants guided planning, or types /plan. Asks clarifying questions, then routes through the installed skills (grilling, domain-modeling, codebase-design, postgresql-table-design, to-spec, implement-spec, tdd) to produce a module map and a first test slice.
+description: Plan a feature before building it. Use when the user describes a feature to build and wants guided planning, or types /plan. Asks clarifying questions, then routes through the installed skills (grilling, domain-modeling, codebase-design, postgresql-table-design, to-spec, implement-spec, tdd, test-smell-review) to produce a module map and a first test slice.
 ---
 
 # Plan
@@ -34,11 +34,12 @@ skills; do not re-explain them.
 5. **Spec.** For anything beyond a small change, offer `to-spec` to
    write a spec file; `implement-spec` can execute it later.
 6. **Slice.** Propose the first TDD slice with `tdd`: the smallest
-   test that proves the core behavior.
+   test that proves the core behavior. Implementation reviews new or
+   edited tests with `test-smell-review` before calling them done.
 
 ## Output
 
 - One Mermaid diagram: the proposed module map.
 - A short plan: packages touched, interfaces, migration needs, first
-  test slice, open questions.
+  test slice, the `test-smell-review` gate, open questions.
 - Offer an ADR via `domain-modeling` when a non-obvious call was made.

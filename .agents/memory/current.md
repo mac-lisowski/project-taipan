@@ -29,6 +29,11 @@
   RAILWAY_ENVIRONMENT, RAILWAY_SERVICE_WEB, RAILWAY_SERVICE_API
   live on GitHub env `project-taipan / dev` (branch policy: dev);
   deploy job declares environment: so they resolve.
+- Test quality gate (UNCOMMITTED): installed
+  `collectiveai-team/botica@test-smell-review` via `npx skills add`.
+  Trimmed botica-internal refs (drift: `npx skills update` clobbers).
+  Wired: AGENTS.md rule 9, plan skill step 6 + output, implement-spec
+  step 4. `uvx falsegreen <files>` is the structural pass.
 - Next step: auth/session layer (FastAPI owns sessions in Redis via
   API_REDIS_URL), src/proxy.ts auth gate once auth endpoints exist
 - Blockers: host port 5432 taken by python-playground-db-1; root

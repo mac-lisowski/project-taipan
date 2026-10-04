@@ -27,3 +27,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [.dockerignore patterns are root-anchored](learnings/dockerignore-anchored.md)
 - [Railway deploys run from CI, not the GitHub app](learnings/railway-github-deployments.md)
 - [Job skipped because an upstream needs job was skipped](learnings/gha-skip-propagates.md)
+- [npx skills CLI behavior in this repo](learnings/skills-cli.md)

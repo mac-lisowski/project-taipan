@@ -167,6 +167,7 @@ jobs:
     # when ci-done succeeded.
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/dev' && needs.ci-done.result == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # Literal: selects which GitHub environment's secrets/vars resolve.
     environment: project-taipan / dev
     env:
