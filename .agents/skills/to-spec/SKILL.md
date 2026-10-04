@@ -23,6 +23,22 @@ Check with the user that these seams match their expectations.
 for the feature. Tell the user the file path. Tickets (created later
 by to-tickets) go in `.scratch/<slug>/issues/`, not in docs.
 
+4. Write the visual artifact: `docs/specs/<slug>/spec.html` beside
+`spec.md`. Every spec gets one. It is a durable, committed artifact,
+not a temp file - it is what a reader opens to understand the spec's
+shape before reading prose. Rules:
+
+- Self-contained HTML. Tailwind and Mermaid via CDN. No build step,
+  no local assets.
+- STE100 prose (repo rule). No em dashes.
+- Required visuals: the module/seam shape (Mermaid for graph-shaped
+  relationships), a before/after depth comparison when the spec
+  restructures existing code (hand-made CSS bars or divs work well),
+  and the test seam: what tests cross, what they assert.
+- Keep it under ~150 lines. It is a map, not a second copy of the
+  spec.
+- Reference it from `spec.md` Further Notes so the pair stays linked.
+
 <spec-template>
 
 ## Problem Statement
