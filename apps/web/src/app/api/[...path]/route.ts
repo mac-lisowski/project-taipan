@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { copyHeaders, proxyUpstream } from "@/lib/upstream-proxy";
+import { type NextRequest } from "next/server";
+import { proxyUpstream } from "@/lib/upstream-proxy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,63 +17,16 @@ function apiInternalUrl(): string {
   return url;
 }
 
-// Browser-facing origin for rewriting upstream redirects. Falls back
-// to http + Host; set it explicitly in production.
 const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN;
 
-function publicOrigin(req: NextRequest): string {
-  return PUBLIC_ORIGIN ?? `http://${req.headers.get("host") ?? "localhost"}`;
-}
-
-// Rewritten below or stale after undici decompresses; server/
-// x-powered-by would leak the internal stack.
-const RESPONSE_REWRITE = new Set([
-  "content-length",
-  "content-encoding",
-  "set-cookie",
-  "location",
-  "content-location",
-  "server",
-  "x-powered-by",
-]);
-
-const NO_BODY_STATUS = new Set([101, 204, 205, 304]);
-
-function rewriteLocation(location: string, publicOrigin: string): string {
-  try {
-    const upstream = new URL(location, apiInternalUrl());
-    if (upstream.origin !== new URL(apiInternalUrl()).origin) return location;
-    return publicOrigin + upstream.pathname + upstream.search + upstream.hash;
-  } catch {
-    return location;
-  }
-}
-
-// Host-bind the cookie: an upstream Domain attribute would be wrong on
-// the public origin.
-function hostBind(cookie: string): string {
-  return cookie.replace(/;\s*domain=[^;]*/gi, "");
-}
-
-// Request-side policy lives in the upstream-proxy module; the
-// response-side rewrite stays here until ticket 02 moves it.
-async function proxy(req: NextRequest) {
-  const upstream = await proxyUpstream(req, {
+// The route is only an adapter: env resolution, the module call, and
+// returning the final browser-facing Response.
+async function proxy(req: NextRequest): Promise<Response> {
+  return proxyUpstream(req, {
     upstreamUrl: apiInternalUrl(),
-    publicOrigin: publicOrigin(req),
+    publicOrigin:
+      PUBLIC_ORIGIN ?? `http://${req.headers.get("host") ?? "localhost"}`,
   });
-  const body = NO_BODY_STATUS.has(upstream.status) ? null : upstream.body;
-  const res = new NextResponse(body, { status: upstream.status });
-  copyHeaders(upstream.headers, res.headers, RESPONSE_REWRITE);
-  for (const name of ["location", "content-location"] as const) {
-    const value = upstream.headers.get(name);
-    if (value)
-      res.headers.set(name, rewriteLocation(value, publicOrigin(req)));
-  }
-  for (const cookie of upstream.headers.getSetCookie()) {
-    res.headers.append("set-cookie", hostBind(cookie));
-  }
-  return res;
 }
 
 export {

@@ -1,29 +1,13 @@
 import { expect, test, vi } from "vitest";
 import { proxyUpstream } from "./upstream-proxy";
+import {
+  type RecordedCall,
+  request,
+  recordingFetch,
+  requireCall,
+} from "./upstream-proxy.testsupport";
 
 const UPSTREAM = "http://upstream.test";
-
-type RecordedCall = { url: string; init: RequestInit & { duplex?: unknown } };
-
-function request(path: string, init?: RequestInit): Request {
-  return new Request(`http://web.test${path}`, init);
-}
-
-// Records what the module sends upstream; never touches the network.
-function recordingFetch(): { fetchImpl: typeof fetch; calls: RecordedCall[] } {
-  const calls: RecordedCall[] = [];
-  const fetchImpl = ((url: string | URL | Request, init?: RequestInit) => {
-    calls.push({ url: String(url), init: init ?? {} });
-    return Promise.resolve(Response.json({ ok: true }));
-  }) as typeof fetch;
-  return { fetchImpl, calls };
-}
-
-function requireCall(calls: RecordedCall[]): RecordedCall {
-  const call = calls[0];
-  if (!call) throw new Error("upstream fetch was not called");
-  return call;
-}
 
 function requireHeaders(calls: RecordedCall[]): Headers {
   const headers = calls[0]?.init.headers;

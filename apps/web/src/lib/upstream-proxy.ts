@@ -1,7 +1,9 @@
-// Owns the request side of the BFF proxy: URL building, path
-// re-encoding, header hygiene, timeout, and the upstream fetch call.
-// Env resolution stays in the route handler and arrives as config, so
-// tests can drive this seam with a plain Request and a stub fetch.
+// Owns the proxy policy for the BFF: URL building, path re-encoding,
+// header hygiene, timeout, the upstream fetch call, and the
+// browser-facing response build (drop list, redirect rewrites, cookie
+// host-binding). Env resolution stays in the route handler and arrives
+// as config, so tests can drive this seam with a plain Request and a
+// stub fetch.
 
 export type ProxyConfig = {
   // Base URL of the upstream API, resolved by the route handler.
@@ -44,9 +46,44 @@ const UNTRUSTED = new Set([
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
-// Shared with the route handler, which still applies the response-side
-// header copy until ticket 02 moves that policy in here too.
-export function copyHeaders(
+// Rewritten below or stale after undici decompresses; server/
+// x-powered-by would leak the internal stack. set-cookie is re-emitted
+// host-bound below instead of copied verbatim.
+const RESPONSE_REWRITE = new Set([
+  "content-length",
+  "content-encoding",
+  "set-cookie",
+  "location",
+  "content-location",
+  "server",
+  "x-powered-by",
+]);
+
+const NO_BODY_STATUS = new Set([101, 204, 205, 304]);
+
+// Same-origin redirects must land on the public origin, not the
+// internal one. Foreign origins and unparseable values pass through.
+function rewriteLocation(
+  location: string,
+  baseUrl: string,
+  publicOrigin: string,
+): string {
+  try {
+    const upstream = new URL(location, baseUrl);
+    if (upstream.origin !== new URL(baseUrl).origin) return location;
+    return publicOrigin + upstream.pathname + upstream.search + upstream.hash;
+  } catch {
+    return location;
+  }
+}
+
+// Host-bind the cookie: an upstream Domain attribute would be wrong on
+// the public origin.
+function hostBind(cookie: string): string {
+  return cookie.replace(/;\s*domain=[^;]*/gi, "");
+}
+
+function copyHeaders(
   src: Headers,
   dst: Headers,
   extraDrop: ReadonlySet<string> = new Set(),
@@ -113,19 +150,47 @@ export async function proxyUpstream(
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
   const doFetch = cfg.fetchImpl ?? globalThis.fetch;
   try {
-    return await doFetch(`${cfg.upstreamUrl}/api/${encoded}${url.search}`, {
-      method: req.method,
-      headers: requestHeaders(req, origin),
-      body: hasBody ? req.body : undefined,
-      redirect: "manual",
-      signal: AbortSignal.any([
-        req.signal,
-        AbortSignal.timeout(cfg.timeoutMs ?? DEFAULT_TIMEOUT_MS),
-      ]),
-      // Required by undici when the body is a stream.
-      ...{ duplex: "half" },
-    } as RequestInit);
+    const upstream = await doFetch(
+      `${cfg.upstreamUrl}/api/${encoded}${url.search}`,
+      {
+        method: req.method,
+        headers: requestHeaders(req, origin),
+        body: hasBody ? req.body : undefined,
+        redirect: "manual",
+        signal: AbortSignal.any([
+          req.signal,
+          AbortSignal.timeout(cfg.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+        ]),
+        // Required by undici when the body is a stream.
+        ...{ duplex: "half" },
+      } as RequestInit,
+    );
+    return browserResponse(upstream, cfg.upstreamUrl, origin);
   } catch {
     return Response.json({ detail: "upstream unavailable" }, { status: 502 });
   }
+}
+
+// Build the final Response the browser sees: the request-side result
+// gets the response-side policy applied in one place.
+function browserResponse(
+  upstream: Response,
+  upstreamUrl: string,
+  publicOrigin: string,
+): Response {
+  const body = NO_BODY_STATUS.has(upstream.status) ? null : upstream.body;
+  const res = new Response(body, { status: upstream.status });
+  copyHeaders(upstream.headers, res.headers, RESPONSE_REWRITE);
+  for (const name of ["location", "content-location"] as const) {
+    const value = upstream.headers.get(name);
+    if (value)
+      res.headers.set(
+        name,
+        rewriteLocation(value, upstreamUrl, publicOrigin),
+      );
+  }
+  for (const cookie of upstream.headers.getSetCookie()) {
+    res.headers.append("set-cookie", hostBind(cookie));
+  }
+  return res;
 }
