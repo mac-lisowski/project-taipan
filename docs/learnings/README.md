@@ -11,10 +11,14 @@ Used in this repo:
 - **ruff**: linter (finds bugs/style issues) and formatter; replaces flake8+black+isort.
 - **pre-commit**: git hook manager; runs ruff/tests automatically on commit/push.
 - **.venv**: virtual environment; isolated Python install for this repo.
+- **FastAPI**: web framework for building REST APIs with type hints; powers `apps/api`.
+- **Postgres**: relational SQL database; runs via docker compose with pgvector.
+- **SQLAlchemy**: ORM; maps Python classes to Postgres tables.
+- **Alembic**: migration tool; versions schema changes (`uv run db-*` scripts).
+- **httpx2**: HTTP client, an httpx fork; pulled in by FastAPI's TestClient.
 
 To master (not installed yet):
 
-- **FastAPI**: web framework for building REST APIs with type hints.
 - **Celery**: task queue; runs jobs in background workers (needs a broker like Redis).
 - **Redis**: in-memory key-value store; used for cache, queues, pub/sub.
 - **LangGraph**: agent runtime for custom control flow and durable state. Builds on LangChain.
@@ -24,7 +28,6 @@ To master (not installed yet):
 - **MCP**: Model Context Protocol; standard way to expose tools and data to AI agents. You can build your own MCP server.
 - **OpenAI API**: HTTP API for LLMs (chat, embeddings, tools); also the base API other providers copy.
 - **MongoDB**: document database; stores JSON-like documents, no fixed schema.
-- **Postgres**: relational SQL database; the default choice for structured data.
 - **Token cost optimisation**: techniques to cut LLM spend: prompt caching, smaller models, shorter prompts.
 
 ## Topics to master. Level = target depth.
@@ -38,8 +41,15 @@ To master (not installed yet):
 | Redis | advanced | [Redis University](https://university.redis.io/), [docs](https://redis.io/docs/latest/) |
 | LangGraph | advanced | [docs](https://langchain-ai.github.io/langgraph/), [LangChain Academy](https://academy.langchain.com/) |
 | LangChain | advanced | [docs](https://python.langchain.com/docs/introduction/), [LangChain Academy](https://academy.langchain.com/) |
+| Deep Agents | advanced | [docs](https://docs.langchain.com/oss/python/deepagents/overview) |
+| LangSmith (observability + evals) | advanced | [docs](https://docs.langchain.com/langsmith/home) |
 | MCP (build servers) | advanced | [official docs](https://modelcontextprotocol.io/docs/getting-started/intro), [Python SDK](https://github.com/modelcontextprotocol/python-sdk) |
 | OpenAI API | advanced | [platform docs](https://platform.openai.com/docs), [cookbook](https://github.com/openai/openai-cookbook) |
-| MongoDB | regular | [MongoDB University](https://learn.mongodb.com/) |
+| Pydantic | regular | [docs](https://docs.pydantic.dev/latest/) |
 | Postgres | regular | [official tutorial](https://www.postgresql.org/docs/current/tutorial.html), [pgexercises](https://pgexercises.com/) |
+| SQLAlchemy + Alembic | regular | [SQLAlchemy tutorial](https://docs.sqlalchemy.org/en/20/tutorial/), [Alembic tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html) |
+| RAG + vector search (pgvector) | regular | [pgvector](https://github.com/pgvector/pgvector), [OpenAI embeddings](https://platform.openai.com/docs/guides/embeddings) |
+| CLI apps (Typer, Click) | regular | [Typer docs](https://typer.tiangolo.com/), [Click docs](https://click.palletsprojects.com/) |
+| TUI apps (Textual, Python's Bubble Tea) | regular | [Textual docs](https://textual.textualize.io/), [tutorial](https://textual.textualize.io/tutorial/) |
+| Memgraph | regular | [docs](https://memgraph.com/docs), [Memgraph Lab](https://memgraph.com/docs/data-visualization) |
 | Token cost optimisation | regular | [OpenAI prompt caching](https://platform.openai.com/docs/guides/prompt-caching), [cookbook](https://github.com/openai/openai-cookbook) |

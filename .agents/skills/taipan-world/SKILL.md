@@ -14,7 +14,8 @@ to this project.
 - Read `AGENTS.md` for workspace rules: `uv run <cmd>` for everything,
   `src/` layout, folder = package = module naming.
 - Run `uv sync` then `uv run pytest` to verify the workspace before
-  packaging it into an Environment.
+  packaging it into an Environment. `apps/api` tests skip
+  unless `docker compose up -d` (Postgres on :5432) is running.
 - Existing Task Specs: `evals/support-desk/tasks/ticket-escalation/Task.md`
   (Draft).
 - Existing runnable Tasks: none yet.
@@ -72,8 +73,6 @@ stable when varying difficulty.
 - Harbor CLI is not installed. Required before any run.
 - `apps/agent` is not built. Task Specs describe the planned Harness.
 - Model provider and LangSmith tracing are undecided.
-- `.video_agent/` at repo root is unexplored; check before assuming it is
-  unrelated to evals.
 
 ## Update this skill
 

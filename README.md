@@ -1,5 +1,9 @@
 # project-taipan
 
+Learning Python. I know this stack in Node - APIs,
+CLIs, agents, databases. The concepts are familiar; this monorepo is
+where I learn the Python equivalents: FastAPI, Typer, LangChain etc.
+
 A Python monorepo managed with [uv workspaces](https://docs.astral.sh/uv/concepts/workspaces/).
 Shared libraries live in `packages/`, runnable applications live in `apps/`.
 
@@ -44,6 +48,8 @@ Postgres 17 + pgvector via docker compose. Schema changes go through Alembic:
 uv run db-revision -m "add orders"   # autogen migration from model changes
 uv run db-upgrade                    # apply migrations
 uv run db-downgrade                  # roll back one
+uv run db-current                    # show applied revision
+uv run db-stamp head                 # mark a revision applied without running it
 ```
 
 Always read the generated file in `apps/api/alembic/versions/` before
@@ -68,5 +74,8 @@ with `uv run --env-file apps/api/.env api`.
 ## Conventions
 
 - `src/` layout per package (import from `packages/core/src/core`).
-- Tests live in each package under `tests/`.
+- Tests live under `tests/` inside each member that has them.
 - Python version pinned in `.python-version`; lockfile is `uv.lock`.
+- `pre-commit` runs ruff and an em-dash fixer on commit, pytest on push.
+  Install hooks with `uv run pre-commit install` (commit hook) and
+  `uv run pre-commit install --hook-type pre-push` (pytest on push).

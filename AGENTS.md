@@ -9,6 +9,11 @@
 3. Use `uv run <cmd>` for all commands. Never activate `.venv` manually.
 4. Memory lives in `.agents/memory/`. Read `current.md` before a task.
    Update memory files per `.agents/memory/MEMORY.md` rules.
+5. Explain with Mermaid diagrams. When you describe a non-trivial
+   solution, problem, or flow to the user, add a small Mermaid
+   diagram. Keep it simple. One idea per diagram. Use them in docs
+   you write too. Skip them for `.agents/memory/` entries and
+   short answers.
 
 ## Project map
 
@@ -21,35 +26,21 @@ packages/<name>/          libraries
   tests/                  package tests
 apps/<name>/              runnable apps
   src/<import_name>/      app code
+  tests/                  app tests
+docker-compose.yaml       Postgres 17 + pgvector
+docker/initdb/            DB init scripts (vector extension)
+evals/                    eval task specs
 docs/learnings/           study notes
 .agents/memory/           agent memory across sessions
+.agents/skills/           local skills (e.g. taipan-world)
+skills-lock.json          vendored skill versions
 ```
 
 Naming rule: folder `packages/core` = package `core` (in `dependencies` +
 `[tool.uv.sources]`) = module `core` (dir in `src/`, used in `import`).
 All three use the same generic name, no repo prefix.
 
-## Commands
+## Commands and adding a project
 
-```bash
-uv sync                 # install all workspace members into .venv
-uv run pytest           # run all tests
-uv run ruff check .     # lint
-uv run cli              # run the cli app
-docker compose up -d    # Postgres + pgvector on :5432 (required for api, migrations, api tests)
-uv run db-upgrade       # apply Alembic migrations
-uv run api              # run the api app
-uv run db-revision -m "msg"  # autogen migration after model changes; always review the file
-uv run db-downgrade     # roll back one migration
-uv run db-current       # show applied revision
-uv run --env-file apps/api/.env api   # api with env overrides (see apps/api/.env.example)
-uv add --package <pkg> <dep>   # add dep to one member
-uv add <dep> --dev             # add shared dev dep
-```
-
-## Adding a project
-
-1. Copy `packages/core` or `apps/cli` to `packages/<name>` or `apps/<name>`.
-2. Rename package in its `pyproject.toml`; rename `src/` dir (underscores).
-3. Add to root `pyproject.toml`: `dependencies` + `uv.sources`.
-4. `uv sync`.
+See `README.md`. It is the single source for the command list and the
+add-a-project steps.
