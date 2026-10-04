@@ -28,3 +28,5 @@ dist/
 .devin/config.local.json
 .devin/mcp_config.local.json
 .zcode/config.local.json
+# Agent working files (spec tickets, scratch state)
+.scratch/

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec visual - BFF upstream-proxy module</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .iface { background: #f59e0b; }
+  .impl  { background: #3b82f6; }
+  .lbl   { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">BFF upstream-proxy module</h1>
+    <p class="text-slate-500">Visual companion to <code>spec.md</code>.
+      Extract the proxy policy out of the Next.js route handler into a
+      deep module on standard <code>Request</code>/<code>Response</code>.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">The problem: deep code, unusable seam</h2>
+    <p class="mb-4">180 LOC of security policy (header hygiene, cookie
+    host-binding, redirect rewriting, path re-encoding) is fused to
+    Next.js plumbing. The interface is 7 method exports bound to
+    <code>NextRequest</code>. Zero tests in <code>apps/web</code>, and
+    this is the riskiest untested code.</p>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="border border-slate-200 rounded-lg p-4">
+        <p class="lbl mb-2">Before</p>
+        <div class="impl h-6 rounded mb-1" style="width:100%"></div>
+        <p class="text-xs text-slate-500 mt-1">one module: policy + Next
+          plumbing fused. Test surface = run a Next server.</p>
+      </div>
+      <div class="border border-slate-200 rounded-lg p-4">
+        <p class="lbl mb-2">After</p>
+        <div class="iface h-4 rounded mb-1" style="width:25%"></div>
+        <div class="impl h-6 rounded" style="width:75%"></div>
+        <p class="text-xs text-slate-500 mt-1">thin adapter + deep module.
+          Tests drive plain <code>Request</code> objects.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Module shape</h2>
+    <div class="mermaid">
+graph LR
+  subgraph route.ts - thin adapter ~40 LOC
+    NR[NextRequest] --> AD["adapt to Request<br>+ read env config"]
+    AD --> CALL["handleUpstream(req, upstream, cfg)"]
+    CALL --> NR2["adapt to NextResponse"]
+  end
+  subgraph proxy module - deep
+    CALL --> POL["header hygiene<br>cookie host-binding<br>location rewrite<br>path re-encode<br>timeout + abort"]
+    POL --> UP["fetch upstream<br>(injectable)"]
+  end
+    </div>
+    <p class="text-xs text-slate-500 mt-2">Env reads stay inside
+    <code>src/app/api/</code> (check-bff.sh boundary). Config is passed
+    in, so the module never touches <code>process.env</code> and tests
+    need no env manipulation.</p>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">The test seam</h2>
+    <div class="mermaid">
+graph LR
+  T["tests: new Request()"] --> M["handleUpstream"]
+  M --> SF["stub fetch<br>(assert args, return canned Response)"]
+  M --> OUT["assert Response:<br>status, headers, set-cookie"]
+    </div>
+    <ul class="list-disc ml-5 mt-3 space-y-1">
+      <li>client <code>x-forwarded-*</code> never reaches upstream</li>
+      <li>cookie <code>Domain</code> stripped; <code>set-cookie</code> re-emitted host-bound</li>
+      <li>upstream <code>location</code> rewritten to public origin</li>
+      <li><code>%2F</code> path segments cannot reshape upstream path</li>
+      <li>upstream throw -&gt; 502; bad segments -&gt; 400</li>
+      <li>no-body statuses drop the body</li>
+    </ul>
+  </section>
+
+  <section class="bg-slate-800 text-slate-100 rounded-xl p-6">
+    <h2 class="font-bold mb-2">Why this first</h2>
+    <p class="text-slate-300">Largest source file, only security-critical
+    untested code, behavior-preserving refactor. After it, the riskiest
+    code in the repo is testable through a plain
+    <code>Request/Response</code> seam.</p>
+  </section>
+</div>
+</body>
+</html>

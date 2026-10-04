@@ -91,7 +91,34 @@
   tests, skip-when-down). Verified: both stacks up, bootstrap+rerun,
   pytest 3/3. check-docker.sh glob now covers apps/* + docker/* +
   .devcontainer Dockerfile* (all root-context builds gated).
-- Pending: nothing on gates; docs reviewed (no exemption).
+- Infisical dev service live on Railway: PR #4 merged; fixed two
+  config bugs (SITE_URL lacked https:// -> WebAuthn crash -> 502;
+  Postgres moved same-region, migrations 20+min -> 90s). User set up
+  admin via web bootstrap; KMS key created via UI; MI `taipan-api`
+  with `cryptographic-operator` role + Token Auth. Vars
+  AUTH_SECRET/DB_CONNECTION_URI/ENCRYPTION_KEY/REDIS_URL/SITE_URL set;
+  api needs API_INFISICAL_URL/TOKEN/KMS_KEY_ID on Railway.
+- Branch feat/infisical-kms (uncommitted): spec written at
+  docs/specs/infisical-kms/spec.md (packages/kms client + admin
+  provisioning + integration tests vs live instance, decided:
+  self-provision fixture, encrypt/decrypt+rotate coverage, export
+  off). to-spec patched: specs -> docs/specs/<slug>/spec.md;
+  to-tickets installed from mattpocock/skills, patched: tickets ->
+  .scratch/<slug>/issues/ (.scratch now gitignored); implement-spec +
+  code-review de-trackered.
+- infisical-kms review fixes (feat/infisical-kms): _request wraps
+  httpx2.HTTPError in KmsError (spec story 5, chained via from);
+  test_transport_error_raises_kmserror runs everywhere (port 1).
+  Test file refactor: skip moved from pytestmark to per-test
+  live_only marker so the transport test is never skipped; Keys
+  NamedTuple now carries client+project_id+key_a (descriptive names,
+  no more per-test InfisicalKms construction); key B created inline
+  in test_cross_key_decrypt_fails per ticket 02.
+- Pending: merge feat/infisical-kms to dev (tickets 01-03 done,
+  memory DoD boxes ticked) (packages/kms, KmsClient
+  encrypt/decrypt/rotate, admin create/del project+key, tests in
+  apps/api/tests/test_infisical_kms.py, docs/infisical.md,
+  .env.example KMS_KEY_ID).
 - Next step: auth/session layer (FastAPI owns sessions in Redis via
   API_REDIS_URL), src/proxy.ts auth gate once auth endpoints exist
 - Blockers: host port 5432 taken by python-playground-db-1; root

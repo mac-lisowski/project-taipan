@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec visual - encryption seam decision</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">Decide the seam for encrypted fields</h1>
+    <p class="text-slate-500">Visual companion to <code>spec.md</code>.
+      A decision spec: the deliverable is ADR-0001 plus a throwaway
+      prototype, not production code.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">The fork</h2>
+    <p class="mb-4">Envelope encryption is coming (infisical-kms spec).
+    Where ciphertext conversion lives decides whether the repository
+    layer deepens or gets deleted.</p>
+    <div class="mermaid">
+graph TD
+  W["write path: model field"] --> Q{"where does<br>encrypt/decrypt live?"}
+  Q --> A["Option A: TypeDecorator<br>encryption rides the ORM"]
+  Q --> B["Option B: repository module<br>encrypt on write, decrypt on read"]
+  A --> A1["repos deletable<br>every ORM path converts"]
+  B --> B1["repos earn depth<br>raw-session paths bypass it"]
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Decision criteria (prototype-verified)</h2>
+    <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="border-b border-slate-300">
+          <th class="py-2 pr-4">Criterion</th>
+          <th class="py-2 pr-4">Option A: TypeDecorator</th>
+          <th class="py-2">Option B: repository</th>
+        </tr>
+      </thead>
+      <tbody class="text-slate-600">
+        <tr class="border-b border-slate-200">
+          <td class="py-2 pr-4 font-semibold">Locality</td>
+          <td class="py-2 pr-4">all ORM paths convert; no bypass</td>
+          <td class="py-2">raw session use bypasses encryption</td>
+        </tr>
+        <tr class="border-b border-slate-200">
+          <td class="py-2 pr-4 font-semibold">Test surface</td>
+          <td class="py-2 pr-4">column type + stubbed Cipher port</td>
+          <td class="py-2">repository with stubbed Cipher</td>
+        </tr>
+        <tr class="border-b border-slate-200">
+          <td class="py-2 pr-4 font-semibold">Query limits</td>
+          <td class="py-2 pr-4" colspan="2">identical: no equality filter,
+            ordering, or join on ciphertext either way</td>
+        </tr>
+        <tr class="border-b border-slate-200">
+          <td class="py-2 pr-4 font-semibold">Migration shape</td>
+          <td class="py-2 pr-4" colspan="2">identical rewrap sweep; decided
+            by key-id sourcing, not the seam</td>
+        </tr>
+        <tr>
+          <td class="py-2 pr-4 font-semibold">Repo layer fate</td>
+          <td class="py-2 pr-4">deletable (deletion test passes)</td>
+          <td class="py-2">earns depth, stays</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Process</h2>
+    <div class="mermaid">
+graph LR
+  P["throwaway prototype<br>1 encrypted column,<br>live Cipher port"] --> ADR["ADR-0001 in docs/adr/<br>options + criteria + loser reason"]
+  ADR --> D["repository fate decided<br>+ key-id sourcing recorded"]
+    </div>
+    <p class="text-xs text-slate-500 mt-2">Prototype lives in
+    <code>.scratch/</code> or is deleted. Mechanical DoD check: ADR
+    exists, names both options, states criteria, cites the prototype
+    outcome, answers the repository question.</p>
+  </section>
+
+  <section class="bg-slate-800 text-slate-100 rounded-xl p-6">
+    <h2 class="font-bold mb-2">Why a spec for a decision</h2>
+    <p class="text-slate-300">The wrong outcome is not "pick A over B".
+    It is letting the feature spec improvise the seam mid-implementation
+    and stranding a shallow repository layer or a scattered encryption
+    concern.</p>
+  </section>
+</div>
+</body>
+</html>

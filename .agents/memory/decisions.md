@@ -14,3 +14,4 @@ Why things are the way they are. One decision per file in
 - [FastAPI mounts routers under /api](decisions/api-prefix.md)
 - [Quality gates: LOC cap + BFF boundary](decisions/quality-gates.md)
 - [Docker build context is the repo root](decisions/docker-root-context.md)
+- [Specs live in docs/specs/, not an issue tracker](decisions/specs-as-files.md)
