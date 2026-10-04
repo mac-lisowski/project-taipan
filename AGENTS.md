@@ -14,6 +14,9 @@
    diagram. Keep it simple. One idea per diagram. Use them in docs
    you write too. Skip them for `.agents/memory/` entries and
    short answers.
+6. Inside the devcontainer the same `uv run` commands apply. DB hosts
+   come from env vars (`API_DATABASE_URL`, `API_TEST_*`). `localhost`
+   defaults in code are fine; never hardcode `db`.
 
 ## Project map
 
@@ -27,12 +30,21 @@ packages/<name>/          libraries
 apps/<name>/              runnable apps
   src/<import_name>/      app code
   tests/                  app tests
-docker-compose.yaml       Postgres 17 + pgvector
+docker-compose.yaml       Postgres 17 + pgvector (host dev)
 docker/initdb/            DB init scripts (vector extension)
+.devcontainer/            dev container: app + db services, own compose file
+docs/devcontainer.md      devcontainer guide and troubleshooting
 evals/                    eval task specs
 docs/learnings/           study notes
+apps/<name>/AGENTS.md     nested rules for that subtree (e.g. apps/api)
+CLAUDE.md                 symlink -> AGENTS.md
+.claude/settings.json     hook manifest + permissions (Claude, Devin, Grok)
+.zcode/config.json        ZCode hooks (hooks.enabled)
+.devin/config.json        Devin permissions (no hooks: see .agents/hooks/)
 .agents/memory/           agent memory across sessions
 .agents/skills/           local skills (e.g. taipan-world)
+.agents/commands/         slash commands (e.g. /plan)
+.agents/hooks/            hook scripts wired from tool manifests
 skills-lock.json          vendored skill versions
 ```
 

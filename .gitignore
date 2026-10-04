@@ -22,3 +22,9 @@ dist/
 
 # Env files (.env.example stays tracked)
 .env
+
+# Agent tool local overrides
+.claude/settings.local.json
+.devin/config.local.json
+.devin/mcp_config.local.json
+.zcode/config.local.json

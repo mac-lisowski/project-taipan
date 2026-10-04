@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Exec(uv run)",
+      "Exec(uv sync)",
+      "Exec(uv lock)",
+      "Exec(uv add)",
+      "Exec(git status)",
+      "Exec(git diff)",
+      "Exec(git log)",
+      "Exec(git show)",
+      "Exec(git add)",
+      "Exec(ls)",
+      "Exec(cat)",
+      "Exec(find)",
+      "Exec(docker compose)"
+    ],
+    "deny": [
+      "Exec(sudo)"
+    ]
+  }
+}

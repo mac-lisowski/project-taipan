@@ -79,3 +79,10 @@ with `uv run --env-file apps/api/.env api`.
 - `pre-commit` runs ruff and an em-dash fixer on commit, pytest on push.
   Install hooks with `uv run pre-commit install` (commit hook) and
   `uv run pre-commit install --hook-type pre-push` (pytest on push).
+  Also run `uv tool install pre-commit` once per machine so the hook's
+  PATH fallback works; without it the hook breaks when `.venv` moves.
+  Install hooks on the host, not inside the devcontainer - the hook
+  stores an absolute `.venv` path that differs between the two.
+- Agent hooks enforce the repo rules inside Claude Code, Devin, Grok,
+  and ZCode. Scripts live in `.agents/hooks/` - see its README for the
+  coverage table and how to test them.

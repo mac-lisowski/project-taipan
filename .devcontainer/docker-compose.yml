@@ -1,0 +1,68 @@
+# Self-contained devcontainer stack. Not merged with the root
+# docker-compose.yaml: its "5432:5432" publish would collide on the host.
+# The db service here publishes no host port. The app service reaches it
+# over the compose network as host "db".
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    command: sleep infinity
+    # Root on purpose: this host runs rootless Docker, where host uid
+    # 1000 maps to container uid 0. A non-root user cannot write the
+    # bind-mounted repo. On a rootful host you can use a normal user.
+    user: root
+    volumes:
+      - ..:/workspaces/project-taipan:cached
+      # Mask the host-built .venv. Its absolute paths are invalid here.
+      - devcontainer-venv:/workspaces/project-taipan/.venv
+      - devcontainer-uvcache:/root/.cache/uv
+    environment:
+      HOME: /root
+      API_DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/app
+      API_TEST_ADMIN_URL: postgresql+psycopg://postgres:postgres@db:5432/postgres
+      API_TEST_URL: postgresql+psycopg://postgres:postgres@db:5432/app_test
+      # testcontainers spawns into the sibling dind daemon.
+      DOCKER_HOST: tcp://dind:2375
+    depends_on:
+      db:
+        condition: service_healthy
+      dind:
+        condition: service_healthy
+
+  # Docker-in-Docker daemon for testcontainers. Privileged by design.
+  # TLS off: only reachable on this private compose network.
+  dind:
+    image: docker:28-dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    volumes:
+      - devcontainer-dind:/var/lib/docker
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    volumes:
+      - devcontainer-pgdata:/var/lib/postgresql/data
+      - ../docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  devcontainer-pgdata:
+  devcontainer-venv:
+  devcontainer-uvcache:
+  devcontainer-dind:

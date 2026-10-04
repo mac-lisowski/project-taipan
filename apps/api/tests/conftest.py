@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from api.db import Base, get_db
 from api.main import app
@@ -6,8 +8,14 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
-ADMIN_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
-TEST_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/app_test"
+ADMIN_URL = os.environ.get(
+    "API_TEST_ADMIN_URL",
+    "postgresql+psycopg://postgres:postgres@localhost:5432/postgres",
+)
+TEST_URL = os.environ.get(
+    "API_TEST_URL",
+    "postgresql+psycopg://postgres:postgres@localhost:5432/app_test",
+)
 
 
 @pytest.fixture(scope="session")

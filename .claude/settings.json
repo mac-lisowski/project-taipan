@@ -1,0 +1,89 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest*)",
+      "Bash(uv run ruff*)",
+      "Bash(uv run db-*)",
+      "Bash(uv sync*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(ls*)",
+      "Bash(cat*)",
+      "Bash(find*)",
+      "Bash(docker compose ps*)",
+      "Bash(docker compose logs*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-.}}/.agents/hooks/session-start.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "exec|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-.}}/.agents/hooks/pre-exec.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "edit|write|notebook_edit|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-.}}/.agents/hooks/pre-write.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "edit|write|notebook_edit|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-.}}/.agents/hooks/post-write.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "exec|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-.}}/.agents/hooks/post-exec.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-.}}/.agents/hooks/stop-nudge.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

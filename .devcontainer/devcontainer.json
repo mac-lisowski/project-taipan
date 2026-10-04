@@ -1,0 +1,22 @@
+{
+  "name": "project-taipan",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/project-taipan",
+  "remoteUser": "root",
+  "postCreateCommand": "uv sync --frozen && uv run pre-commit install && uv run pre-commit install --hook-type pre-push && ln -sf /workspaces/project-taipan/.venv/bin/pre-commit /usr/local/bin/pre-commit",
+  "postStartCommand": "uv run db-upgrade",
+  "forwardPorts": [8000],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspaces/project-taipan/.venv/bin/python"
+      }
+    }
+  }
+}
