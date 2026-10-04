@@ -164,16 +164,20 @@ jobs:
     needs: ci-done
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
+    # Literal: selects which GitHub environment's secrets/vars resolve.
     environment: project-taipan / dev
     env:
       # Project token scoped to the Railway dev environment.
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
+      RAILWAY_SERVICE_WEB: ${{ vars.RAILWAY_SERVICE_WEB }}
+      RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install railway cli
         run: npm install -g @railway/cli@5.41.2
       - name: deploy web
-        run: railway up --service project-taipan --environment dev --project "$RAILWAY_PROJECT_ID" --ci
+        run: railway up --service "$RAILWAY_SERVICE_WEB" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
       - name: deploy api
-        run: railway up --service project-taipan-dev --environment dev --project "$RAILWAY_PROJECT_ID" --ci
+        run: railway up --service "$RAILWAY_SERVICE_API" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci

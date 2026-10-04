@@ -25,9 +25,10 @@
   the GitHub repo source (no Deployment records, no check runs).
   New `deploy` job in ci.yml runs `railway up --service <name>
   --ci` for web then api after `ci-done` on push to dev.
-  Secrets RAILWAY_TOKEN + RAILWAY_PROJECT_ID set on GitHub env
-  `project-taipan / dev` (branch policy allows dev). Deploy job
-  declares environment: so they resolve.
+  Secrets RAILWAY_TOKEN + RAILWAY_PROJECT_ID and vars
+  RAILWAY_ENVIRONMENT, RAILWAY_SERVICE_WEB, RAILWAY_SERVICE_API
+  live on GitHub env `project-taipan / dev` (branch policy: dev);
+  deploy job declares environment: so they resolve.
 - Next step: auth/session layer (FastAPI owns sessions in Redis via
   API_REDIS_URL), src/proxy.ts auth gate once auth endpoints exist
 - Blockers: host port 5432 taken by python-playground-db-1; root
