@@ -159,3 +159,21 @@ jobs:
             case "$result" in success|skipped) ;; *) status=1 ;; esac
           done
           exit $status
+
+  deploy:
+    needs: ci-done
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    environment: project-taipan / dev
+    env:
+      # Project token scoped to the Railway dev environment.
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: install railway cli
+        run: npm install -g @railway/cli@5.41.2
+      - name: deploy web
+        run: railway up --service project-taipan --environment dev --project "$RAILWAY_PROJECT_ID" --ci
+      - name: deploy api
+        run: railway up --service project-taipan-dev --environment dev --project "$RAILWAY_PROJECT_ID" --ci

@@ -25,3 +25,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Module-level env throws break next build](learnings/next-build-env-eval.md)
 - [CI smoke tests bind ephemeral ports](learnings/ci-ephemeral-ports.md)
 - [.dockerignore patterns are root-anchored](learnings/dockerignore-anchored.md)
+- [Railway deploys run from CI, not the GitHub app](learnings/railway-github-deployments.md)
