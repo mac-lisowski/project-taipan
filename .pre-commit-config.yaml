@@ -12,7 +12,7 @@ repos:
         entry: sed -i 's/\xe2\x80\x94/-/g'
         language: system
         types: [text]
-        exclude: '^(uv\.lock|skills-lock\.json)$'
+        exclude: '^(\.agents/skills/|\.devin/|\.claude/|\.grok/|\.zcode/|uv\.lock$|skills-lock\.json$)'
       - id: pytest
         name: pytest
         entry: uv run pytest

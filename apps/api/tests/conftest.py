@@ -26,6 +26,8 @@ def engine():
         pytest.skip("postgres not running (docker compose up -d)")
 
     eng = create_engine(TEST_URL)
+    with eng.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     Base.metadata.drop_all(eng)
     Base.metadata.create_all(eng)
     yield eng
