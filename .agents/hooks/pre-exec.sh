@@ -5,10 +5,14 @@ set -u
 input=$(cat)
 cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 0
 [ -z "$cmd" ] && exit 0
+# Match against a whitespace-flattened copy so multi-space or
+# line-continued spellings still hit the gates. Quoted forms like
+# git "commit" evade by design (README lists the gaps).
+cmd_flat=$(printf '%s' "$cmd" | tr -s '[:space:]' ' ')
 
 block() { printf '%s\n' "$1" >&2; exit 2; }
 
-first=$(printf '%s' "$cmd" | awk '{print $1}')
+first=$(printf '%s' "$cmd_flat" | awk '{print $1}')
 
 # AGENTS.md rule 3: Python commands go through uv run.
 case "$first" in
@@ -20,14 +24,14 @@ case "$first" in
     ;;
 esac
 
-case "$cmd" in
+case "$cmd_flat" in
   *".venv/bin/"*|"source .venv"*|" . .venv"*)
     block "Never activate .venv manually. Use 'uv run <cmd>' (AGENTS.md rule 3)."
     ;;
 esac
 
 # Dangerous commands.
-case "$cmd" in
+case "$cmd_flat" in
   *"git push --force"*|*"git push -f "*|*"git push -f")
     block "Force push blocked."
     ;;
@@ -40,8 +44,8 @@ case "$cmd" in
   *"DROP TABLE"*|*"drop table"*|*"mkfs"*|*"dd if="*)
     block "Destructive command blocked."
     ;;
-  *"git config"*"ooks"[Pp]"ath"*|*"git -c"*"ooks"[Pp]"ath"*|*"GIT_CONFIG_PARAMETERS"*"ooks"[Pp]"ath"*)
-    case "$cmd" in
+  *"git config"*"ooks"[Pp]"ath"*|*"git -c"*"ooks"[Pp]"ath"*|*"GIT_CONFIG_PARAMETERS"*"="*"ooks"[Pp]"ath"*|*"GIT_CONFIG_KEY"*"="*"ooks"[Pp]"ath"*)
+    case "$cmd_flat" in
       *--get*|*--list*) ;;
       *) block "Changing core.hooksPath blocked." ;;
     esac
@@ -59,16 +63,22 @@ root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." 2>
 # clean code-review pass; edits after stamping invalidate it. Bypass
 # vectors are denied. Subagent calls are exempt: implement-spec
 # subagents are gated by the orchestrator's code-review step instead.
-case "$cmd" in
+case "$cmd_flat" in
   *"git commit"*|*"git -"*"commit"*)
     # Bypass flags are scoped to the commit invocation's own args so a
     # '-n' in a neighbouring compound command does not false-block.
-    case "$cmd" in
+    case "$cmd_flat" in
+      *"git -C "*|*"git --git-dir"*)
+        block "Commits via -C/--git-dir bind the marker to this repo's hash. cd there and commit plainly."
+        ;;
+      *commit*";"*commit*|*commit*"&"*commit*|*commit*"|"*commit*)
+        block "One commit per command: each commit needs its own review marker."
+        ;;
       *--no-veri*|*"SKIP="*|*"HUSKY="*|*"LEFTHOOK="*|*"OVERCOMMIT_DISABLE"*)
         block "Commit bypass blocked: hooks and the review gate must run."
         ;;
     esac
-    cargs=${cmd#*commit}; cargs=${cargs%%[;&|]*}
+    cargs=${cmd_flat#*commit}; cargs=${cargs%%[;&|]*}
     set -f
     for a in $cargs; do
       case "$a" in

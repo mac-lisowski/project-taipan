@@ -45,31 +45,36 @@
 - Second review pass (committed e2d894e): parent hooks resolve root
   env -> script location -> cwd; routes read TAIPAN_TARGET;
   falsegreen-js glob covers colocated *.test.js/.jsx and __tests__/.
-- Review/stamp/gate stack (UNCOMMITTED): pre-exec.sh blocks git
-  commit without a diff-bound marker /tmp/taipan-review-<key>-<hash>
-  written by review-stamp.sh; bypass vectors denied; subagent calls
-  exempt. code-review skill stamps in step 7 on uncommitted diffs
-  (step 6 = test-smell pass on touched tests). plan skill step 7 runs
-  an adversarial plan-review subagent (coverage/grounding/scope/
-  feasibility/test-strategy, BLOCKER/WARNING with file:line, max 2
-  rounds). commit-msg stage: scripts/check-commit-msg.sh caps every
-  line at 120, skips #-comments and commit -v scissors; installed via
-  pre-commit install --hook-type commit-msg. post-write.sh flags
+- Review/stamp/gate stack (feat/agent-mode-hooks, committed 6be7994
+  + fixes 2562d19, PR #3 to dev): pre-exec.sh blocks git commit
+  without a diff-bound marker /tmp/taipan-review-<key>-<hash> written
+  by review-stamp.sh; bypass vectors denied; subagent calls exempt.
+  code-review skill stamps in step 7 on uncommitted diffs (step 6 =
+  test-smell pass; diff = git diff HEAD plus untracked files via
+  git diff --no-index). plan skill step 7 runs an adversarial
+  plan-review subagent (5 axes, BLOCKER/WARNING + file:line, max 2
+  rounds). commit-msg stage: check-commit-msg.sh caps every line at
+  120, skips #-comments and commit -v scissors. post-write.sh flags
   >3-line comment runs incl /* openers (advisory). pre-write.sh
   protects manifests and gate files, anchored to project root.
-  Exec-side write deterrent was tried and REMOVED: a syntax bug
-  locked out all exec - that file is a loaded gun, see
-  learnings/hook-editing-lockout.md.
-- Third review pass fixes (UNCOMMITTED): taipan_diff_hash now binds
-  worktree blob hashes per changed path, path-sorted, so git add
-  does not invalidate a stamp (partial-staging still does); untracked
-  file contents are hashed, not just paths. commit-tree/update-ref
-  denial moved to the always-on dangerous-command case (was dead code
-  standalone). Commit match widened to git -<global-flags>. -n bundle
-  check is a per-token loop scoped to the commit args (fixes both the
-  missed -sn/-ns bundles and false blocks on neighbouring bash -n).
-  dhash empty now blocks instead of failing open. git config
-  --get/--list on hooksPath exempted.
+- taipan_diff_hash binds HEAD + path/mode/worktree-blob-hash sorted
+  (symlinks bind link target) + stale-index cached diffs. git add on
+  fully-unstaged work keeps a stamp; partial-staging, content/mode
+  edits, or HEAD moves invalidate. External review fixes applied:
+  HEAD+mode binding, untracked files in review diff. Exec-side write
+  deterrent was tried and REMOVED (lockout, see
+  learnings/hook-editing-lockout.md).
+- Third review pass on PR #3 (committed 7922d77, needs force-push):
+  pre-write.sh traversal bypass fixed (/./ squeeze rewrote ../
+  paths; pwd -P canonicalizes alone); pre-exec.sh matches a
+  whitespace-flattened copy, denies foreign (-C/--git-dir) commits,
+  second commits after separators, and GIT_CONFIG_KEY_n hooksPath
+  pairs; stop-nudge.sh gains the script-location root tier and
+  literal grep; comment-run counting starts after line 10 (boundary
+  runs now flag); taipan_timeout degrades to unbounded without GNU
+  timeout (stock macOS); em-dash hook entry is portable sed -i.bak
+  (config file excluded from its own gate). Batteries: 23+13+5
+  cases green, bash -n clean.
 - Pending: nothing on gates; docs reviewed (no exemption).
 - Next step: auth/session layer (FastAPI owns sessions in Redis via
   API_REDIS_URL), src/proxy.ts auth gate once auth endpoints exist

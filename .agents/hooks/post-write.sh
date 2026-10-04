@@ -9,6 +9,7 @@ file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // ""' 2>/dev/null) |
 root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd)}}"
 [ -z "$root" ] && root=$PWD
 cd "$root" 2>/dev/null || exit 0
+[ -f "$root/.agents/hooks/mode-lib.sh" ] && . "$root/.agents/hooks/mode-lib.sh"
 [ -f "$file" ] || exit 0
 
 case "$file" in
@@ -33,11 +34,12 @@ esac
 case "$file" in
   *.py|*.ts|*.tsx|*.js|*.jsx)
     crun=$(awk '
+      NR <= 10 { run = 0; next }
       /^[[:space:]]*#/ || /^[[:space:]]*\/\// || /^[[:space:]]*\*/ || /^[[:space:]]*\/\*/ {
         if (run == 0) start = NR; run++; next
       }
-      { if (run > 3 && start > 10) { printf "%d (%d lines)", start, run; found = 1; exit } run = 0 }
-      END { if (!found && run > 3 && start > 10) printf "%d (%d lines)", start, run }
+      { if (run > 3) { printf "%d (%d lines)", start, run; found = 1; exit } run = 0 }
+      END { if (!found && run > 3) printf "%d (%d lines)", start, run }
     ' "$file" 2>/dev/null)
     [ -n "$crun" ] && notes="$notes comment run at line $crun in $file - keep comments to one line, why not what."
     ;;
@@ -67,10 +69,10 @@ case "$file" in
     fg=""
     case "$file" in
       *.py)
-        fg=$(timeout 8 uvx falsegreen "$file" 2>/dev/null || true)
+        fg=$(taipan_timeout 8 uvx falsegreen "$file" 2>/dev/null || true)
         ;;
       *.ts|*.tsx|*.js|*.jsx)
-        fg=$(timeout 8 npx --yes falsegreen-js "$file" 2>/dev/null || true)
+        fg=$(taipan_timeout 8 npx --yes falsegreen-js "$file" 2>/dev/null || true)
         ;;
     esac
     case "$fg" in

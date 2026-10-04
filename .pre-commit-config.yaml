@@ -11,7 +11,7 @@ repos:
     hooks:
       - id: no-em-dashes
         name: replace em dashes with hyphens
-        entry: sed -i 's/\xe2\x80\x94/-/g'
+        entry: bash -c 'd=$(printf "\\342\\200\\224"); for f in "$@"; do sed -i.bak "s/$d/-/g" "$f" && rm "$f.bak"; done' --
         language: system
         types: [text]
         exclude: '^(\.agents/skills/|\.devin/|\.claude/|\.grok/|\.zcode/|uv\.lock$|skills-lock\.json$)'

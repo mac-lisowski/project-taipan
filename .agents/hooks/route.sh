@@ -33,7 +33,7 @@ route="$root/.agents/hooks/hooks.d/$mode/$event.sh"
 
 target=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // .tool_input.command // ""' 2>/dev/null) || target=""
 out=$(TAIPAN_MODE="$mode" TAIPAN_TARGET="$target" TAIPAN_ROOT="$root" \
-  timeout 8 bash "$route" <<<"$input" 2>/dev/null) || true
+  taipan_timeout 8 bash "$route" <<<"$input" 2>/dev/null) || true
 [ -z "$out" ] && exit 0
 
 # Once per mode-set. Noclobber create claims the marker atomically, so

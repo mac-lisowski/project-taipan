@@ -19,7 +19,7 @@ defines hooks. Devin reads both, and every hook would fire twice.
 
 | Script | Event | Action |
 |---|---|---|
-| `pre-exec.sh` | PreToolUse (`exec`/`Bash`) | Blocks bare `python`/`pytest`/`ruff`/`alembic`/`uvicorn` (use `uv run`), `pip` (use `uv add`), `.venv` activation, force push, `git reset --hard`, dangerous `rm -rf`, `DROP TABLE`, `core.hooksPath` changes. Commit gate: blocks `git commit` without a review marker bound to the diff (see Commit gate). Then runs mode routing. |
+| `pre-exec.sh` | PreToolUse (`exec`/`Bash`) | Blocks bare `python`/`pytest`/`ruff`/`alembic`/`uvicorn` (use `uv run`), `pip` (use `uv add`), `.venv` activation, force push, `git reset --hard`, `git clean -f`, dangerous `rm -rf`, `DROP TABLE`, `core.hooksPath` changes. Commit gate: blocks `git commit` without a review marker bound to the diff (see Commit gate). Then runs mode routing. |
 | `pre-write.sh` | PreToolUse (write tools) | Blocks writes to `uv.lock`, `skills-lock.json`, `.venv/`, `.git/`, tool manifests (`.claude/settings*.json`, `.zcode/config*.json`, `.devin/config*.json`), gate files (`.pre-commit-config.yaml`, `scripts/check-*.sh`, the hook scripts themselves). Then runs mode routing. |
 | `post-write.sh` | PostToolUse (write tools) | Em-dash check; `ruff check` on `.py`; 300-LOC warning on source files; comment-run warning (>3 consecutive comment lines after the first 10, `#`/`//`/`/*`/` *` counted, `.py`/`.ts`/`.tsx`/`.js`/`.jsx`); BFF-boundary warning on `apps/web/src` outside `app/api/`; `falsegreen`/`falsegreen-js` scan on test files + one-shot `test-smell-review` nudge. Then runs mode routing. Findings go to context. |
 | `post-exec.sh` | PostToolUse (`exec`/`Bash`) | After `db-revision`: remind to review the migration. Then runs mode routing. |
@@ -57,9 +57,15 @@ flowchart LR
   `GIT_CONFIG_PARAMETERS`), `SKIP=`/`HUSKY=`/`LEFTHOOK=`/
   `OVERCOMMIT_DISABLE`. Read-only `git config --get`/`--list` pass.
 - Flag detection is scoped to the commit invocation's own args, so a
-  `-n` inside a neighbouring compound command does not false-block.
+  `-n` in a neighbouring compound command does not false-block.
   Strings inside a quoted `-m` message still can - matching is on the
-  command text, not parsed argv.
+  command text, not parsed argv. A command containing a second commit
+  after a separator is blocked outright: one commit per command, each
+  with its own marker.
+- `git -C <repo>`/`--git-dir` commits are blocked outright: the marker
+  binds this repo's hash, not the foreign repo's. `cd` there and
+  commit plainly. `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` hooksPath
+  pairs are denied alongside `GIT_CONFIG_PARAMETERS`.
 - The marker proves a stamp file exists, not that a review ran: the
   agent can mint one itself. Same "deterrent, not boundary" model as
   the write protection below.
@@ -72,11 +78,12 @@ flowchart LR
   ignored). Fresh clones get the stage via
   `default_install_hook_types`; existing checkouts need
   `pre-commit install` once.
-- `git merge`/`rebase`/`cherry-pick`/`stash` create commits without
-  matching `git commit` and are not gated; `export SKIP=` set by an
-  earlier command, commits inside scripts or Makefiles, and
-  `git -C <other-repo>` are outside the string match. Their
-  pre-commit hooks still run.
+- `git merge`/`rebase`/`cherry-pick`/`stash`/`am`/`pull` create
+  commits without matching `git commit` and are not gated;
+  `export SKIP=` set by an earlier command, commits inside scripts
+  or Makefiles, `git ci` aliases, and quoted/IFS-obfuscated spellings
+  (`git "commit"`, `git commit${IFS}-n`) are outside the string match.
+  Their pre-commit hooks still run.
 - Residual hole, documented: the write protection in `pre-write.sh`
   covers the write/edit tools only. A shell command (`sed -i`,
   `>`, `tee`, `python`) can still modify gate files - hooks are

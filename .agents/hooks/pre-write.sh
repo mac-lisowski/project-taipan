@@ -22,7 +22,6 @@ esac
 # they are nudges, not gates.
 abs=$file
 case "$abs" in /*) ;; *) abs=$PWD/$abs ;; esac
-abs=${abs//\.\//\/}
 nd=$(cd "$(dirname "$abs")" 2>/dev/null && pwd -P) && abs="$nd/${abs##*/}"
 case "$abs" in
   "$root"/.claude/settings*.json|"$root"/.zcode/config*.json|"$root"/.devin/config*.json)

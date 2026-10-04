@@ -32,3 +32,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Hook root resolution: script location before cwd](learnings/hook-root-resolution.md)
 - [Editing live hook files is a loaded gun](learnings/hook-editing-lockout.md)
 - [Diff hash binds worktree content, not diff position](learnings/diff-hash-staging-invariance.md)
+- [Canonicalize paths via pwd -P, never string surgery](learnings/path-normalization-squeeze.md)

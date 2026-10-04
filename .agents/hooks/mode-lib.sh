@@ -67,6 +67,12 @@ taipan_hash() {
   fi
 }
 
+# `timeout` is GNU coreutils. Run the command unbounded when it is
+# missing (stock macOS) rather than skipping the check entirely.
+taipan_timeout() {
+  if command -v timeout >/dev/null 2>&1; then timeout "$@"; else shift; "$@"; fi
+}
+
 # Digest of the change a commit could record, bound to the current
 # HEAD and to worktree bytes+modes rather than index state: every path
 # differing from HEAD contributes its mode and worktree blob hash;
