@@ -29,3 +29,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Job skipped because an upstream needs job was skipped](learnings/gha-skip-propagates.md)
 - [npx skills CLI behavior in this repo](learnings/skills-cli.md)
 - [falsegreen vs falsegreen-js output formats differ](learnings/falsegreen-js-format.md)
+- [Hook root resolution: script location before cwd](learnings/hook-root-resolution.md)

@@ -34,17 +34,22 @@
   Trimmed botica-internal refs (drift: `npx skills update` clobbers).
   Wired: AGENTS.md rule 9, plan skill step 6 + output, implement-spec
   step 4. `uvx falsegreen <files>` is the structural pass.
-- Agent mode system (branch feat/agent-mode-hooks, UNCOMMITTED):
-  agent-mode.sh set|get|clear|list over fixed enum
+- Agent mode system (feat/agent-mode-hooks, committed 7e9b63d,
+  pushed): agent-mode.sh set|get|clear|list over fixed enum
   (plan implement test review debug docs commit); state file
   /tmp/taipan-mode-<rootkey>; route.sh dispatches to
   hooks.d/<mode>/<event>.sh (advisory nudges, once per mode-set,
   never block, skipped in subagents). Wired into all four tool hooks
   + session-start. AGENTS.md rule 10. post-write.sh also runs
-  falsegreen on test files deterministically. Two review agents
-  fixed: /tmp mode-file path traversal (validated enum),
-  cwd-keyed root, sha1sum fallback, dedup TOCTOU, glob anchoring,
-  set -u unbound fg, falsegreen-js format diff.
+  falsegreen on test files deterministically.
+- Second review pass (UNCOMMITTED fixes): parent hooks now resolve
+  root env -> script location -> cwd; routes read TAIPAN_TARGET
+  instead of re-parsing stdin; falsegreen-js glob covers colocated
+  *.test.js/.jsx and __tests__/; nmark fallback uses cksum;
+  README contract documents agent_id and TAIPAN_TARGET.
+- Pending proposal: commit-msg length gate (subject <=100, one line)
+  + comment-prose check for .py/.ts - research done, not yet
+  presented for approval.
 - Next step: auth/session layer (FastAPI owns sessions in Redis via
   API_REDIS_URL), src/proxy.ts auth gate once auth endpoints exist
 - Blockers: host port 5432 taken by python-playground-db-1; root

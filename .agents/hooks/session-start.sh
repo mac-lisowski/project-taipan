@@ -3,7 +3,8 @@
 set -u
 cat >/dev/null  # consume stdin
 
-root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd)}}"
+[ -z "$root" ] && root=$PWD
 cd "$root" 2>/dev/null || exit 0
 
 ctx=""
@@ -19,8 +20,8 @@ WARNING: broken skill symlinks:
 $broken"
 
 mode=""
-if [ -f .agents/hooks/mode-lib.sh ]; then
-  . .agents/hooks/mode-lib.sh
+if [ -f "$root/.agents/hooks/mode-lib.sh" ]; then
+  . "$root/.agents/hooks/mode-lib.sh"
   mode=$(taipan_mode_get)
 fi
 ctx="$ctx

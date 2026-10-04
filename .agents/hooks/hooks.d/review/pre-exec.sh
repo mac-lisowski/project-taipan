@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # review mode route: nudge the code-review skill before a commit.
-# Route contract: stdin = hook JSON; stdout = plain-text nudge; exit 0.
+# Route contract: env TAIPAN_TARGET carries the command; stdin has the hook
+# JSON if needed; stdout = plain-text nudge; exit 0.
 set -u
-input=$(cat)
-cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 0
+cmd="${TAIPAN_TARGET:-}"
 
 case "$cmd" in
   *"git commit"*)

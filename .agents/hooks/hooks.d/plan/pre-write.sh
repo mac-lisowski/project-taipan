@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # plan mode route: warn once per mode-set when the agent edits code.
-# Route contract: stdin = hook JSON; stdout = plain-text nudge; exit 0.
+# Route contract: env TAIPAN_TARGET carries the write target; stdin has the
+# hook JSON if needed; stdout = plain-text nudge; exit 0.
 set -u
-input=$(cat)
-file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // ""' 2>/dev/null) || exit 0
+file="${TAIPAN_TARGET:-}"
 
 case "$file" in
   *.py|*.ts|*.tsx|*.js|*.jsx|*.sql|*.sh|*.ipynb)

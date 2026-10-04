@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # test mode route: before a commit, remind that green still needs the
 # J1-J6 judgment pass.
-# Route contract: stdin = hook JSON; stdout = plain-text nudge; exit 0.
+# Route contract: env TAIPAN_TARGET carries the command; stdin has the hook
+# JSON if needed; stdout = plain-text nudge; exit 0.
 set -u
-input=$(cat)
-cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 0
+cmd="${TAIPAN_TARGET:-}"
 
 case "$cmd" in
   *"git commit"*)

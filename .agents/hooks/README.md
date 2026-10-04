@@ -40,8 +40,9 @@ bash .agents/hooks/agent-mode.sh list          # vocabulary
 Vocabulary: `plan implement test review debug docs commit`. `set`
 rejects anything else. State is a file in `/tmp` keyed by project
 root (an exec'd script cannot see `session_id`). `set` to a different
-mode and `clear` reset route dedup markers so a new mode re-nudges
-once. Re-setting the same mode is a no-op and keeps the markers.
+mode and `clear` reset all markers under this project's key - route
+dedup and the one-shot test-scan nudge - so a new mode re-nudges once.
+Re-setting the same mode is a no-op and keeps the markers.
 
 `route.sh` is the dispatcher. Parent hooks call it last with the raw
 hook JSON on stdin and the event name as `$1`. If a mode is set and
@@ -49,8 +50,9 @@ hook JSON on stdin and the event name as `$1`. If a mode is set and
 
 Route contract for `hooks.d/<mode>/<event>.sh`:
 
-- stdin: the hook JSON. env: `TAIPAN_MODE`, `TAIPAN_TARGET`
-  (file_path, notebook_path, or command), `TAIPAN_ROOT`.
+- env: `TAIPAN_MODE`, `TAIPAN_TARGET` (file_path, notebook_path, or
+  command), `TAIPAN_ROOT`. Prefer `TAIPAN_TARGET` over re-parsing stdin.
+- stdin: the hook JSON (usually unneeded once `TAIPAN_TARGET` is read).
 - stdout: a short plain-text nudge. `route.sh` hands it to the
   parent hook, which wraps it in `additionalContext`.
 - Each nudge fires **once per mode-set** (dedup marker in `/tmp`),
@@ -66,7 +68,8 @@ edit needed; parent hooks already call `route.sh`.
 
 ## Contract
 
-- stdin: `{"tool_name", "tool_input": {"command"|"file_path"}, "session_id"}`
+- stdin: `{"tool_name", "tool_input": {"command"|"file_path"|"notebook_path"}, "session_id", "agent_id"?}`.
+  `agent_id` is present on subagent tool calls; `route.sh` skips them.
 - Block: exit `2`, reason on stderr.
 - Context: stdout `{"hookSpecificOutput": {"hookEventName": "<Event>", "additionalContext": "..."}}`.
 - Stop nudge uses `{"decision": "block", "reason": "..."}` so the agent continues once.

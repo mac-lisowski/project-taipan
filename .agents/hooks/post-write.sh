@@ -6,7 +6,8 @@ input=$(cat)
 file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // ""' 2>/dev/null) || exit 0
 [ -z "$file" ] && exit 0
 
-root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd)}}"
+[ -z "$root" ] && root=$PWD
 cd "$root" 2>/dev/null || exit 0
 [ -f "$file" ] || exit 0
 
@@ -47,7 +48,7 @@ esac
 
 # Test files: deterministic false-green scan (AGENTS.md rule 9).
 case "$file" in
-  */tests/*|*/test_*.py|*conftest.py|*.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx)
+  */tests/*|*/__tests__/*|*/test_*.py|*conftest.py|*.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx|*.test.js|*.test.jsx|*.spec.js|*.spec.jsx)
     fg=""
     case "$file" in
       *.py)
@@ -65,7 +66,7 @@ case "$file" in
         ;;
     esac
     [ -f "$root/.agents/hooks/mode-lib.sh" ] && . "$root/.agents/hooks/mode-lib.sh"
-    nmark="/tmp/taipan-nudge-$(taipan_key 2>/dev/null || printf '%s' "$root" | sha1sum | cut -c1-12)-test"
+    nmark="/tmp/taipan-nudge-$(taipan_key 2>/dev/null || printf '%s' "$root" | cksum | awk '{printf "%012x", $1}')-test"
     if [ ! -f "$nmark" ]; then
       touch "$nmark"
       notes="$notes Test file changed: finish with the test-smell-review judgment pass (J1-J6)."

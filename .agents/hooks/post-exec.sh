@@ -12,7 +12,8 @@ case "$cmd" in
     ;;
 esac
 
-root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd)}}"
+[ -z "$root" ] && root=$PWD
 route_out=$(printf '%s' "$input" | bash "$root/.agents/hooks/route.sh" post-exec 2>/dev/null || true)
 [ -n "$route_out" ] && ctx="${ctx:+$ctx }$route_out"
 
