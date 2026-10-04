@@ -40,10 +40,56 @@ case "$cmd" in
   *"DROP TABLE"*|*"drop table"*|*"mkfs"*|*"dd if="*)
     block "Destructive command blocked."
     ;;
+  *"git config"*"ooks"[Pp]"ath"*|*"git -c"*"ooks"[Pp]"ath"*|*"GIT_CONFIG_PARAMETERS"*"ooks"[Pp]"ath"*)
+    case "$cmd" in
+      *--get*|*--list*) ;;
+      *) block "Changing core.hooksPath blocked." ;;
+    esac
+    ;;
+  *commit-tree*|*update-ref*)
+    block "Git plumbing that mints commits or moves refs is blocked."
+    ;;
 esac
 
 root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd)}}"
 [ -z "$root" ] && root=$PWD
+
+# Commit gate (AGENTS.md rule 11): a commit needs a review marker bound
+# to the exact staged+unstaged diff. Stamp via review-stamp.sh after a
+# clean code-review pass; edits after stamping invalidate it. Bypass
+# vectors are denied. Subagent calls are exempt: implement-spec
+# subagents are gated by the orchestrator's code-review step instead.
+case "$cmd" in
+  *"git commit"*|*"git -"*"commit"*)
+    # Bypass flags are scoped to the commit invocation's own args so a
+    # '-n' in a neighbouring compound command does not false-block.
+    case "$cmd" in
+      *--no-veri*|*"SKIP="*|*"HUSKY="*|*"LEFTHOOK="*|*"OVERCOMMIT_DISABLE"*)
+        block "Commit bypass blocked: hooks and the review gate must run."
+        ;;
+    esac
+    cargs=${cmd#*commit}; cargs=${cargs%%[;&|]*}
+    set -f
+    for a in $cargs; do
+      case "$a" in
+        -[a-zA-Z]*)
+          case "${a#-}" in
+            *n*) block "Commit bypass blocked: hooks and the review gate must run." ;;
+          esac
+          ;;
+      esac
+    done
+    set +f
+    agent_id=$(printf '%s' "$input" | jq -r '.agent_id // ""' 2>/dev/null) || agent_id=""
+    if [ -z "$agent_id" ]; then
+      . "$root/.agents/hooks/mode-lib.sh" 2>/dev/null || block "Review gate cannot verify state (mode-lib.sh missing) - ask the user."
+      dhash=$(cd "$root" 2>/dev/null && taipan_diff_hash)
+      [ -z "$dhash" ] && block "Review gate cannot compute the diff hash (project root unreachable) - ask the user."
+      marker="/tmp/taipan-review-$(taipan_key)-$dhash"
+      [ -f "$marker" ] || block "Review gate: run the code-review skill on the uncommitted diff (HEAD..worktree) plus test-smell-review on touched tests, then 'bash .agents/hooks/review-stamp.sh'. The stamp binds to this diff; new edits invalidate it."
+    fi
+    ;;
+esac
 ctx=$(printf '%s' "$input" | bash "$root/.agents/hooks/route.sh" pre-exec 2>/dev/null || true)
 [ -n "$ctx" ] && jq -nc --arg c "$ctx" '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:$c}}'
 exit 0

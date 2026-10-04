@@ -1,3 +1,5 @@
+default_install_hook_types: [pre-commit, pre-push, commit-msg]
+
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.10
@@ -28,6 +30,11 @@ repos:
         entry: scripts/check-docker.sh
         language: system
         pass_filenames: false
+      - id: commit-msg-len
+        name: commit message line cap (120 chars)
+        entry: scripts/check-commit-msg.sh
+        language: system
+        stages: [commit-msg]
       - id: pytest
         name: pytest
         entry: uv run pytest

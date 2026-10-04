@@ -28,6 +28,21 @@ case "$file" in
     ;;
 esac
 
+# Comment runs: 4+ consecutive comment lines after the header zone.
+# Advisory only; explains why, not what (AGENTS.md rule 11).
+case "$file" in
+  *.py|*.ts|*.tsx|*.js|*.jsx)
+    crun=$(awk '
+      /^[[:space:]]*#/ || /^[[:space:]]*\/\// || /^[[:space:]]*\*/ || /^[[:space:]]*\/\*/ {
+        if (run == 0) start = NR; run++; next
+      }
+      { if (run > 3 && start > 10) { printf "%d (%d lines)", start, run; found = 1; exit } run = 0 }
+      END { if (!found && run > 3 && start > 10) printf "%d (%d lines)", start, run }
+    ' "$file" 2>/dev/null)
+    [ -n "$crun" ] && notes="$notes comment run at line $crun in $file - keep comments to one line, why not what."
+    ;;
+esac
+
 case "$file" in
   *.py)
     out=$(uv run ruff check --output-format concise "$file" 2>/dev/null)

@@ -32,6 +32,14 @@
     implement, test, review, debug, docs, commit. Mode selects which
     advisory nudges run (`.agents/hooks/hooks.d/<mode>/`). It never
     replaces the hard gates.
+11. Before `git commit`: run the `code-review` skill on the
+    uncommitted diff (fixed point `HEAD`, `git diff HEAD`) and
+    `test-smell-review` on touched tests. When clean, stamp with
+    `bash .agents/hooks/review-stamp.sh` - the hook blocks the commit
+    without it and any edit invalidates the stamp. Never use
+    `--no-verify` or `-n`. Commit messages: subject and every line
+    <= 120 chars (`scripts/check-commit-msg.sh`). Comments explain
+    why, not what: one line, no narration blocks.
 
 ## Project map
 

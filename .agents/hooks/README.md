@@ -19,12 +19,68 @@ defines hooks. Devin reads both, and every hook would fire twice.
 
 | Script | Event | Action |
 |---|---|---|
-| `pre-exec.sh` | PreToolUse (`exec`/`Bash`) | Blocks bare `python`/`pytest`/`ruff`/`alembic`/`uvicorn` (use `uv run`), `pip` (use `uv add`), `.venv` activation, force push, `git reset --hard`, dangerous `rm -rf`, `DROP TABLE`. Then runs mode routing. |
-| `pre-write.sh` | PreToolUse (write tools) | Blocks writes to `uv.lock`, `skills-lock.json`, `.venv/`, `.git/`. Then runs mode routing. |
-| `post-write.sh` | PostToolUse (write tools) | Em-dash check; `ruff check` on `.py`; 300-LOC warning on source files; BFF-boundary warning on `apps/web/src` outside `app/api/`; `falsegreen`/`falsegreen-js` scan on test files + one-shot `test-smell-review` nudge. Then runs mode routing. Findings go to context. |
+| `pre-exec.sh` | PreToolUse (`exec`/`Bash`) | Blocks bare `python`/`pytest`/`ruff`/`alembic`/`uvicorn` (use `uv run`), `pip` (use `uv add`), `.venv` activation, force push, `git reset --hard`, dangerous `rm -rf`, `DROP TABLE`, `core.hooksPath` changes. Commit gate: blocks `git commit` without a review marker bound to the diff (see Commit gate). Then runs mode routing. |
+| `pre-write.sh` | PreToolUse (write tools) | Blocks writes to `uv.lock`, `skills-lock.json`, `.venv/`, `.git/`, tool manifests (`.claude/settings*.json`, `.zcode/config*.json`, `.devin/config*.json`), gate files (`.pre-commit-config.yaml`, `scripts/check-*.sh`, the hook scripts themselves). Then runs mode routing. |
+| `post-write.sh` | PostToolUse (write tools) | Em-dash check; `ruff check` on `.py`; 300-LOC warning on source files; comment-run warning (>3 consecutive comment lines after the first 10, `#`/`//`/`/*`/` *` counted, `.py`/`.ts`/`.tsx`/`.js`/`.jsx`); BFF-boundary warning on `apps/web/src` outside `app/api/`; `falsegreen`/`falsegreen-js` scan on test files + one-shot `test-smell-review` nudge. Then runs mode routing. Findings go to context. |
 | `post-exec.sh` | PostToolUse (`exec`/`Bash`) | After `db-revision`: remind to review the migration. Then runs mode routing. |
 | `session-start.sh` | SessionStart | Injects `.agents/memory/current.md`, the current activity mode, and the mode command; warns on broken skill symlinks. |
 | `stop-nudge.sh` | Stop | Once per session: if tree is dirty and memory untouched, tells the agent to update memory. |
+
+## Commit gate
+
+A commit is allowed only with a review marker bound to the exact
+diff it would record:
+
+```mermaid
+flowchart LR
+    A["git commit"] --> B{"bypass flags?<br/>--no-verify, -n, plumbing"}
+    B -->|yes| C["exit 2 deny"]
+    B -->|no| D{"marker?<br/>/tmp/taipan-review-&lt;key&gt;-&lt;hash&gt;"}
+    D -->|no| E["exit 2: run code-review,<br/>then review-stamp.sh"]
+    D -->|yes| F["allow"]
+```
+
+- `review-stamp.sh` runs `taipan_diff_hash`: every path differing
+  from HEAD contributes its worktree blob hash, plus the cached diff
+  of any path whose staged content diverges from the worktree. A
+  content edit after stamping invalidates the marker. `git add` does
+  not - unless the path was partially staged (index and worktree
+  differed), which rewrites what the commit would record and needs a
+  new stamp.
+- The `code-review` skill ends with the stamp step. Review covers
+  `git diff HEAD` (staged + unstaged); `test-smell-review` covers
+  touched tests.
+- Bypass vectors denied in `pre-exec.sh`: `--no-verify` (including
+  unambiguous abbreviations), `-n` alone or bundled (`-sn`, `-avn`),
+  `commit-tree`, `update-ref`, `core.hooksPath` (including
+  `GIT_CONFIG_PARAMETERS`), `SKIP=`/`HUSKY=`/`LEFTHOOK=`/
+  `OVERCOMMIT_DISABLE`. Read-only `git config --get`/`--list` pass.
+- Flag detection is scoped to the commit invocation's own args, so a
+  `-n` inside a neighbouring compound command does not false-block.
+  Strings inside a quoted `-m` message still can - matching is on the
+  command text, not parsed argv.
+- The marker proves a stamp file exists, not that a review ran: the
+  agent can mint one itself. Same "deterrent, not boundary" model as
+  the write protection below.
+- Subagent calls (`agent_id` present) are exempt: `implement-spec`
+  ticket commits are gated by the orchestrator's code-review step.
+- Humans committing in a terminal do not pass through these hooks;
+  the git-level backstops are the pre-commit checks plus the
+  `commit-msg` stage (`scripts/check-commit-msg.sh`: every message
+  line <= 120 chars, `#` comments and `commit -v` scissors content
+  ignored). Fresh clones get the stage via
+  `default_install_hook_types`; existing checkouts need
+  `pre-commit install` once.
+- `git merge`/`rebase`/`cherry-pick`/`stash` create commits without
+  matching `git commit` and are not gated; `export SKIP=` set by an
+  earlier command, commits inside scripts or Makefiles, and
+  `git -C <other-repo>` are outside the string match. Their
+  pre-commit hooks still run.
+- Residual hole, documented: the write protection in `pre-write.sh`
+  covers the write/edit tools only. A shell command (`sed -i`,
+  `>`, `tee`, `python`) can still modify gate files - hooks are
+  deterrents, not boundaries. The backstops are the same as for the
+  commit gate: pre-commit checks, the `commit-msg` stage, and CI.
 
 ## Activity modes
 
@@ -83,6 +139,7 @@ edit needed; parent hooks already call `route.sh`.
 .agents/hooks/
   mode-lib.sh     shared helpers (sourced, not run directly)
   agent-mode.sh   mode CLI the agent calls via exec
+  review-stamp.sh writes the commit-gate marker for the current diff
   route.sh        mode dispatcher, called by parent hooks
   hooks.d/        mode routes: hooks.d/<mode>/<event>.sh
     plan/pre-write.sh    warn once when editing code in plan mode

@@ -30,3 +30,5 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [npx skills CLI behavior in this repo](learnings/skills-cli.md)
 - [falsegreen vs falsegreen-js output formats differ](learnings/falsegreen-js-format.md)
 - [Hook root resolution: script location before cwd](learnings/hook-root-resolution.md)
+- [Editing live hook files is a loaded gun](learnings/hook-editing-lockout.md)
+- [Diff hash binds worktree content, not diff position](learnings/diff-hash-staging-invariance.md)
