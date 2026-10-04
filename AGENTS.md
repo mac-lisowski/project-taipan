@@ -7,6 +7,8 @@
    No em dashes.
 2. Do not edit generated scaffold files unless asked.
 3. Use `uv run <cmd>` for all commands. Never activate `.venv` manually.
+4. Memory lives in `.agents/memory/`. Read `current.md` before a task.
+   Update memory files per `.agents/memory/MEMORY.md` rules.
 
 ## Project map
 
@@ -20,6 +22,7 @@ packages/<name>/          libraries
 apps/<name>/              runnable apps
   src/<import_name>/      app code
 docs/learnings/           study notes
+.agents/memory/           agent memory across sessions
 ```
 
 Naming rule: folder `packages/core` → package `playground-core` (hyphens,
