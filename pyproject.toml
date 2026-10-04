@@ -20,7 +20,7 @@ members = ["packages/*", "apps/*"]
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
+    "httpx2>=2.13.1",
     "pre-commit>=4.6.2",
     "pytest>=8",
     "ruff>=0.6",
