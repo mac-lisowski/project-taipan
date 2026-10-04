@@ -22,7 +22,11 @@ class InfisicalKms:
         )
 
     def _request(self, method: str, path: str, json: dict | None = None) -> dict:
-        response = self._client.request(method, path, json=json)
+        try:
+            response = self._client.request(method, path, json=json)
+        except httpx2.HTTPError as exc:
+            # Spec story 5: clients must never inspect HTTP internals.
+            raise KmsError(f"{method} {path} failed: {type(exc).__name__}: {exc}") from exc
         if not response.is_success:
             raise KmsError(f"{method} {path} failed: {response.status_code} {response.text}")
         return response.json()

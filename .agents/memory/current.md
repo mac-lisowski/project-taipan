@@ -106,7 +106,16 @@
   to-tickets installed from mattpocock/skills, patched: tickets ->
   .scratch/<slug>/issues/ (.scratch now gitignored); implement-spec +
   code-review de-trackered.
-- Pending: implement infisical-kms spec (packages/kms, KmsClient
+- infisical-kms review fixes (feat/infisical-kms): _request wraps
+  httpx2.HTTPError in KmsError (spec story 5, chained via from);
+  test_transport_error_raises_kmserror runs everywhere (port 1).
+  Test file refactor: skip moved from pytestmark to per-test
+  live_only marker so the transport test is never skipped; Keys
+  NamedTuple now carries client+project_id+key_a (descriptive names,
+  no more per-test InfisicalKms construction); key B created inline
+  in test_cross_key_decrypt_fails per ticket 02.
+- Pending: merge feat/infisical-kms to dev (tickets 01-03 done,
+  memory DoD boxes ticked) (packages/kms, KmsClient
   encrypt/decrypt/rotate, admin create/del project+key, tests in
   apps/api/tests/test_infisical_kms.py, docs/infisical.md,
   .env.example KMS_KEY_ID).
