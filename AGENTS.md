@@ -17,6 +17,11 @@
 6. Inside the devcontainer the same `uv run` commands apply. DB hosts
    come from env vars (`API_DATABASE_URL`, `API_TEST_*`). `localhost`
    defaults in code are fine; never hardcode `db`.
+7. JS/TS apps (e.g. `apps/web`) use `pnpm -C apps/<name> <cmd>`. They
+   are not uv workspace members.
+8. Hard gates: 300 LOC per source file (`scripts/check-file-size.sh`)
+   and the web BFF boundary (`scripts/check-bff.sh`). Both run in
+   pre-commit and CI. Do not weaken them to make a check pass.
 
 ## Project map
 

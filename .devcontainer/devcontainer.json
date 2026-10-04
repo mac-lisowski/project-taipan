@@ -4,15 +4,22 @@
   "service": "app",
   "workspaceFolder": "/workspaces/project-taipan",
   "remoteUser": "root",
-  "postCreateCommand": "uv sync --frozen && uv run pre-commit install && uv run pre-commit install --hook-type pre-push && ln -sf /workspaces/project-taipan/.venv/bin/pre-commit /usr/local/bin/pre-commit",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24"
+    }
+  },
+  "postCreateCommand": "uv sync --frozen && uv run pre-commit install && uv run pre-commit install --hook-type pre-push && ln -sf /workspaces/project-taipan/.venv/bin/pre-commit /usr/local/bin/pre-commit && corepack enable && pnpm -C apps/web install --frozen-lockfile",
   "postStartCommand": "uv run db-upgrade",
-  "forwardPorts": [8000],
+  "forwardPorts": [8000, 3000],
   "customizations": {
     "vscode": {
       "extensions": [
         "charliermarsh.ruff",
         "ms-python.python",
-        "ms-python.vscode-pylance"
+        "ms-python.vscode-pylance",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/workspaces/project-taipan/.venv/bin/python"

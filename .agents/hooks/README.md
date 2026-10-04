@@ -21,7 +21,7 @@ defines hooks. Devin reads both, and every hook would fire twice.
 |---|---|---|
 | `pre-exec.sh` | PreToolUse (`exec`/`Bash`) | Blocks bare `python`/`pytest`/`ruff`/`alembic`/`uvicorn` (use `uv run`), `pip` (use `uv add`), `.venv` activation, force push, `git reset --hard`, dangerous `rm -rf`, `DROP TABLE`. |
 | `pre-write.sh` | PreToolUse (write tools) | Blocks writes to `uv.lock`, `skills-lock.json`, `.venv/`, `.git/`. |
-| `post-write.sh` | PostToolUse (write tools) | Em-dash check + `ruff check` on `.py` files. Findings go to context. |
+| `post-write.sh` | PostToolUse (write tools) | Em-dash check; `ruff check` on `.py`; 300-LOC warning on source files; BFF-boundary warning on `apps/web/src` outside `app/api/`. Findings go to context. |
 | `post-exec.sh` | PostToolUse (`exec`/`Bash`) | After `db-revision`: remind to review the migration. |
 | `session-start.sh` | SessionStart | Injects `.agents/memory/current.md`; warns on broken skill symlinks. |
 | `stop-nudge.sh` | Stop | Once per session: if tree is dirty and memory untouched, tells the agent to update memory. |

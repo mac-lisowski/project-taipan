@@ -19,3 +19,12 @@
   reads it natively, Devin and Grok via their `.claude` compat layers.
   No `.devin/hooks.v1.json` - Devin reads both and hooks would fire
   twice. ZCode gets its own `.zcode/config.json` (hooks.enabled).
+- Web is Next.js BFF (Option B.1): browser only reaches Next, the
+  catch-all in `src/app/api/[...path]/route.ts` forwards to FastAPI.
+  FastAPI owns sessions + Redis; web has no REDIS_URL, only
+  API_INTERNAL_URL (server-only, never NEXT_PUBLIC_).
+- FastAPI mounts all routers under `prefix="/api"` so the BFF proxy
+  is a dumb 1:1 forwarder with no path rewriting.
+- Hard file cap is 300 LOC (scripts/check-file-size.sh) and the BFF
+  boundary is scripts/check-bff.sh; both run in pre-commit and the
+  CI lint job. Exemptions only in the scripts, with a reason.
