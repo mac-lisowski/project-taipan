@@ -162,7 +162,10 @@ jobs:
 
   deploy:
     needs: ci-done
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    # always() is required: a skipped job anywhere upstream (changes on
+    # push) otherwise propagates a skip through the needs chain even
+    # when ci-done succeeded.
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/dev' && needs.ci-done.result == 'success'
     runs-on: ubuntu-latest
     # Literal: selects which GitHub environment's secrets/vars resolve.
     environment: project-taipan / dev
