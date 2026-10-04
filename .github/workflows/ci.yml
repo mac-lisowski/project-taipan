@@ -96,6 +96,7 @@ jobs:
       # LayoutProps/PageProps are generated; tsc fails without them.
       - run: pnpm -C apps/web exec next typegen
       - run: pnpm -C apps/web exec tsc --noEmit
+      - run: pnpm -C apps/web test
       - run: pnpm -C apps/web build
       - run: scripts/docker-build.sh web
       - name: web image smoke test
