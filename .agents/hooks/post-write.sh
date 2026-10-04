@@ -21,9 +21,26 @@ if grep -Iq $'\xe2\x80\x94' "$file" 2>/dev/null; then
 fi
 
 case "$file" in
+  *.py|*.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.sh)
+    lines=$(wc -l < "$file")
+    [ "$lines" -gt 300 ] && notes="$notes $file is $lines lines; cap is 300 (scripts/check-file-size.sh)."
+    ;;
+esac
+
+case "$file" in
   *.py)
     out=$(uv run ruff check --output-format concise "$file" 2>/dev/null || true)
     [ -n "$out" ] && notes="$notes ruff issues in $file: $out"
+    ;;
+  *apps/web/src/*.ts|*apps/web/src/*.tsx)
+    case "$file" in
+      *apps/web/src/app/api/*) ;;
+      *)
+        if grep -qE 'API_INTERNAL_URL|localhost:8000|NEXT_PUBLIC_[A-Z0-9_]*(API|BACKEND|INTERNAL)' "$file" 2>/dev/null; then
+          notes="$notes BFF boundary: $file touches the upstream API outside src/app/api/ (see apps/web/AGENTS.md)."
+        fi
+        ;;
+    esac
     ;;
 esac
 

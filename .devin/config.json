@@ -6,6 +6,7 @@
       "Exec(uv sync)",
       "Exec(uv lock)",
       "Exec(uv add)",
+      "Exec(pnpm)",
       "Exec(git status)",
       "Exec(git diff)",
       "Exec(git log)",

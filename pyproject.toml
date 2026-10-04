@@ -17,6 +17,8 @@ cli = { workspace = true }
 # Workspace members: shared libraries live in packages/, runnable apps in apps/
 [tool.uv.workspace]
 members = ["packages/*", "apps/*"]
+# apps/web is a pnpm project (Next.js), not a Python workspace member.
+exclude = ["apps/web"]
 
 [dependency-groups]
 dev = [

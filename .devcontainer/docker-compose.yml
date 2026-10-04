@@ -23,12 +23,17 @@ services:
       API_DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/app
       API_TEST_ADMIN_URL: postgresql+psycopg://postgres:postgres@db:5432/postgres
       API_TEST_URL: postgresql+psycopg://postgres:postgres@db:5432/app_test
+      # Session store for the api (FastAPI owns sessions; the web BFF
+      # only forwards cookies).
+      API_REDIS_URL: redis://redis:6379/0
       # testcontainers spawns into the sibling dind daemon.
       DOCKER_HOST: tcp://dind:2375
     depends_on:
       db:
         condition: service_healthy
       dind:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   # Docker-in-Docker daemon for testcontainers. Privileged by design.
@@ -45,6 +50,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+
+  redis:
+    image: redis:8-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   db:
     image: pgvector/pgvector:pg17

@@ -1,16 +1,17 @@
 # Devcontainer guide
 
 The devcontainer gives a full dev environment: Python 3.12, uv, git,
-pre-commit hooks, and Postgres 17 + pgvector. Everything the README
-commands need is inside.
+pre-commit hooks, Node 24 + pnpm, Postgres 17 + pgvector, and Redis.
+Everything the README commands need is inside.
 
 ## Layout
 
 ```mermaid
 graph TD
   subgraph devcontainer compose project
-    A[app<br>mcr devcontainers/python:3.12 + uv + docker CLI]
+    A[app<br>mcr devcontainers/python:3.12 + uv + docker CLI<br>+ Node 24 feature + pnpm]
     B[db<br>pgvector/pgvector:pg17]
+    E[redis<br>redis:8-alpine]
     D[dind<br>docker:28-dind, privileged]
     V1[(devcontainer-venv<br>masks host .venv)]
     V2[(devcontainer-pgdata)]
@@ -19,6 +20,7 @@ graph TD
   end
   R[repo on host] -->|bind mount| A
   A -->|db:5432| B
+  A -->|redis:6379| E
   A -->|DOCKER_HOST tcp://dind:2375| D
   D -->|spawns| T[testcontainers]
   A --- V1
@@ -32,9 +34,11 @@ Files:
 
 - `.devcontainer/Dockerfile` - dev image. `devcontainers/python:3.12`
   gives git, ssh, zsh, and the `vscode` user. uv is copied in, pinned.
-- `.devcontainer/docker-compose.yml` - `app`, `db`, and `dind` services.
+- `.devcontainer/docker-compose.yml` - `app`, `db`, `redis`, and `dind`
+  services.
 - `.devcontainer/devcontainer.json` - service, lifecycle hooks, ports,
-  editor extensions.
+  editor extensions. Node 24 comes from the `devcontainers/features/node`
+  feature; `corepack` in `postCreate` enables pnpm.
 - `.devcontainer/README.md` - quick reference.
 
 ## Why its own compose file
@@ -62,7 +66,10 @@ graph LR
 - `api.db` reads `API_DATABASE_URL` (always did).
 - `conftest.py` reads `API_TEST_ADMIN_URL` and `API_TEST_URL`. It needs
   an admin URL too because tests create the `app_test` database.
-- All three vars are registered in `apps/api/.env.example`.
+- `API_REDIS_URL` (session store, owned by the api) points at the
+  `redis` service. It defaults to `localhost:6379` on the host.
+- The api vars are registered in `apps/api/.env.example`, the web
+  vars in `apps/web/.env.example`.
 
 ## Docker for testcontainers
 
@@ -91,10 +98,10 @@ Why DinD and not the host socket (DooD):
 
 ```mermaid
 graph LR
-  A[image build] --> B[db healthy]
-  B --> C[postCreate<br>uv sync + pre-commit install]
+  A[image build + node feature] --> B[db + redis healthy]
+  B --> C[postCreate<br>uv sync + pre-commit + pnpm install]
   C --> D[postStart<br>uv run db-upgrade]
-  D --> E[you work<br>uv run pytest / api]
+  D --> E[you work<br>uv run pytest / api / pnpm dev]
 ```
 
 - `postCreateCommand` runs once per container create: installs deps and
@@ -122,6 +129,7 @@ uv sync                  # after pulling lockfile changes
 uv run pytest            # full suite, db-backed tests included
 uv run ruff check .
 uv run api               # http://localhost:8000 (auto-forwarded)
+pnpm -C apps/web dev     # http://localhost:3000 (auto-forwarded)
 uv run db-revision -m "add orders"
 git commit / git push    # hooks run inside the container
 ```
@@ -154,8 +162,8 @@ The `devcontainer-venv` volume is not mounted over
 `/workspaces/project-taipan/.venv`. Check the volume lines in
 `docker-compose.yml`.
 
-**Port 8000 not reachable on the host.**
-Only ports in `forwardPorts` are forwarded. 8000 is listed; if you run
+**Port 8000 or 3000 not reachable on the host.**
+Only ports in `forwardPorts` are forwarded. Both are listed; if you run
 something else (e.g. 5432 for a host-side DB client), add it or publish
 `ports: ["5433:5432"]` on the db service in a local override.
 

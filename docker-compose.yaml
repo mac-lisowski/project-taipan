@@ -11,5 +11,10 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
 
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+
 volumes:
   pgdata:
