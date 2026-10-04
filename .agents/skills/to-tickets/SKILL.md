@@ -27,7 +27,10 @@ Look for opportunities to prefactor the code to make the implementation easier. 
 
 ### 3. Draft vertical slices
 
-Break the work into **tracer bullet** tickets.
+Break the work into **tracer bullet** tickets. Each ticket carries
+enough detail to land in a fresh context: context pointers, an ordered
+implementation plan, the failing tests to write first, the gates it
+must pass, and checkable acceptance criteria.
 
 <vertical-slice-rules>
 
@@ -74,14 +77,78 @@ Do NOT close or modify any parent issue.
 
 # <NN>: <Ticket title>
 
-**What to build:** the end-to-end behaviour this ticket makes work, from the user's perspective, not a layer-by-layer implementation list.
-
+**Status:** ready-for-agent | in-progress | done
 **Blocked by:** the numbers/titles of the tickets that gate this one, or "None (can start immediately)".
+**Parallel with:** the ticket numbers that can be worked at the same
+time as this one (no blocking edge in either direction, no file
+overlap). Helps schedulers and humans run the frontier without
+inverting the graph.
+**Conflicts with:** ticket numbers touching the same files. Not
+derivable from blocking edges - two unblocked tickets editing the
+same file serialize anyway.
 
-**Status:** ready-for-agent
+## What to build
 
-- [ ] Acceptance criterion 1
-- [ ] Acceptance criterion 2
+The end-to-end behaviour this ticket makes work, from the user's
+perspective, not a layer-by-layer implementation list.
+
+**Out of scope:** one line naming adjacent work this ticket must not
+absorb.
+
+## Context pointers
+
+- Spec: `docs/specs/<slug>/spec.md` (sections that bind this ticket)
+- Prior art: files that already show the pattern to copy
+- Decisions: the spec/ADR lines that constrain the shape
+
+A fresh-context implementer must be able to start from pointers alone.
+
+## Implementation plan
+
+Ordered steps naming the modules to create or modify and the wiring
+they need (dependencies, env vars, registrations). Sketch interfaces
+only where the spec pins them; otherwise name the shape.
+
+## Tests (TDD)
+
+The failing tests to write before implementing, named and with the
+observable behaviour each asserts. Implementer runs the `tdd` skill:
+red first, then green. For non-code tickets (docs, config), write
+"N/A" and name the mechanical verification instead: a command that
+fails before the change and passes after.
+
+## Gates
+
+- `uv run pytest <test files>`
+- `uv run ruff check` and `uv run ruff format --check` on touched files
+- `uvx falsegreen <test files>`, then a `test-smell-review` pass
+- every hard gate that matches touched file types:
+  `scripts/check-file-size.sh`, `scripts/check-bff.sh`,
+  `scripts/check-docker.sh`, `scripts/check-commit-msg.sh`
+- `code-review` skill on the diff, then
+  `bash .agents/hooks/review-stamp.sh` before `git commit`
+
+## Acceptance criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+
+## Definition of done
+
+Uniform across tickets; checked before Status flips to done.
+Enforced: `review-stamp.sh` refuses to stamp while a done ticket has
+unchecked boxes, and code-review's Spec axis verdicts every item
+against the diff.
+
+- [ ] Every acceptance criterion checked
+- [ ] Tests written red-first (tdd), all pass
+- [ ] All gates green (pytest, ruff, falsegreen + test-smell-review,
+      file-size cap)
+- [ ] code-review pass on the diff is clean, review stamped before
+      commit
+- [ ] Ticket file Status updated to `done`; `.agents/memory/current.md`
+      updated if repo state changed
+- [ ] No leftover artifacts (test resources, temp files, stray env)
 
 </ticket-template>
 

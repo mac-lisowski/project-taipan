@@ -62,11 +62,15 @@ the path from empty instance to working encryption is repeatable.
   Auto-included by the `packages/*` workspace member glob. `uv_build`
   backend, `module-name = "kms"`, dependency `httpx2>=2.13.1` (the
   repo's HTTP client; plain `httpx` is not installed).
-- `KmsClient(base_url: str, token: str)` exposes `encrypt`, `decrypt`,
-  `rotate`. Raises `KmsError` on non-2xx responses. Sync client.
-- A `kms` admin module provides `create_kms_project`,
-  `create_key`, `delete_project`. It exists because the test fixture
-  needs provisioning and is the seam for future automated provisioning.
+- Adapter pattern: a port protocol exposes `encrypt`, `decrypt`,
+  `rotate` plus provisioning ops; `InfisicalKms` is the adapter over
+  httpx2. Call sites depend on the port, so a different backend (the
+  official SDK, a cloud KMS) is a new adapter, not a rewrite.
+  `KmsError` on non-2xx responses. Sync client.
+- Official `infisicalsdk` was evaluated and rejected for now: it lacks
+  `rotate` and workspace provisioning, and pulls boto3/requests into a
+  repo standardized on httpx2. Revisit if the SDK catches up; the port
+  makes that a drop-in change.
 - `api` depends on `kms` via the workspace source mapping, same
   pattern as `core`. Only tests consume it for now.
 - Verified API contract (probed live on v0.165.16):
