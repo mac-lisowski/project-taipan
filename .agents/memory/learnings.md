@@ -30,3 +30,12 @@
   both sides need `pre-commit` on PATH for the hook's `command -v`
   fallback - host: `uv tool install pre-commit`; container: symlink
   `.venv/bin/pre-commit` to `/usr/local/bin` (in postCreateCommand).
+- uv workspace `members = ["apps/*"]` glob matches apps/web (no
+  pyproject.toml). `uv sync --frozen` passes but `uv run` fails:
+  "workspace member is missing a pyproject.toml". Fix is
+  `exclude = ["apps/web"]` under `[tool.uv.workspace]`.
+- GitHub Actions: `setup-node` with `cache: pnpm` runs pnpm during
+  its own step to resolve cache paths, so pnpm must already exist.
+  `corepack enable` in a later step is too late. Use
+  `pnpm/action-setup` BEFORE `setup-node`; it reads the
+  `packageManager` field from apps/web/package.json.
