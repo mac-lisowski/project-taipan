@@ -46,7 +46,8 @@ graph LR
 ## Files
 
 - `Dockerfile` - standalone production image (`next build` with
-  `output: "standalone"`). Build context is this directory.
+  `output: "standalone"`). Build context is the repo root:
+  `scripts/docker-build.sh web` (root context; the script is canonical)
 - `src/proxy.ts` - reserved for the Next 16 auth gate once auth
   endpoints exist (replaces the old `middleware.ts` convention).
 

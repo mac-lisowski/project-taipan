@@ -9,21 +9,22 @@ fail=0
 report() { echo "bff-boundary: $1"; fail=1; }
 
 # The upstream URL may only be referenced inside the proxy handler.
-out=$(git grep -l 'API_INTERNAL_URL' -- 'apps/web/src' 2>/dev/null \
-  | grep -v '^apps/web/src/app/api/' || true)
+# Scope is all of apps/web: a rewrite in next.config.ts or a server
+# file outside src/ would bypass the boundary just the same.
+out=$(git grep -l 'API_INTERNAL_URL' -- 'apps/web' 2>/dev/null \
+  | grep -vE '^apps/web/(src/app/api/|.*\.env.*|[^/]*\.md$|Dockerfile)' || true)
 [ -n "$out" ] && report "API_INTERNAL_URL used outside src/app/api/: $out"
 
 # No NEXT_PUBLIC_* variable may carry the API/backend URL. If the
 # browser can read it, the BFF boundary is broken.
-out=$(git grep -nE 'NEXT_PUBLIC_[A-Z0-9_]*(API|BACKEND|INTERNAL)' -- apps/web 2>/dev/null || true)
+out=$(git grep -nE 'NEXT_PUBLIC_[A-Z0-9_]*(URL|URI|ORIGIN|HOST|ENDPOINT|API|BACKEND|INTERNAL)' -- apps/web 2>/dev/null \
+  | grep -vE '\.env.*:' || true)
 [ -n "$out" ] && report "backend URL in a public env var: $out"
 
-# No hardcoded backend origin outside the proxy handler.
-out=$(git grep -nE '(localhost|127\.0\.0\.1):8000' -- 'apps/web/src' 2>/dev/null \
-  | grep -v 'src/app/api/' || true)
-[ -n "$out" ] && report "hardcoded backend origin outside src/app/api/: $out"
-out=$(git grep -n '8000' -- 'apps/web/next.config.ts' 2>/dev/null || true)
-[ -n "$out" ] && report "backend origin in next.config.ts: $out"
+# No backend port reference outside the proxy handler.
+out=$(git grep -nE ':8000' -- 'apps/web' 2>/dev/null \
+  | grep -vE '(src/app/api/|\.env|\.md:|Dockerfile)' || true)
+[ -n "$out" ] && report "hardcoded backend port outside src/app/api/: $out"
 
 # The proxy layer is server code. A client directive here is a bug.
 out=$(git grep -ln 'use client' -- 'apps/web/src/app/api' 2>/dev/null || true)

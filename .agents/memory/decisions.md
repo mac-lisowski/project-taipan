@@ -1,30 +1,16 @@
-# Decisions
+# Decisions index
 
-- Prefer domain-named packages where they fit. Design packages to be
-  shareable and reusable, not app-specific.
-- Dev dep is `httpx2` (httpx fork), not `httpx`. starlette TestClient
-  supports it natively.
-- Devcontainer is compose-based and self-contained (app + db + dind).
-  Does not merge root docker-compose.yaml; its 5432 publish would
-  collide on the host.
-- Devcontainer runs as root. Rootless Docker maps host uid to
-  container 0, so a normal user cannot write the bind mount.
-- testcontainers get a sibling `dind` service (privileged,
-  DOCKER_HOST=tcp://dind:2375) instead of the host socket. Keeps test
-  containers off the host daemon and avoids rootless socket quirks.
-- Test DB URLs moved to env vars API_TEST_ADMIN_URL/API_TEST_URL so
-  conftest works on host (localhost) and in devcontainer (db).
-- Agent hook scripts live once in `.agents/hooks/` (tool-agnostic
-  bash+jq). `.claude/settings.json` is the single manifest: Claude
-  reads it natively, Devin and Grok via their `.claude` compat layers.
-  No `.devin/hooks.v1.json` - Devin reads both and hooks would fire
-  twice. ZCode gets its own `.zcode/config.json` (hooks.enabled).
-- Web is Next.js BFF (Option B.1): browser only reaches Next, the
-  catch-all in `src/app/api/[...path]/route.ts` forwards to FastAPI.
-  FastAPI owns sessions + Redis; web has no REDIS_URL, only
-  API_INTERNAL_URL (server-only, never NEXT_PUBLIC_).
-- FastAPI mounts all routers under `prefix="/api"` so the BFF proxy
-  is a dumb 1:1 forwarder with no path rewriting.
-- Hard file cap is 300 LOC (scripts/check-file-size.sh) and the BFF
-  boundary is scripts/check-bff.sh; both run in pre-commit and the
-  CI lint job. Exemptions only in the scripts, with a reason.
+Why things are the way they are. One decision per file in
+`decisions/`; when you add a file, add its link here. Append-only.
+
+- [Domain-named packages](decisions/domain-named-packages.md)
+- [httpx2 as the dev HTTP client](decisions/httpx2-fork.md)
+- [Devcontainer is self-contained compose](decisions/devcontainer-compose.md)
+- [Devcontainer runs as root](decisions/devcontainer-root.md)
+- [testcontainers use a sibling dind service](decisions/testcontainers-dind.md)
+- [Test DB URLs come from env vars](decisions/test-db-env-vars.md)
+- [Agent hooks: .agents/hooks + .claude manifest](decisions/agent-hooks.md)
+- [Web is a Next.js BFF](decisions/web-bff.md)
+- [FastAPI mounts routers under /api](decisions/api-prefix.md)
+- [Quality gates: LOC cap + BFF boundary](decisions/quality-gates.md)
+- [Docker build context is the repo root](decisions/docker-root-context.md)

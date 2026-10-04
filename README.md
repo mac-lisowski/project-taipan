@@ -4,6 +4,15 @@ Learning Python. I know this stack in Node - APIs,
 CLIs, agents, databases. The concepts are familiar; this monorepo is
 where I learn the Python equivalents: FastAPI, Typer, LangChain etc.
 
+## North star
+
+A production-shaped system, all in Python:
+
+- FastAPI API with Redis-backed sessions
+- user panel in `apps/web` (Next.js BFF, SSR, OAuth)
+- event-driven communication between services
+- CQRS: separate write and read models
+
 A Python monorepo managed with [uv workspaces](https://docs.astral.sh/uv/concepts/workspaces/).
 Shared libraries live in `packages/`, runnable applications live in `apps/`.
 
@@ -73,7 +82,8 @@ cookie. The browser never talks to FastAPI directly.
 - `API_INTERNAL_URL` (server-only) lives in `apps/web/.env.example`.
   Copy to `.env.local` for local overrides.
 - `apps/web/Dockerfile` builds a standalone production image.
-  Build context is `apps/web` itself.
+  Build context is the repo root, same as `apps/api/Dockerfile`:
+  `scripts/docker-build.sh web`
 
 ## Adding a new project
 
@@ -91,7 +101,9 @@ cookie. The browser never talks to FastAPI directly.
 - Tests live under `tests/` inside each member that has them.
 - Python version pinned in `.python-version`; lockfile is `uv.lock`.
 - Source files are capped at 300 lines (`scripts/check-file-size.sh`);
-  the web BFF boundary is checked by `scripts/check-bff.sh`. Both run
+  the web BFF boundary is checked by `scripts/check-bff.sh`; Dockerfile
+  COPY sources must resolve at repo root (`scripts/check-docker.sh`,
+  since `apps/*/Dockerfile` builds use the root as context). All run
   in pre-commit and CI.
 - `pre-commit` runs ruff, an em-dash fixer, and the gate scripts on
   commit; pytest and web lint/typecheck on push.

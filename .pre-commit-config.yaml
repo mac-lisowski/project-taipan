@@ -23,6 +23,11 @@ repos:
         entry: scripts/check-bff.sh
         language: system
         pass_filenames: false
+      - id: docker-copy
+        name: Dockerfile COPY sources resolve at repo root
+        entry: scripts/check-docker.sh
+        language: system
+        pass_filenames: false
       - id: pytest
         name: pytest
         entry: uv run pytest
