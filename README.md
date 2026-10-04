@@ -99,6 +99,9 @@ and `AUTH_SECRET`. Set both through your production deployment environment.
 Keep a backup of `ENCRYPTION_KEY`; stored secrets cannot be decrypted if
 it is lost.
 
+The full operator checklist (KMS project, key, machine identities,
+Railway gotchas) lives in `docs/infisical.md`.
+
 ## Frontend (web)
 
 `apps/web` is Next.js acting as the BFF: pages are server-rendered and
