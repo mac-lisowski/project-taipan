@@ -75,6 +75,22 @@
   timeout (stock macOS); em-dash hook entry is portable sed -i.bak
   (config file excluded from its own gate). Batteries: 23+13+5
   cases green, bash -n clean.
+- README image/docs updated: optimized repository image is WebP; prerequisites and Infisical setup documented with provider-neutral production secret guidance.
+- Infisical self-host (feat/infisical, UNCOMMITTED): docker/
+  infisical/Dockerfile pins infisical/infisical:v0.165.16 for
+  `railway up`; dedicated infisical-db Postgres service in both
+  compose files (postgres:17-alpine, creds infisical/infisical, no
+  host port, own volume - mirrors cloud shape; stale `infisical`
+  db may linger inside shared pg volumes, harmless);
+  infisical service in root compose (:8080) + devcontainer compose
+  (no host port, API_INFISICAL_URL=http://infisical:8080 on app);
+  scripts/infisical-bootstrap.sh does POST /api/v1/admin/bootstrap
+  (admin@taipan.local/taipan-admin defaults, idempotent, prints MI
+  token); API_INFISICAL_URL/TOKEN in api .env.example; CI deploy gets
+  var-guarded RAILWAY_SERVICE_INFISICAL step; test_infisical.py (3
+  tests, skip-when-down). Verified: both stacks up, bootstrap+rerun,
+  pytest 3/3. check-docker.sh glob now covers apps/* + docker/* +
+  .devcontainer Dockerfile* (all root-context builds gated).
 - Pending: nothing on gates; docs reviewed (no exemption).
 - Next step: auth/session layer (FastAPI owns sessions in Redis via
   API_REDIS_URL), src/proxy.ts auth gate once auth endpoints exist

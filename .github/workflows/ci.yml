@@ -177,6 +177,7 @@ jobs:
       RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
       RAILWAY_SERVICE_WEB: ${{ vars.RAILWAY_SERVICE_WEB }}
       RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
+      RAILWAY_SERVICE_INFISICAL: ${{ vars.RAILWAY_SERVICE_INFISICAL }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install railway cli
@@ -185,3 +186,8 @@ jobs:
         run: railway up --service "$RAILWAY_SERVICE_WEB" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
       - name: deploy api
         run: railway up --service "$RAILWAY_SERVICE_API" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
+      - name: deploy infisical
+        # Skipped until the Railway service exists and the GitHub
+        # environment var RAILWAY_SERVICE_INFISICAL is set.
+        if: ${{ vars.RAILWAY_SERVICE_INFISICAL != '' }}
+        run: railway up --service "$RAILWAY_SERVICE_INFISICAL" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
