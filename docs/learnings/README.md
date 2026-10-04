@@ -17,8 +17,10 @@ To master (not installed yet):
 - **FastAPI**: web framework for building REST APIs with type hints.
 - **Celery**: task queue; runs jobs in background workers (needs a broker like Redis).
 - **Redis**: in-memory key-value store; used for cache, queues, pub/sub.
-- **LangGraph**: framework for building stateful multi-step AI agents.
-- **LangChain**: framework for LLM apps: model wrappers, tools, integrations. LangGraph builds on it.
+- **LangGraph**: agent runtime for custom control flow and durable state. Builds on LangChain.
+- **LangChain**: framework for LLM apps: model wrappers, tools, agent loop. Base layer of the stack.
+- **Deep Agents**: agent harness on LangGraph: planning, files, subagents, memory included.
+- **LangSmith**: observability and eval platform for all layers. See [agents/](agents/README.md).
 - **MCP**: Model Context Protocol; standard way to expose tools and data to AI agents. You can build your own MCP server.
 - **OpenAI API**: HTTP API for LLMs (chat, embeddings, tools); also the base API other providers copy.
 - **MongoDB**: document database; stores JSON-like documents, no fixed schema.
