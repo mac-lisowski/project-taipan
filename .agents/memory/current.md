@@ -29,11 +29,22 @@
   RAILWAY_ENVIRONMENT, RAILWAY_SERVICE_WEB, RAILWAY_SERVICE_API
   live on GitHub env `project-taipan / dev` (branch policy: dev);
   deploy job declares environment: so they resolve.
-- Test quality gate (UNCOMMITTED): installed
+- Test quality gate (committed 7770c19): installed
   `collectiveai-team/botica@test-smell-review` via `npx skills add`.
   Trimmed botica-internal refs (drift: `npx skills update` clobbers).
   Wired: AGENTS.md rule 9, plan skill step 6 + output, implement-spec
   step 4. `uvx falsegreen <files>` is the structural pass.
+- Agent mode system (branch feat/agent-mode-hooks, UNCOMMITTED):
+  agent-mode.sh set|get|clear|list over fixed enum
+  (plan implement test review debug docs commit); state file
+  /tmp/taipan-mode-<rootkey>; route.sh dispatches to
+  hooks.d/<mode>/<event>.sh (advisory nudges, once per mode-set,
+  never block, skipped in subagents). Wired into all four tool hooks
+  + session-start. AGENTS.md rule 10. post-write.sh also runs
+  falsegreen on test files deterministically. Two review agents
+  fixed: /tmp mode-file path traversal (validated enum),
+  cwd-keyed root, sha1sum fallback, dedup TOCTOU, glob anchoring,
+  set -u unbound fg, falsegreen-js format diff.
 - Next step: auth/session layer (FastAPI owns sessions in Redis via
   API_REDIS_URL), src/proxy.ts auth gate once auth endpoints exist
 - Blockers: host port 5432 taken by python-playground-db-1; root

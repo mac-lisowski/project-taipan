@@ -19,4 +19,7 @@ case "$(basename "$file")" in
     ;;
 esac
 
+root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+ctx=$(printf '%s' "$input" | bash "$root/.agents/hooks/route.sh" pre-write 2>/dev/null || true)
+[ -n "$ctx" ] && jq -nc --arg c "$ctx" '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:$c}}'
 exit 0

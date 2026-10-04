@@ -27,6 +27,11 @@
    them with the `test-smell-review` skill. Run
    `uvx falsegreen <files>` first for the structural pass. A test that
    cannot fail is bloat. Fix it or delete it.
+10. Declare the activity mode when the phase changes:
+    `bash .agents/hooks/agent-mode.sh set <mode>`. Modes: plan,
+    implement, test, review, debug, docs, commit. Mode selects which
+    advisory nudges run (`.agents/hooks/hooks.d/<mode>/`). It never
+    replaces the hard gates.
 
 ## Project map
 

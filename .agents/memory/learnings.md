@@ -28,3 +28,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Railway deploys run from CI, not the GitHub app](learnings/railway-github-deployments.md)
 - [Job skipped because an upstream needs job was skipped](learnings/gha-skip-propagates.md)
 - [npx skills CLI behavior in this repo](learnings/skills-cli.md)
+- [falsegreen vs falsegreen-js output formats differ](learnings/falsegreen-js-format.md)

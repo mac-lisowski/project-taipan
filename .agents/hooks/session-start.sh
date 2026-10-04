@@ -18,6 +18,14 @@ broken=$(find -L .claude/skills .devin/skills .grok/skills .zcode/skills -type l
 WARNING: broken skill symlinks:
 $broken"
 
+mode=""
+if [ -f .agents/hooks/mode-lib.sh ]; then
+  . .agents/hooks/mode-lib.sh
+  mode=$(taipan_mode_get)
+fi
+ctx="$ctx
+Activity mode: ${mode:-none}. Set when the phase changes: bash .agents/hooks/agent-mode.sh set <plan|implement|test|review|debug|docs|commit> (AGENTS.md rule 10)."
+
 [ -f AGENTS.md ] || ctx="$ctx
 WARNING: AGENTS.md missing."
 

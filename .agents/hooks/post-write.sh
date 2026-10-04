@@ -11,7 +11,7 @@ cd "$root" 2>/dev/null || exit 0
 [ -f "$file" ] || exit 0
 
 case "$file" in
-  *.agents/skills/*|*.venv/*) exit 0 ;;
+  *.agents/skills/*|*.venv/*|*node_modules/*) exit 0 ;;
 esac
 
 notes=""
@@ -29,8 +29,9 @@ esac
 
 case "$file" in
   *.py)
-    out=$(uv run ruff check --output-format concise "$file" 2>/dev/null || true)
-    [ -n "$out" ] && notes="$notes ruff issues in $file: $out"
+    out=$(uv run ruff check --output-format concise "$file" 2>/dev/null)
+    rc=$?
+    [ $rc -ne 0 ] && [ -n "$out" ] && notes="$notes ruff issues in $file: $out"
     ;;
   *apps/web/src/*.ts|*apps/web/src/*.tsx)
     case "$file" in
@@ -43,6 +44,37 @@ case "$file" in
     esac
     ;;
 esac
+
+# Test files: deterministic false-green scan (AGENTS.md rule 9).
+case "$file" in
+  */tests/*|*/test_*.py|*conftest.py|*.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx)
+    fg=""
+    case "$file" in
+      *.py)
+        fg=$(timeout 8 uvx falsegreen "$file" 2>/dev/null || true)
+        ;;
+      *.ts|*.tsx|*.js|*.jsx)
+        fg=$(timeout 8 npx --yes falsegreen-js "$file" 2>/dev/null || true)
+        ;;
+    esac
+    case "$fg" in
+      *[Nn]"o false-positive"*|"") ;;
+      *)
+        hits=$(printf '%s\n' "$fg" | grep -E '\[[A-Z0-9]+\]|^Summary:| (HIGH|LOW) +[A-Z][0-9]+|^[0-9]+ high' | sed 's/^ *//' | tr '\n' ' ' | cut -c1-500)
+        [ -n "$hits" ] && notes="$notes falsegreen: $hits"
+        ;;
+    esac
+    [ -f "$root/.agents/hooks/mode-lib.sh" ] && . "$root/.agents/hooks/mode-lib.sh"
+    nmark="/tmp/taipan-nudge-$(taipan_key 2>/dev/null || printf '%s' "$root" | sha1sum | cut -c1-12)-test"
+    if [ ! -f "$nmark" ]; then
+      touch "$nmark"
+      notes="$notes Test file changed: finish with the test-smell-review judgment pass (J1-J6)."
+    fi
+    ;;
+esac
+
+route_out=$(printf '%s' "$input" | bash "$root/.agents/hooks/route.sh" post-write 2>/dev/null || true)
+[ -n "$route_out" ] && notes="$notes $route_out"
 
 [ -z "$notes" ] && exit 0
 jq -nc --arg ctx "${notes# }" '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$ctx}}'
