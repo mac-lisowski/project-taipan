@@ -4,6 +4,14 @@ Learning Python. I know this stack in Node - APIs,
 CLIs, agents, databases. The concepts are familiar; this monorepo is
 where I learn the Python equivalents: FastAPI, Typer, LangChain etc.
 
+![Project Taipan repository overview](docs/project-taipan-repo.webp)
+
+## Prerequisites
+
+- Python 3.12 and `uv` for the workspace.
+- Docker Compose for Postgres, Redis, and Infisical.
+- Node.js 24 and pnpm 11.17 for `apps/web`.
+
 ## North star
 
 A production-shaped system, all in Python:
@@ -45,7 +53,7 @@ Each app registers a command in its `pyproject.toml` under `[project.scripts]`.
 
 ```bash
 uv run cli                 # CLI app -> prints "Hello, world!"
-docker compose up -d       # Postgres + pgvector :5432, redis :6379 (needed by api/web)
+docker compose up -d       # Postgres + pgvector :5432, redis :6379, Infisical :8080
 uv run db-upgrade          # apply migrations
 uv run api                 # API app -> FastAPI server on http://127.0.0.1:8000 (docs at /docs)
 pnpm -C apps/web install   # one-time: web dependencies
@@ -72,6 +80,27 @@ API tests run against a real `app_test` database on the docker Postgres
 
 Env vars are registered in `apps/api/.env.example`. Copy to `.env` and run
 with `uv run --env-file apps/api/.env api`.
+
+## Secrets (Infisical)
+
+Self-hosted Infisical runs in the dev compose stack on :8080 (UI + API).
+Its database (`infisical`) is created by `docker/initdb` on fresh
+volumes; on an existing volume run once:
+
+```bash
+docker compose exec db psql -U postgres -c 'CREATE DATABASE infisical'
+```
+
+First run of a new instance needs an admin, org, and machine identity:
+
+```bash
+bash scripts/infisical-bootstrap.sh   # prints the MI token
+```
+
+`docker-compose.yaml` provides development defaults for `ENCRYPTION_KEY`
+and `AUTH_SECRET`. Set both through your production deployment environment.
+Keep a backup of `ENCRYPTION_KEY`; stored secrets cannot be decrypted if
+it is lost.
 
 ## Frontend (web)
 

@@ -8,3 +8,4 @@
   Evals are later; do not push eval flow before basics exist.
 - Wants domain-named packages where they fit. Packages should be
   shareable and reusable, not app-specific.
+- Keep production setup guidance provider-neutral unless a provider is requested.

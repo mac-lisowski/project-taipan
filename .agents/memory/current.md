@@ -75,6 +75,7 @@
   timeout (stock macOS); em-dash hook entry is portable sed -i.bak
   (config file excluded from its own gate). Batteries: 23+13+5
   cases green, bash -n clean.
+- README image/docs updated: optimized repository image is WebP; prerequisites and Infisical setup documented with provider-neutral production secret guidance.
 - Pending: nothing on gates; docs reviewed (no exemption).
 - Next step: auth/session layer (FastAPI owns sessions in Redis via
   API_REDIS_URL), src/proxy.ts auth gate once auth endpoints exist
