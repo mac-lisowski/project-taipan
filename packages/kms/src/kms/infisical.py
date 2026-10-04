@@ -57,3 +57,8 @@ class InfisicalKms:
 
     def delete_project(self, project_id: str) -> None:
         self._request("DELETE", f"/api/v1/workspace/{project_id}")
+
+    def rotate(self, key_id: str) -> int:
+        # Ops-only action: the key object comes back wrapped, like create.
+        body = self._request("POST", f"/api/v1/kms/keys/{key_id}/rotate")
+        return body["key"]["version"]
