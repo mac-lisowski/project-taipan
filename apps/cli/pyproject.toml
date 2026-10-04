@@ -1,0 +1,21 @@
+[project]
+name = "playground-cli"
+version = "0.1.0"
+description = "Example CLI app depending on playground-core"
+requires-python = ">=3.12"
+dependencies = [
+    "playground-core",
+]
+
+[tool.uv.sources]
+playground-core = { workspace = true }
+
+[project.scripts]
+playground = "playground_cli.main:main"
+
+[build-system]
+requires = ["uv_build>=0.9,<1"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "playground_cli"
