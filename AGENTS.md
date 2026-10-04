@@ -33,8 +33,9 @@
     advisory nudges run (`.agents/hooks/hooks.d/<mode>/`). It never
     replaces the hard gates.
 11. Before `git commit`: run the `code-review` skill on the
-    uncommitted diff (fixed point `HEAD`, `git diff HEAD`) and
-    `test-smell-review` on touched tests. When clean, stamp with
+    uncommitted diff (fixed point `HEAD`, `git diff HEAD` plus
+    untracked files) and `test-smell-review` on touched tests. When
+    clean, stamp with
     `bash .agents/hooks/review-stamp.sh` - the hook blocks the commit
     without it and any edit invalidates the stamp. Never use
     `--no-verify` or `-n`. Commit messages: subject and every line

@@ -40,13 +40,14 @@ flowchart LR
     D -->|yes| F["allow"]
 ```
 
-- `review-stamp.sh` runs `taipan_diff_hash`: every path differing
-  from HEAD contributes its worktree blob hash, plus the cached diff
-  of any path whose staged content diverges from the worktree. A
-  content edit after stamping invalidates the marker. `git add` does
-  not - unless the path was partially staged (index and worktree
-  differed), which rewrites what the commit would record and needs a
-  new stamp.
+- `review-stamp.sh` runs `taipan_diff_hash`: the current HEAD plus
+  every path differing from it, each with its mode and worktree blob
+  hash (symlinks bind the link target), plus the cached diff of any
+  path whose staged content diverges from the worktree. A content or
+  mode edit after stamping invalidates the marker, and so does a
+  commit/rebase/pull that moves HEAD. `git add` does not - unless
+  the path was partially staged (index and worktree differed), which
+  rewrites what the commit would record and needs a new stamp.
 - The `code-review` skill ends with the stamp step. Review covers
   `git diff HEAD` (staged + unstaged); `test-smell-review` covers
   touched tests.
@@ -95,7 +96,9 @@ bash .agents/hooks/agent-mode.sh list          # vocabulary
 
 Vocabulary: `plan implement test review debug docs commit`. `set`
 rejects anything else. State is a file in `/tmp` keyed by project
-root (an exec'd script cannot see `session_id`). `set` to a different
+root (an exec'd script cannot see `session_id`), so one mode serves
+all sessions in this checkout - parallel sessions share it. `set`
+to a different
 mode and `clear` reset all markers under this project's key - route
 dedup and the one-shot test-scan nudge - so a new mode re-nudges once.
 Re-setting the same mode is a no-op and keeps the markers.

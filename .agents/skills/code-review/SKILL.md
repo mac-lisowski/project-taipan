@@ -18,11 +18,16 @@ The issue tracker should have been provided to you. If `docs/agents/issue-tracke
 
 Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one and the tree has uncommitted changes, use `HEAD` (`git diff HEAD`); otherwise ask.
 
-For the pre-commit review gate (AGENTS.md rule 11), the change is uncommitted work: the fixed point is `HEAD` and the diff command is `git diff HEAD`, which covers the staged and unstaged diff together. Skip the commit-list step; there are no commits yet.
+For the pre-commit review gate (AGENTS.md rule 11), the change is uncommitted work. Fixed point is `HEAD`; skip the three-dot form and the commit list (there are no commits yet). The diff is:
 
-Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
+- `git diff HEAD` (staged + unstaged changes to tracked files), **plus**
+- every untracked file: `git ls-files --others --exclude-standard -z | xargs -0 -I{} git diff --no-index -- /dev/null {}`
 
-Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
+Untracked files go into the commit after `git add` and are part of the stamp hash, so they must be reviewed. Pass both commands to the sub-agents.
+
+Otherwise (committed work), capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
+
+Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. For uncommitted work, "non-empty" means `git status --porcelain --untracked-files=all` prints something. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
 
 ### 2. Identify the spec source
 
@@ -88,13 +93,13 @@ unresolved: they block the stamp below.
 
 ### 7. Stamp the diff (uncommitted reviews only)
 
-When the review covered `git diff HEAD` for the commit gate and the findings are clean - or the fixes are applied and the diff re-verified - run:
+When the review covered the uncommitted diff (`git diff HEAD` plus untracked files) for the commit gate and the findings are clean - or the fixes are applied and the diff re-verified - run:
 
 ```bash
 bash .agents/hooks/review-stamp.sh
 ```
 
-The stamp binds to the exact staged + unstaged diff. Any edit after stamping invalidates it, and `git commit` is blocked without a matching stamp. Do not stamp while findings are unresolved.
+The stamp binds the exact worktree change against the current HEAD, contents and modes. Any edit after stamping invalidates it, and `git commit` is blocked without a matching stamp. Do not stamp while findings are unresolved.
 
 ## Why two axes
 

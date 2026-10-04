@@ -67,21 +67,33 @@ taipan_hash() {
   fi
 }
 
-# Digest of the change a commit could record, bound to worktree bytes
-# rather than index state: every path differing from HEAD contributes
-# its status, path, and worktree blob hash; staged content that
-# diverges from the worktree contributes its cached diff. `git add`
-# moves no worktree bytes, so a stamp survives staging; a content edit
-# after stamping invalidates it. Run from the repo root.
+# Digest of the change a commit could record, bound to the current
+# HEAD and to worktree bytes+modes rather than index state: every path
+# differing from HEAD contributes its mode and worktree blob hash;
+# staged content that diverges from the worktree contributes its
+# cached diff. `git add` moves no worktree bytes, so a stamp survives
+# staging; a content or mode edit - or a commit/rebase/pull moving
+# HEAD - after stamping invalidates it. Run from the repo root.
 taipan_diff_hash() {
   {
-    # path<TAB>worktree-blob-hash, path-sorted so `git add` (which only
-    # reorders status output) cannot change the digest.
+    # Baseline: the same worktree bytes against a different HEAD are
+    # a different diff.
+    printf 'HEAD\t%s\n' "$(git rev-parse --verify -q HEAD 2>/dev/null || echo UNBORN)"
+    # path<TAB>mode<TAB>worktree-blob-hash, path-sorted so `git add`
+    # (which only reorders status output) cannot change the digest.
+    # Symlinks bind the link target; absent paths bind a marker.
     git status --porcelain=v1 --no-renames -z --untracked-files=all 2>/dev/null |
     while IFS= read -r -d '' rec; do
       p=${rec:3}
-      if [ -f "$p" ]; then h=$(git hash-object -- "$p" 2>/dev/null); else h=ABSENT; fi
-      printf '%s\t%s\n' "$p" "$h"
+      if [ -L "$p" ]; then
+        m=120000; h=$(printf '%s' "$(readlink "$p")" | git hash-object --stdin 2>/dev/null)
+      elif [ -f "$p" ]; then
+        if [ -x "$p" ]; then m=100755; else m=100644; fi
+        h=$(git hash-object -- "$p" 2>/dev/null)
+      else
+        m=000000; h=ABSENT
+      fi
+      printf '%s\t%s\t%s\n' "$p" "$m" "$h"
     done | LC_ALL=C sort
     # stale index: staged content that differs from the worktree is
     # bound too, or a stamp could bless an unreviewed staged version.
