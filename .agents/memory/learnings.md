@@ -28,3 +28,8 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Railway deploys run from CI, not the GitHub app](learnings/railway-github-deployments.md)
 - [Job skipped because an upstream needs job was skipped](learnings/gha-skip-propagates.md)
 - [npx skills CLI behavior in this repo](learnings/skills-cli.md)
+- [falsegreen vs falsegreen-js output formats differ](learnings/falsegreen-js-format.md)
+- [Hook root resolution: script location before cwd](learnings/hook-root-resolution.md)
+- [Editing live hook files is a loaded gun](learnings/hook-editing-lockout.md)
+- [Diff hash binds worktree content, not diff position](learnings/diff-hash-staging-invariance.md)
+- [Canonicalize paths via pwd -P, never string surgery](learnings/path-normalization-squeeze.md)

@@ -16,11 +16,18 @@ The issue tracker should have been provided to you. If `docs/agents/issue-tracke
 
 ### 1. Pin the fixed point
 
-Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one, ask for it.
+Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one and the tree has uncommitted changes, use `HEAD` (`git diff HEAD`); otherwise ask.
 
-Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
+For the pre-commit review gate (AGENTS.md rule 11), the change is uncommitted work. Fixed point is `HEAD`; skip the three-dot form and the commit list (there are no commits yet). The diff is:
 
-Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
+- `git diff HEAD` (staged + unstaged changes to tracked files), **plus**
+- every untracked file: `git ls-files --others --exclude-standard -z | xargs -0 -I{} git diff --no-index -- /dev/null {}`
+
+Untracked files go into the commit after `git add` and are part of the stamp hash, so they must be reviewed. Pass both commands to the sub-agents.
+
+Otherwise (committed work), capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
+
+Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. For uncommitted work, "non-empty" means `git status --porcelain --untracked-files=all` prints something. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
 
 ### 2. Identify the spec source
 
@@ -76,6 +83,23 @@ If the spec is missing, skip the Spec sub-agent and note this in the final repor
 Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_).
 
 End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
+
+### 6. Test-smell pass on touched tests
+
+If the diff adds or edits test files, run `uvx falsegreen` on them
+(`npx --yes falsegreen-js` for `.ts`/`.tsx`/`.js`/`.jsx`), then the
+`test-smell-review` judgment pass. False-green findings count as
+unresolved: they block the stamp below.
+
+### 7. Stamp the diff (uncommitted reviews only)
+
+When the review covered the uncommitted diff (`git diff HEAD` plus untracked files) for the commit gate and the findings are clean - or the fixes are applied and the diff re-verified - run:
+
+```bash
+bash .agents/hooks/review-stamp.sh
+```
+
+The stamp binds the exact worktree change against the current HEAD, contents and modes. Any edit after stamping invalidates it, and `git commit` is blocked without a matching stamp. Do not stamp while findings are unresolved.
 
 ## Why two axes
 
