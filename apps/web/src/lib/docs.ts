@@ -3,7 +3,8 @@ import path from "node:path";
 
 // Markdown sources live in the repo-root docs/ dir; the web app reads them
 // at request time (SSG via generateStaticParams in the route).
-export const DOCS_DIR = path.resolve(process.cwd(), "..", "..", "docs");
+export const DOCS_DIR =
+  process.env.DOCS_DIR ?? path.resolve(process.cwd(), "..", "..", "docs");
 
 export interface DocEntry {
   /** path segments under docs/, without the .md extension */

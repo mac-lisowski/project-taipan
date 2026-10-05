@@ -21,6 +21,7 @@ FROM base AS build
 WORKDIR /app
 COPY --from=deps /app/apps/web/node_modules apps/web/node_modules
 COPY apps/web apps/web
+COPY docs docs
 RUN cd apps/web && pnpm build
 
 FROM node:24-alpine AS runner
@@ -30,6 +31,8 @@ RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/apps/web/public ./public
+COPY --from=build --chown=nextjs:nodejs /app/docs ./docs
+ENV DOCS_DIR=/app/docs
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000 HOSTNAME=0.0.0.0
