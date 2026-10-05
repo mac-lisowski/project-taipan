@@ -24,8 +24,8 @@ const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN;
 async function proxy(req: NextRequest): Promise<Response> {
   return proxyUpstream(req, {
     upstreamUrl: apiInternalUrl(),
-    publicOrigin:
-      PUBLIC_ORIGIN ?? `http://${req.headers.get("host") ?? "localhost"}`,
+    // The module owns the publicOrigin fallback policy; it is testable there.
+    publicOrigin: PUBLIC_ORIGIN,
   });
 }
 

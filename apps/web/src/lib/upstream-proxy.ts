@@ -55,24 +55,15 @@ const RESPONSE_REWRITE = new Set([
 
 const NO_BODY_STATUS = new Set([101, 204, 205, 304]);
 
-// Same-origin redirects must land on the public origin, not the
-// internal one. Foreign origins and unparseable values pass through.
-const BASE_ORIGINS = new Map<string, string>();
-
 function rewriteLocation(
   location: string,
   baseUrl: string,
   publicOrigin: string,
 ): string {
   try {
-    // Resolve against baseUrl, not a memoized origin: relative locations need the base path.
+    // Same-origin redirects land on the public origin; foreign or unparseable values pass through.
     const upstream = new URL(location, baseUrl);
-    let baseOrigin = BASE_ORIGINS.get(baseUrl);
-    if (!baseOrigin) {
-      baseOrigin = new URL(baseUrl).origin;
-      BASE_ORIGINS.set(baseUrl, baseOrigin);
-    }
-    if (upstream.origin !== baseOrigin) return location;
+    if (upstream.origin !== new URL(baseUrl).origin) return location;
     return publicOrigin + upstream.pathname + upstream.search + upstream.hash;
   } catch {
     return location;

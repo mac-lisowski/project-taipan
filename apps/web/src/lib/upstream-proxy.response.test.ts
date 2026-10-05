@@ -102,7 +102,7 @@ test("drops the response drop-list headers downstream", async () => {
 });
 
 test("drops the body for no-body statuses", async () => {
-  for (const status of [204, 304]) {
+  for (const status of [204, 205, 304]) {
     const { fetchImpl } = recordingFetch(() => {
       // Response forbids a body on these statuses, but the wire can deliver one; force the status so the seam sees a body.
       const res = new Response("x", { status: 200 });
