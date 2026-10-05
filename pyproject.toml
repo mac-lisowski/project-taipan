@@ -7,12 +7,14 @@ dependencies = [
     "api",
     "core",
     "cli",
+    "crypto",
 ]
 
 [tool.uv.sources]
 api = { workspace = true }
 core = { workspace = true }
 cli = { workspace = true }
+crypto = { workspace = true }
 
 # Workspace members: shared libraries live in packages/, runnable apps in apps/
 [tool.uv.workspace]

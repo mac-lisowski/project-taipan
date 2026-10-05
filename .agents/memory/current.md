@@ -1,24 +1,29 @@
 # Current state
 
 - Last updated: 2026-10-05
-- kms-identity-adapters spec implemented: PR #8 opened to dev from
-  feat/kms-identity-adapters (commits 9b86988 transport + cipher,
-  6c7740f provisioner replaces InfisicalKms, spec status marked).
-  Both tickets done with reports in .scratch/kms-identity-adapters/issues/.
-  Package exports: InfisicalCipher, InfisicalProvisioner, KmsError,
-  Cipher, Provisioning.
-- KmsError gotcha: httpx2 retries a request whose response was lost
-  on a dropped keep-alive; idempotent DELETEs can 404 on the retry.
-  Test teardown tolerates that case. learnings/httpx2-retry-lost-response.md
-- Workflow: implement-spec runs ticket by ticket; review-stamp before
-  every commit; PR to dev when the user asks; user reviews diffs
-  before commits when asked.
-- Next step: after PR #8 merges, next spec per priority: users-slice,
-  encryption-seam (ADR first). Auth/session layer after users:
-  FastAPI owns sessions in Redis via API_REDIS_URL;
-  apps/web/src/proxy.ts reserved.
-- Open PR: #2 (dev -> main).
-- Blocker: host port 5432 taken by python-playground-db-1; the root
-  compose db cannot publish while it runs.
-- Running on this host: user's FastAPI on :8000. Do not kill it;
-  smoke tests route around it.
+- PR #9 open: feat/encryption-seam-adr -> dev (field-encryption
+  capability, commit 79358e2). ADR-0001 accepted + amended.
+  Encryption-seam + field-encryption specs marked implemented.
+- Shipped in the PR: packages/crypto (envelope grammar, DekManager
+  adopt-on-conflict + tenant single-flight, FieldCrypto, CryptoError
+  6 codes, context), PostgresDekStore (tenant_deks, alembic
+  a3f8c2d91b47), two-tier DEK cache (60s L1 + Redis L2, warm op 47us
+  -> 2us, API_DEK_CACHE_L1_TTL), composition root, EncryptedString
+  TypeDecorator + lifespan wiring. 56 passed / 0 skipped live.
+- Reviews: three full rounds (standards, spec, PG design) clean; the
+  round-2 catch was ORM/migration type drift (model now Text +
+  timestamptz, catalog-verified on both paths).
+- New spec docs/specs/field-encryption-hardening/ (spec.md + html):
+  Cipher-port circuit breaker (kms_unavailable, threshold 3 /
+  cooldown 30s env), apps/api test-helper dedup, public accessors
+  (FieldCrypto.cipher/store/cache, TwoTierDekCache.local/remote).
+  Seams confirmed by user. Next step: to-tickets, then implement.
+- When PR #9 merges: delete .scratch/encryption-seam/prototype.py
+  (gitignored scratch) and mark spec statuses with the PR number.
+- Remaining unimplemented specs: users-slice, field-encryption-
+  hardening. First real encrypted model field after hardening (one
+  mapped_column(EncryptedString) line).
+- Token for live runs: mint via recipe in memory
+  infisical-token-minting.md; /tmp/taipan-infisical-kms-notes/token.md
+  (ephemeral) has a valid one.
+- Open PRs: #2 (dev -> main), #9 (feat/encryption-seam-adr -> dev).
