@@ -36,3 +36,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Canonicalize paths via pwd -P, never string surgery](learnings/path-normalization-squeeze.md)
 - [Infisical SITE_URL needs https:// or it 502s](learnings/infisical-site-url.md)
 - [Infisical first boot slow; keep Postgres same-region](learnings/infisical-first-boot.md)
+- [Rewrite current.md, never append history](learnings/memory-hygiene.md)
