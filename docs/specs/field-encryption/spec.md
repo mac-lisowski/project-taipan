@@ -1,6 +1,6 @@
 # Spec: Field encryption capability
 
-Status: implemented
+Status: implemented (#9)
 
 Seam: `packages/crypto`, one deep module: tenant-aware
 `encrypt(tenant_id, plaintext)` and `decrypt(tenant_id, envelope)`
@@ -131,8 +131,12 @@ the first real encrypted field lands in a later feature.
   out of scope. Tail note: once per TTL window per tenant per
   process, a decrypt waits on Postgres plus Infisical (15 s
   transport timeout), and an Infisical outage repeats that wait
-  because failures are never cached. A circuit breaker is future
-  work.
+  because failures are never cached. A circuit breaker guards the
+  Cipher port: after 3 consecutive KMS failures (tunable via
+  `API_KMS_BREAKER_THRESHOLD`) it fails fast with
+  `kms_unavailable`; one probe per 30 s cooldown (tunable via
+  `API_KMS_BREAKER_COOLDOWN`) tests recovery. See
+  `docs/specs/field-encryption-hardening/`.
 - Database schema: the wrapped-DEK table ships as an Alembic
   revision plus an ORM model beside the api models. The
   `cryptography` library belongs to the crypto package, which owns

@@ -1,6 +1,6 @@
 # Spec: Field-encryption hardening
 
-Status: not implemented.
+Status: implemented.
 
 The capability is complete and verified live. This spec lands the
 three follow-ups the whole-scope review deferred: fail-fast on KMS
@@ -100,6 +100,15 @@ through public surface.
   accessors; the two-tier cache exposes `local` and `remote`. Wiring
   tests assert types through these. No test reads private attributes
   anymore.
+- Cache-content assertions stop hardcoding the `crypto:dek:` Redis
+  key prefix. Tests assert presence through the `remote` accessor;
+  if a key-format assertion is truly needed, the adapter exposes
+  the prefix constant rather than tests reimplementing it.
+- `packages/kms` gets its own `tests/` directory. The adapter and
+  transport tests that need no api move out of `apps/api/tests`
+  with the same skip conventions; api-scoped integration tests
+  stay. The package becomes self-verifying, matching the crypto
+  package's convention.
 - The spec's tail-latency note is updated: the breaker is no longer
   future work; the note names the new category and defaults.
 

@@ -1,6 +1,6 @@
 # Spec: Infisical KMS client + integration tests
 
-Status: implemented
+Status: implemented (#4, #5)
 
 Seam: `KmsClient` against the real Infisical HTTP API. No mocks.
 One seam, same boundary production code uses.

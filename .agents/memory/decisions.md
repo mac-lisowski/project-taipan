@@ -17,3 +17,4 @@ Why things are the way they are. One decision per file in
 - [Specs live in docs/specs/, not an issue tracker](decisions/specs-as-files.md)
 - [Done tickets carry an HTML report](decisions/ticket-reports.md)
 - [ADR-0001: seam for encrypted model fields](../docs/adr/ADR-0001-seam-for-encrypted-model-fields.md) - TypeDecorator + deep crypto module, envelope encryption, generic tenant_id
+- [Extensible entities via Pattern A](decisions/extensible-entities-pattern-a.md)

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec: request-scoped tenant context</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lbl { font-size: 10px; letter-spacing: .05em;
+         text-transform: uppercase; color: #6b7280; }
+  .bar { height: 14px; border-radius: 4px; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">Request-scoped tenant context</h1>
+    <p class="text-slate-500">Tenant scope comes from the logged-in
+      user: session cookie to user to tenant. No config tenant, no
+      fallback. Spec:
+      <code>docs/specs/request-tenant-scope/spec.md</code>.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Before: nothing sets the scope</h2>
+    <div class="mermaid">
+flowchart LR
+  R[Request] --> H[handler]
+  H --> ORM[ORM flush]
+  ORM --> ES[EncryptedString]
+  ES -. "reads ambient" .-> CTX["tenant_ctx"]
+  CTX -. "zero prod callers" .-> X["MISSING_TENANT_SCOPE"]
+  W[web login form] -. "POST /api/auth/login" .-> N["404: no such endpoint"]
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">After: session user owns the scope</h2>
+    <div class="mermaid">
+flowchart LR
+  REG["register: tenant + user<br/>login: session + cookie"] --> R[Request]
+  R --> TS["TenantScope middleware<br/>cookie to session to user to tenant_id"]
+  TS --> H[handler]
+  H --> ORM[ORM flush]
+  ORM --> ES[EncryptedString]
+  ES -. "reads" .-> CTX["tenant_ctx = user.tenant_id"]
+  G["before_flush guard"] -. "row.tenant_id == scope" .-> ORM
+  TS -. "no valid session" .-> U["unscoped: encrypted writes fail"]
+    </div>
+    <p class="mt-3">No env tenant. No resolver port. A request has
+      a tenant only through a logged-in user.</p>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Depth check</h2>
+    <div class="space-y-2">
+      <div>
+        <p class="lbl mb-1">before: scope setup would repeat per handler</p>
+        <div class="bar bg-red-400" style="width:80%">N call sites</div>
+      </div>
+      <div>
+        <p class="lbl mb-1">after: one middleware, scope from session user</p>
+        <div class="bar bg-emerald-500" style="width:18%">1 module</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Test seam</h2>
+    <ul class="list-disc ml-5 space-y-1">
+      <li>Tests cross the middleware through <code>TestClient</code>
+        (lifespan running): register, login, <code>/me</code>,
+        logout. They assert outcomes and rows, never the
+        ContextVar.</li>
+      <li><code>/me</code> reports the ambient scope, so it doubles
+        as the scope probe.</li>
+      <li>Flush-guard test writes a <code>tenant_id="b"</code> row
+        under scope <code>"a"</code> and expects a raise.</li>
+      <li>Startup check test asserts boot fails when encrypted
+        columns exist and the module is unregistered.</li>
+    </ul>
+  </section>
+
+  <footer class="bg-slate-800 text-slate-100 rounded-xl p-6">
+    <h2 class="font-bold mb-2">Out of scope</h2>
+    <p class="text-slate-300">Shared tenants, password reset, session
+      management endpoints, rate limiting, per-tenant KMS keys,
+      background-job helpers, crypto package changes.</p>
+  </footer>
+</div>
+</body>
+</html>

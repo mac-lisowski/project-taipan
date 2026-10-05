@@ -9,7 +9,8 @@ from redis import Redis, RedisError
 
 _log = logging.getLogger(__name__)
 
-_KEY_PREFIX = "crypto:dek:"
+# Public so tests assert key shape through the adapter, never a literal.
+KEY_PREFIX = "crypto:dek:"
 
 
 class LocalTtlDekCache:
@@ -48,7 +49,7 @@ class RedisDekCache:
 
     def get(self, tenant_id: str) -> bytes | None:
         try:
-            return self._client.get(_KEY_PREFIX + tenant_id)
+            return self._client.get(KEY_PREFIX + tenant_id)
         except RedisError:
             # Logs never carry key material; the tenant id stays out too.
             _log.warning("dek cache read failed; continuing without the cache")
@@ -58,7 +59,7 @@ class RedisDekCache:
         # The caller may defer the choice; the configured default applies then.
         ttl = ttl_seconds if ttl_seconds > 0 else self._ttl_seconds
         try:
-            self._client.set(_KEY_PREFIX + tenant_id, dek, ex=ttl)
+            self._client.set(KEY_PREFIX + tenant_id, dek, ex=ttl)
         except RedisError:
             _log.warning("dek cache write failed; continuing without the cache")
 
@@ -73,6 +74,14 @@ class TwoTierDekCache:
     def __init__(self, local: LocalTtlDekCache, remote: RedisDekCache) -> None:
         self._local = local
         self._remote = remote
+
+    @property
+    def local(self) -> LocalTtlDekCache:
+        return self._local
+
+    @property
+    def remote(self) -> RedisDekCache:
+        return self._remote
 
     def get(self, tenant_id: str) -> bytes | None:
         hit = self._local.get(tenant_id)

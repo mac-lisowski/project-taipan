@@ -55,12 +55,14 @@ graph LR
     MAP --> REG["register(email, password)<br>get / list / remove"]
     REG --> RULES["uniqueness check<br>hash_password<br>typed errors"]
   end
-  RULES --> REPO["UserRepository (unchanged)"]
-  REPO --> DB[("Session - injected")]
+  RULES --> DB[("Session - injected")]
+  DB -.->|commits at request end| TEAR["get_db teardown"]
+  DEL["BaseRepository + UserRepository: deleted"]
     </div>
     <p class="text-xs text-slate-500 mt-2">No FastAPI imports inside the
-    module. Domain errors, not HTTPException. Callers map to their own
-    error mode.</p>
+    module. Domain errors, not HTTPException. The module uses the
+    session directly; the repository layer is deleted here, and
+    <code>get_db</code> teardown owns the commit.</p>
   </section>
 
   <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
@@ -76,6 +78,8 @@ graph LR
       <li>duplicate email raises <code>EmailTaken</code></li>
       <li>get on missing id raises <code>NotFound</code></li>
       <li>existing HTTP tests pass unchanged</li>
+      <li>a failed request leaves no partial row (commit lives in
+        get_db teardown, not in add())</li>
     </ul>
   </section>
 

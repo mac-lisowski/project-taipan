@@ -1,6 +1,6 @@
 # Spec: Decide the seam for encrypted fields
 
-Status: implemented (ADR-0001 accepted; the feature spec is
+Status: implemented (#9; ADR-0001 accepted, the feature spec is
 docs/specs/field-encryption/spec.md, itself implemented).
 
 Seam: chosen. Column-level `TypeDecorator` + deep crypto module

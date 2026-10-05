@@ -1,6 +1,6 @@
 # Spec: Deepen the BFF upstream-proxy module
 
-Status: implemented
+Status: implemented (#7)
 
 Seam: the new proxy module's interface over standard Fetch
 `Request`/`Response` types. One seam. The route handler stays

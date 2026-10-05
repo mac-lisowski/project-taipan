@@ -26,12 +26,32 @@ Shared libraries live in `packages/`, runnable applications live in `apps/`.
 
 ```
 ├── pyproject.toml        # workspace root: members, shared dev tools
-├── packages/
-│   └── core/             # library: core
-└── apps/
-    ├── cli/              # app: cli (depends on core)
-    ├── api/              # app: api (depends on core)
-    └── web/              # Next.js frontend, pnpm - not a uv member
+├── packages/             # puzzle pieces: domain libraries
+│   ├── core/             # shared primitives and protocols
+│   ├── crypto/           # envelope encryption and DEK cache
+│   └── kms/              # Infisical KMS adapter
+└── apps/                 # runnable composition roots
+    ├── cli/              # app: cli
+    ├── api/              # app: FastAPI server assembling packages
+    └── web/              # Next.js frontend, pnpm (not a uv member)
+```
+
+### Architecture: Modular Monolith (Puzzle Pieces)
+
+The system is designed as independent puzzle pieces:
+
+1. **Packages are standalone**: Domain logic lives in `packages/<name>/`. Packages never import from apps.
+2. **Apps are composition roots**: `apps/api` wires packages together and mounts HTTP routers.
+3. **Extensible entities (Pattern A)**: Core database tables (such as `users`) stay lean. They store only essential authentication fields. Applications extend entities using separate 1:1 or 1:N extension tables referencing entity IDs. This prevents schema bloat and merge conflicts.
+
+```mermaid
+flowchart TD
+    App["apps/api (Composition Root)"] --> Core["packages/core"]
+    App --> Crypto["packages/crypto"]
+    App --> Kms["packages/kms"]
+    App --> Ext["Feature Extension Table\n(e.g. user_profiles)"]
+
+    Ext -.->|references user_id| User["Core User Table\n(id, email, password)"]
 ```
 
 ## Everyday commands

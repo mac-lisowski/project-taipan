@@ -31,7 +31,22 @@ class FieldCrypto:
         if resolver is not None and default_key_id is not None:
             raise ValueError("pass a resolver or a default_key_id, not both")
         self._resolver = resolver or DefaultKeyResolver(_require(default_key_id))
+        self._cipher = cipher
+        self._store = store
+        self._cache = cache
         self._deks = DekManager(cipher, store, cache)
+
+    @property
+    def cipher(self) -> Cipher:
+        return self._cipher
+
+    @property
+    def store(self) -> DekStore:
+        return self._store
+
+    @property
+    def cache(self) -> DekCache | None:
+        return self._cache
 
     def encrypt(self, tenant_id: str, plaintext: str) -> str:
         self._require_scope(tenant_id)

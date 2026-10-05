@@ -49,16 +49,20 @@ database session, without TestClient or HTTP semantics.
    that it is usable from scripts and tests without the framework.
 10. As a developer, I want existing endpoint behavior unchanged,
     so that the refactor cannot break the API contract.
+11. As a maintainer, I want the repository layer deleted once the
+    module uses the session directly, so that no second
+    persistence path survives to drift.
 
 ## Implementation Decisions
 
 - New `users` module inside the api app. It exposes functions
   taking a `Session` plus domain arguments. It returns `User`
   objects and raises typed errors.
-- The module depends on the existing repository for persistence
-  and on the existing hashing helper. The repository layer itself
-  is unchanged; the deeper decision about its future belongs to
-  the encryption-seam spec.
+- The module uses the injected `Session` directly, not the
+  repository. `BaseRepository` and `UserRepository` are deleted in
+  this spec: field-encryption deferred the deletion here, and
+  ADR-0001 rules them deletable. Once the module exists, nothing
+  calls them.
 - The module raises a domain error on duplicate email. The router
   catches it and returns 409. Missing-user lookups return a typed
   `NotFound` the router maps to 404.
@@ -67,6 +71,12 @@ database session, without TestClient or HTTP semantics.
   status mapping.
 - `security.py` is unchanged. The users module calls it; hashing
   policy stays in one place either way.
+- The commit boundary moves out of `BaseRepository.add/delete`.
+  Today `add()` commits the entire session, including unrelated
+  pending state. The `get_db` teardown owns commit instead: the
+  session commits when the request completes cleanly and rolls
+  back on error. The repository and the users module flush at
+  most; neither commits.
 - No schema changes. No new endpoints. No behavior change visible
   through the HTTP contract.
 
@@ -81,6 +91,9 @@ database session, without TestClient or HTTP semantics.
   deletes; list returns users.
 - Existing HTTP tests stay and keep passing unchanged; they now
   also pin the error-to-status mapping.
+- A test pins the new commit boundary: a handler error after a
+  write attempt leaves no partial row, and a clean POST persists
+  without any module-level commit.
 - Prior art: `apps/api/tests/test_users.py` for the HTTP layer;
   the same `API_TEST_*` session conventions for module tests,
   skip-when-DB-down per apps/api rules.
@@ -89,8 +102,6 @@ database session, without TestClient or HTTP semantics.
 ## Out of Scope
 
 - Auth endpoints, login, sessions, tokens.
-- Deleting or deepening the repository layer (owned by the
-  encryption-seam spec).
 - Encrypted columns or KMS integration.
 - Schema or migration changes.
 
@@ -99,4 +110,7 @@ database session, without TestClient or HTTP semantics.
 - Candidate 2 from the architecture review. The payoff is mostly
   locality ahead of growth: auth and sessions land in this slice
   next, and they should land on a deep module, not in routers.
+  The review added the commit-boundary relocation: the repository
+  slated for deletion secretly owns the app's only commit, so it
+  moves to session teardown before the repo goes.
 - `docs/specs/users-slice/spec.html` visualizes the refactor.

@@ -15,9 +15,15 @@ from collections.abc import Iterator
 from typing import NamedTuple
 
 import pytest
-from api.dek_cache import LocalTtlDekCache, RedisDekCache, TwoTierDekCache
+from api.dek_cache import (
+    KEY_PREFIX,
+    LocalTtlDekCache,
+    RedisDekCache,
+    TwoTierDekCache,
+)
 from api.dek_store import PostgresDekStore
 from api.field_crypto import DEFAULT_DEK_CACHE_TTL_SECONDS, DEFAULT_DEK_L1_TTL_SECONDS
+from api_testsupport import KEY_ID, unique_tenant
 from crypto import NONCE_BYTES, CryptoCategory, CryptoError, FieldCrypto, parse
 from kms import KmsError
 from kms.infisical_cipher import InfisicalCipher
@@ -81,11 +87,7 @@ def make_module(key_id: str, engine) -> FieldCrypto:
 def drop_dek_cache(tenant_id: str) -> int:
     """Drop the Redis DEK entry; the count proves the cold path was real."""
     with Redis.from_url(REDIS_URL) as client:
-        return client.delete("crypto:dek:" + tenant_id)
-
-
-def unique_tenant() -> str:
-    return uuid.uuid4().hex
+        return client.delete(KEY_PREFIX + tenant_id)
 
 
 @live_only
@@ -132,7 +134,7 @@ def test_live_transport_failure_maps_to_module_error() -> None:
     module = FieldCrypto(
         cipher=InfisicalCipher("http://127.0.0.1:1", "unused-token"),
         store=DeadStore(),
-        default_key_id="5f0c9a1e-2222-4333-8444-555566667777",
+        default_key_id=KEY_ID,
     )
     with pytest.raises(CryptoError) as excinfo:
         module.encrypt("some-tenant", "secret")

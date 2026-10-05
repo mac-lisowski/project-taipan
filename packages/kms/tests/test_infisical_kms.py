@@ -11,9 +11,6 @@ import base64
 import os
 import urllib.error
 import urllib.request
-import uuid
-from collections.abc import Iterator
-from typing import NamedTuple
 
 import pytest
 from kms import KmsError
@@ -37,30 +34,8 @@ live_only = pytest.mark.skipif(
 )
 
 
-class Keys(NamedTuple):
-    provisioner: InfisicalProvisioner
-    cipher: InfisicalCipher
-    project_id: str
-    key_a: str
-
-
-@pytest.fixture(scope="session")
-def keys() -> Iterator[Keys]:
-    provisioner = InfisicalProvisioner(INFISICAL_URL, TOKEN)
-    cipher = InfisicalCipher(INFISICAL_URL, TOKEN)
-    project_id = provisioner.create_project(f"taipan-test-{uuid.uuid4().hex}")
-    key_a = provisioner.create_key(project_id, "test-key-a")
-    yield Keys(provisioner, cipher, project_id, key_a)
-    try:
-        provisioner.delete_project(project_id)
-    except KmsError as exc:
-        # A lost-response retry 404s; the project is gone either way.
-        if " failed: 404 " not in str(exc):
-            raise
-
-
 @live_only
-def test_encrypt_decrypt_roundtrip(keys: Keys) -> None:
+def test_encrypt_decrypt_roundtrip(keys) -> None:
     plaintext = b"taipan roundtrip secret"
     ciphertext = keys.cipher.encrypt(keys.key_a, plaintext)
     assert isinstance(ciphertext, str)
@@ -70,13 +45,13 @@ def test_encrypt_decrypt_roundtrip(keys: Keys) -> None:
 
 
 @live_only
-def test_decrypt_garbage_raises_kmserror(keys: Keys) -> None:
+def test_decrypt_garbage_raises_kmserror(keys) -> None:
     with pytest.raises(KmsError):
         keys.cipher.decrypt(keys.key_a, "junk")
 
 
 @live_only
-def test_rotation_preserves_decryption(keys: Keys) -> None:
+def test_rotation_preserves_decryption(keys) -> None:
     plaintext = b"taipan rotation secret"
     old_ciphertext = keys.provisioner.encrypt(keys.key_a, plaintext)
     new_version = keys.provisioner.rotate(keys.key_a)
@@ -88,7 +63,7 @@ def test_rotation_preserves_decryption(keys: Keys) -> None:
 
 
 @live_only
-def test_cross_key_decrypt_fails(keys: Keys) -> None:
+def test_cross_key_decrypt_fails(keys) -> None:
     # Only this test needs a second key, so it is created inline.
     key_b = keys.provisioner.create_key(keys.project_id, "test-key-b")
     plaintext = b"taipan cross-key secret"
@@ -100,7 +75,7 @@ def test_cross_key_decrypt_fails(keys: Keys) -> None:
 
 
 @live_only
-def test_provisioner_can_encrypt(keys: Keys) -> None:
+def test_provisioner_can_encrypt(keys) -> None:
     plaintext = b"taipan provisioner secret"
     ciphertext = keys.provisioner.encrypt(keys.key_a, plaintext)
     assert keys.provisioner.decrypt(keys.key_a, ciphertext) == plaintext
@@ -130,14 +105,14 @@ def test_provisioner_exposes_both_identities() -> None:
 
 
 @live_only
-def test_cipher_roundtrip_live(keys: Keys) -> None:
+def test_cipher_roundtrip_live(keys) -> None:
     plaintext = b"taipan cipher secret"
     ciphertext = keys.cipher.encrypt(keys.key_a, plaintext)
     assert keys.cipher.decrypt(keys.key_a, ciphertext) == plaintext
 
 
 @live_only
-def test_cipher_garbage_ciphertext_raises_kmserror(keys: Keys) -> None:
+def test_cipher_garbage_ciphertext_raises_kmserror(keys) -> None:
     with pytest.raises(KmsError):
         keys.cipher.decrypt(keys.key_a, "junk")
 

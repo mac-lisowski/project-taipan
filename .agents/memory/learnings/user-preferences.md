@@ -11,3 +11,4 @@
 - Keep production setup guidance provider-neutral unless a provider is requested.
 - Keep .agents/memory/current.md a lean snapshot; rewrite it, never append history.
 - No spec/ticket references in code comments (e.g. "Spec story 5"). Code comments state the rule; docs carry the linkage.
+- Cleanup, hardening, and perf specs before feature specs. Deferred request-tenant-scope (auth+tenants extends functionality) until cleanup queue is done.
