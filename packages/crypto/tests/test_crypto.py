@@ -205,7 +205,7 @@ def test_broken_cache_degrades_with_a_warning(caplog) -> None:
         def get(self, tenant_id: str) -> bytes:
             raise RuntimeError("cache down")
 
-        def put(self, tenant_id: str, dek: bytes, ttl_seconds: int) -> None:
+        def put(self, tenant_id: str, dek: bytes) -> None:
             raise RuntimeError("cache down")
 
     module = FieldCrypto(
