@@ -42,7 +42,7 @@ Enforce Pattern A (Extension Tables) across the codebase:
    foreign key with `ON DELETE CASCADE`, so that deleting a user cleans
    up extension records automatically.
 4. As an API consumer, I want endpoints to read and update profile
-   data (`GET /users/{id}/profile`, `PUT /users/{id}/profile`), so
+   data (`GET /api/users/{id}/profile`, `PUT /api/users/{id}/profile`), so
    that profile mutations do not complicate core user endpoints.
 5. As an external developer, I want a documented pattern for building
    custom extension tables, so that downstream projects can add new
@@ -63,7 +63,7 @@ Enforce Pattern A (Extension Tables) across the codebase:
 - Create Pydantic schemas in `apps/api/src/api/schemas/profile.py`:
   `ProfileRead`, `ProfileUpdate`, `ProfileCreate`.
 - Create router endpoints in `apps/api/src/api/routers/profiles.py`
-  mounted under `/users/{user_id}/profile`.
+  mounted under `/api/users/{user_id}/profile`.
 - Create a dedicated Alembic migration adding the `user_profiles`
   table.
 

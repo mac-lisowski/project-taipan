@@ -24,8 +24,19 @@
   done, merged to feat/field-encryption-hardening; 02
   (public accessors) and 05 (kms tests move) done on the
   same branch. 03 (breaker wiring) and 04 (helper dedup)
-  done too. Hardening spec implemented. Next: tightening
-  needs to-tickets.
+  done too. Hardening spec implemented. Landed as d0512c3
+  (commit-all: hardening 03/04 + CI jobs + tenant-scope
+  rewrite + Pattern A track). Next: tightening needs
+  to-tickets.
+- Known gap: breaker singleton-ness unenforced. Story 4
+  (one breaker per process) holds only because the lifespan
+  calls the builder once; a second build_field_crypto caller
+  would fork breaker state. No test pins it.
+- Open decision: Pattern A rule 14 vs users.tenant_id in the
+  tenant-scope spec. Recommendation given (keep column:
+  tenancy is identity infrastructure, not feature data).
+  User has not ruled yet. Foreign entity spec route paths
+  fixed to /api prefix, uncommitted.
 - Post-#9 cleanup done: .scratch/encryption-seam/prototype.py
   deleted, implemented spec statuses carry PR numbers.
 - Architecture review run 2026-10-05; report at
