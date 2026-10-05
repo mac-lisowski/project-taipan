@@ -44,6 +44,18 @@ def test_put_upserts(client, session_factory):
     assert count == 1
 
 
+def test_put_replaces_omitted_fields_with_null(client):
+    user_id = _create_user(client, "replace@x.com")
+    full = {"display_name": "Ada", "avatar_url": "https://x/ada.png", "bio": "hi"}
+    assert client.put(f"/api/users/{user_id}/profile", json=full).status_code == 200
+    resp = client.put(f"/api/users/{user_id}/profile", json={"bio": "updated"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["bio"] == "updated"
+    assert body["display_name"] is None
+    assert body["avatar_url"] is None
+
+
 def test_get_unknown_user_404(client):
     resp = client.get("/api/users/999/profile")
     assert resp.status_code == 404

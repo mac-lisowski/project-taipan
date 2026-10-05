@@ -10,6 +10,7 @@ class ProfileCreate(BaseModel):
 
 
 class ProfileUpdate(ProfileCreate):
+    # PUT is replace, so a partial body resets omitted fields to null.
     pass
 
 

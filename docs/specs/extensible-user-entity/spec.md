@@ -66,6 +66,10 @@ Enforce Pattern A (Extension Tables) across the codebase:
   mounted under `/api/users/{user_id}/profile`.
 - Create a dedicated Alembic migration adding the `user_profiles`
   table.
+- GET on an existing user with no profile returns 404
+  `{"detail": "profile not found"}`. Pinned by ticket 02 tests.
+- PUT is replace: a partial body resets omitted fields to null.
+  Pinned by test.
 
 ## Testing Decisions
 

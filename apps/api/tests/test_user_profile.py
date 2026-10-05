@@ -64,6 +64,21 @@ def test_delete_user_cascades_profile(session_factory):
     assert remaining == 0
 
 
+def test_delete_user_cascades_profile_at_db_level(session_factory, engine):
+    with session_factory() as session:
+        user = _user_with_profile(session)
+        user_id = user.id
+    # Raw SQL bypasses the ORM cascade; only the FK ON DELETE CASCADE
+    # can remove the profile row here.
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM users WHERE id = :id"), {"id": user_id})
+    with engine.begin() as conn:
+        remaining = conn.execute(
+            text("SELECT count(*) FROM user_profiles WHERE user_id = :id"), {"id": user_id}
+        ).scalar_one()
+    assert remaining == 0
+
+
 def test_profile_requires_user(session_factory):
     with session_factory() as session:
         session.add(UserProfile(user_id=99999, **PROFILE_VALUES))
