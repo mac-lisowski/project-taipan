@@ -1,5 +1,6 @@
 """Tenant-aware field encryption over injected edges."""
 
+from crypto.breaker import BreakerCipher
 from crypto.context import current_tenant, require_tenant, tenant_ctx, tenant_scope
 from crypto.deks import DefaultKeyResolver, DekManager
 from crypto.engine import FieldCrypto
@@ -9,6 +10,7 @@ from crypto.ports import DekCache, DekStore, KeyResolver
 
 __all__ = [
     "NONCE_BYTES",
+    "BreakerCipher",
     "CryptoCategory",
     "CryptoError",
     "DefaultKeyResolver",
