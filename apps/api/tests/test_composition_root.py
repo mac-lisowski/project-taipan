@@ -23,7 +23,10 @@ def _pin_env(monkeypatch: pytest.MonkeyPatch, key_id: str) -> None:
 
 
 def test_build_rejects_malformed_key_id(monkeypatch: pytest.MonkeyPatch) -> None:
-    for key_id in ("kms-key-alias", "5f0c9a1e-2222-4333-8444"):
+    # Braced and urn forms parse as UUIDs but the envelope grammar rejects
+    # them, so they must fail here, not at the first encrypt.
+    exotic = ("{" + VALID_KEY_ID + "}", "urn:uuid:" + VALID_KEY_ID)
+    for key_id in ("kms-key-alias", "5f0c9a1e-2222-4333-8444", *exotic):
         _pin_env(monkeypatch, key_id)
         with pytest.raises(ValueError, match="API_INFISICAL_KMS_KEY_ID"):
             build_field_crypto()

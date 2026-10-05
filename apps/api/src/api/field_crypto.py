@@ -1,9 +1,9 @@
 """Composition root for the crypto module: real edges when config allows."""
 
 import os
-import uuid
 
 from crypto import BreakerCipher, FieldCrypto
+from crypto.envelope import is_valid_key_id
 from kms import InfisicalCipher
 from redis import Redis
 
@@ -53,11 +53,9 @@ def build_field_crypto() -> FieldCrypto | None:
 
 
 def _require_uuid_key_id(key_id: str) -> None:
-    # A non-UUID key id would produce envelopes the module cannot decrypt.
-    try:
-        uuid.UUID(key_id)
-    except ValueError as exc:
-        raise ValueError("API_INFISICAL_KMS_KEY_ID must be a UUID") from exc
+    # Same rule the envelope grammar enforces; a looser check boots configs that fail at first encrypt.
+    if not is_valid_key_id(key_id):
+        raise ValueError("API_INFISICAL_KMS_KEY_ID must be a UUID")
 
 
 def build_and_register_field_crypto() -> FieldCrypto | None:
