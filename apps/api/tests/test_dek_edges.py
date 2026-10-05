@@ -108,22 +108,22 @@ class FakeRedis:
     """Same set/get contract as redis.Redis, expiry judged by a fake clock."""
 
     def __init__(self, clock: FakeClock) -> None:
-        self._clock = clock
-        self._values: dict[str, tuple[bytes, float | None]] = {}
+        self.clock = clock
+        self.values: dict[str, tuple[bytes, float | None]] = {}
         self.get_calls = 0
 
     def set(self, key: str, value: bytes, ex: int | None = None) -> None:
-        expire_at = self._clock.now + ex if ex is not None else None
-        self._values[key] = (value, expire_at)
+        expire_at = self.clock.now + ex if ex is not None else None
+        self.values[key] = (value, expire_at)
 
     def get(self, key: str) -> bytes | None:
         self.get_calls += 1
-        item = self._values.get(key)
+        item = self.values.get(key)
         if item is None:
             return None
         value, expire_at = item
-        if expire_at is not None and self._clock.now >= expire_at:
-            del self._values[key]
+        if expire_at is not None and self.clock.now >= expire_at:
+            del self.values[key]
             return None
         return value
 
@@ -275,7 +275,7 @@ def test_build_field_crypto_wires_real_edges(monkeypatch) -> None:
     monkeypatch.delenv("API_DEK_CACHE_L1_TTL", raising=False)
     module = build_field_crypto()
     assert isinstance(module, FieldCrypto)
-    assert isinstance(module._deks._cipher, InfisicalCipher)
-    cache = module._deks._cache
+    assert isinstance(module.cipher, InfisicalCipher)
+    cache = module.cache
     assert isinstance(cache, TwoTierDekCache)
-    assert isinstance(cache._remote, RedisDekCache)
+    assert isinstance(cache.remote, RedisDekCache)

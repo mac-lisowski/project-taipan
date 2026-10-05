@@ -18,16 +18,16 @@ class StubCrypto:
     """Seals plaintext under a tenant-marked envelope; records tenants."""
 
     def __init__(self) -> None:
-        self._sealed: dict[str, str] = {}
-        self._count = 0
+        self.sealed: dict[str, str] = {}
+        self.count = 0
         self.encrypt_tenants: list[str] = []
         self.decrypt_tenants: list[str] = []
 
     def encrypt(self, tenant_id: str, plaintext: str) -> str:
         self.encrypt_tenants.append(tenant_id)
-        envelope = f"stub::{tenant_id}::{self._count}"
-        self._count += 1
-        self._sealed[envelope] = plaintext
+        envelope = f"stub::{tenant_id}::{self.count}"
+        self.count += 1
+        self.sealed[envelope] = plaintext
         return envelope
 
     def decrypt(self, tenant_id: str, envelope: str) -> str:
@@ -36,7 +36,7 @@ class StubCrypto:
         if marked != tenant_id:
             # The real module fails the tag on a foreign tenant; so does the stub.
             raise CryptoError(CryptoCategory.DECRYPT_FAILURE, "foreign tenant")
-        return self._sealed[envelope]
+        return self.sealed[envelope]
 
 
 @pytest.fixture
