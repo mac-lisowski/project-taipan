@@ -81,6 +81,24 @@ The api encrypts and decrypts through a KMS project.
 4. Leave key export off. Keys are non-exportable by design.
 5. Copy the key id. It goes into `API_INFISICAL_KMS_KEY_ID`.
 
+## Paired restore: api Postgres and Infisical
+
+The api stores one wrapped DEK per tenant in its own Postgres
+(`tenant_deks` table). The wrapped DEK only unwraps through the
+Infisical KMS key that wrapped it. Restores are therefore paired.
+
+```mermaid
+graph LR
+  A[api Postgres<br>tenant_deks] -->|"wrapped DEK"| B[Infisical KMS]
+  B --> C[Infisical Postgres<br>+ ENCRYPTION_KEY]
+```
+
+**Never delete or disable a KMS key that wrapped a DEK.** Rotation is
+a version change, so old versions keep unwrapping old wrapped DEKs.
+A deleted key makes every row it wrapped unreadable. A backup of the
+api Postgres is only readable against a restored Infisical: its
+database plus its `ENCRYPTION_KEY`.
+
 ## Env vars
 
 ### Api side

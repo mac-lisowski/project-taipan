@@ -69,7 +69,9 @@ tenant context at flush time, not at add() time, so rows added under
 two tenant scopes but flushed once were all encrypted under the last
 scope. Rule: one tenant scope per flush. With per-request scoping
 (one request = one tenant) this holds naturally. Background jobs
-must set the scope explicitly per unit of work.
+must set the scope explicitly per unit of work. The mixed-scope
+flush is a documented rule, not a runtime-detectable error: the
+column reads the context at flush time and cannot see the mixture.
 
 ## Why Option B lost
 
@@ -108,3 +110,16 @@ must set the scope explicitly per unit of work.
   port with the KMS test conventions (skip when down).
 - Story 8 (key-id sourcing): inside the envelope; rotation is a KMS
   key version change, not a data migration.
+
+## Amendment (2026-10-05, challenge review of the field-encryption spec)
+
+- Decrypt is tenant-bound: `decrypt(tenant_id, envelope)`; the tenant
+  id and key id are AES-GCM associated data, so an envelope copied
+  into another tenant's row fails the authentication tag.
+- DEKs are per tenant from day one (store keyed by tenant id, not key
+  id); with the default resolver all tenants share one DEK today, and
+  that blast radius is stated in the spec.
+- Wrapped-DEK creation is get-or-create with conflict adoption, so
+  racing processes cannot make data undecryptable.
+- Restore pairing: an api Postgres restore is only readable against a
+  restored Infisical (its database plus its encryption key).
