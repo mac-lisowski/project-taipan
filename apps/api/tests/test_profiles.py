@@ -1,5 +1,13 @@
+from datetime import datetime
+
 from api.models import UserProfile
 from sqlalchemy import func, select
+
+
+def _assert_tz_aware(body, key):
+    # now() makes the column non-null, and the timestamptz column must
+    # round trip as an offset-bearing timestamp.
+    assert datetime.fromisoformat(body[key]).tzinfo is not None
 
 
 def _create_user(client, email: str) -> int:
@@ -20,6 +28,8 @@ def test_get_profile_roundtrip(client):
     payload = {"display_name": "Ada", "avatar_url": "https://x/ada.png", "bio": "hi"}
     resp = client.put(f"/api/users/{user_id}/profile", json=payload)
     assert resp.status_code == 200
+    _assert_tz_aware(resp.json(), "created_at")
+    _assert_tz_aware(resp.json(), "updated_at")
     resp = client.get(f"/api/users/{user_id}/profile")
     assert resp.status_code == 200
     body = resp.json()
@@ -27,6 +37,8 @@ def test_get_profile_roundtrip(client):
     assert body["display_name"] == "Ada"
     assert body["avatar_url"] == "https://x/ada.png"
     assert body["bio"] == "hi"
+    _assert_tz_aware(body, "created_at")
+    _assert_tz_aware(body, "updated_at")
 
 
 def test_put_upserts(client, session_factory):
@@ -36,7 +48,10 @@ def test_put_upserts(client, session_factory):
     )
     resp = client.put(f"/api/users/{user_id}/profile", json={"display_name": "two"})
     assert resp.status_code == 200
-    assert resp.json()["display_name"] == "two"
+    body = resp.json()
+    assert body["display_name"] == "two"
+    _assert_tz_aware(body, "created_at")
+    _assert_tz_aware(body, "updated_at")
     with session_factory() as db:
         count = db.scalar(
             select(func.count()).select_from(UserProfile).where(UserProfile.user_id == user_id)
@@ -54,6 +69,12 @@ def test_put_replaces_omitted_fields_with_null(client):
     assert body["bio"] == "updated"
     assert body["display_name"] is None
     assert body["avatar_url"] is None
+
+
+def test_put_rejects_oversize_bio(client):
+    user_id = _create_user(client, "toolong@x.com")
+    resp = client.put(f"/api/users/{user_id}/profile", json={"bio": "x" * 5001})
+    assert resp.status_code == 422
 
 
 def test_get_unknown_user_404(client):

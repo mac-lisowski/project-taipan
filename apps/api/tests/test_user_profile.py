@@ -1,8 +1,18 @@
 import pytest
 from api.models import User, UserProfile
 from api.repositories.user import UserRepository
-from sqlalchemy import func, select, text
+from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
+
+# Pattern A: identity and credential columns only; a feature column here
+# means someone skipped the extension table.
+USER_COLUMNS = {"id", "email", "hashed_password", "is_active", "created_at", "updated_at"}
+
+
+def test_users_table_columns_are_locked_to_pattern_a(engine):
+    column_names = {col["name"] for col in inspect(engine).get_columns("users")}
+    assert column_names == USER_COLUMNS
+
 
 PROFILE_VALUES = {
     "display_name": "Ada Lovelace",
@@ -30,7 +40,8 @@ def _user_with_profile(session):
 
 
 def test_create_user_makes_no_profile(client, session_factory):
-    client.post("/api/users", json={"email": "ada@example.com", "password": "s3cret"})
+    resp = client.post("/api/users", json={"email": "ada@example.com", "password": "s3cret"})
+    assert resp.status_code == 201
     with session_factory() as session:
         profile_count = session.scalar(select(func.count()).select_from(UserProfile))
     assert profile_count == 0
