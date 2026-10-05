@@ -20,14 +20,17 @@
   Cipher-port circuit breaker (kms_unavailable, threshold 3 /
   cooldown 30s env), apps/api test-helper dedup, public accessors
   (FieldCrypto.cipher/store/cache, TwoTierDekCache.local/remote).
-  Seams confirmed by user. Next step: to-tickets, then implement.
+  Seams confirmed by user. Tickets written: issues/01-05. 01
+  done, merged to feat/field-encryption-hardening;
+  frontier is 02, 05.
 - Post-#9 cleanup done: .scratch/encryption-seam/prototype.py
   deleted, implemented spec statuses carry PR numbers.
 - Architecture review run 2026-10-05; report at
   /tmp/architecture-review-20261005-210214.html (ephemeral). Six new
   specs written, all "not implemented": request-tenant-scope (top
-  pick - nothing sets tenant_scope in prod; middleware + resolver
-  port + lifespan check + before_flush tenant_id guard),
+  pick - nothing sets tenant_scope in prod; rewritten 2026-10-05:
+  tenants table + session-cookie auth + middleware, env-tenant
+  draft deleted per user; lifespan check + before_flush guard kept),
   crypto-interface-tightening (drop DekCache.put ttl_seconds,
   unexport tenant_ctx/DekManager, serialize enforces UUID key id),
   docs-url-policy (docHref/assetHref/resolveDocPath in lib/docs;
@@ -43,8 +46,11 @@
 - Remaining unimplemented specs: users-slice, field-encryption-
   hardening, request-tenant-scope, crypto-interface-tightening,
   docs-url-policy, unreached-ui-cleanup, auth-form-module,
-  bff-seam-hardening. First real encrypted model field after
-  hardening + tenant scope (one mapped_column(EncryptedString)).
+  bff-seam-hardening. User order: cleanup/hardening/perf first
+  (hardening, tightening, users-slice, ui-cleanup, docs-url,
+  auth-form, bff); tenant scope deferred as feature work. First
+  real encrypted model field after hardening + tenant scope
+  (one mapped_column(EncryptedString)).
 - Token for live runs: mint via recipe in memory
   infisical-token-minting.md; /tmp/taipan-infisical-kms-notes/token.md
   (ephemeral) has a valid one.

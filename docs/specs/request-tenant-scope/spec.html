@@ -18,38 +18,40 @@
 
   <header class="mb-8">
     <h1 class="text-2xl font-bold mb-2">Request-scoped tenant context</h1>
-    <p class="text-slate-500">One middleware owns request-to-tenant scope;
-      startup fails fast on missing wiring; a flush guard stops
-      cross-tenant envelopes. Spec:
+    <p class="text-slate-500">Tenant scope comes from the logged-in
+      user: session cookie to user to tenant. No config tenant, no
+      fallback. Spec:
       <code>docs/specs/request-tenant-scope/spec.md</code>.</p>
   </header>
 
   <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-    <h2 class="font-bold mb-4">Before: the seam nobody plugs into</h2>
+    <h2 class="font-bold mb-4">Before: nothing sets the scope</h2>
     <div class="mermaid">
 flowchart LR
   R[Request] --> H[handler]
   H --> ORM[ORM flush]
   ORM --> ES[EncryptedString]
   ES -. "reads ambient" .-> CTX["tenant_ctx"]
-  CTX -. "zero prod callers" .-> X["RuntimeError / wrong-tenant envelope"]
+  CTX -. "zero prod callers" .-> X["MISSING_TENANT_SCOPE"]
+  W[web login form] -. "POST /api/auth/login" .-> N["404: no such endpoint"]
     </div>
   </section>
 
   <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-    <h2 class="font-bold mb-4">After: one module at the request seam</h2>
+    <h2 class="font-bold mb-4">After: session user owns the scope</h2>
     <div class="mermaid">
 flowchart LR
-  R[Request] --> TS["TenantScope middleware<br/>tenant_for(request) port"]
+  REG["register: tenant + user<br/>login: session + cookie"] --> R[Request]
+  R --> TS["TenantScope middleware<br/>cookie to session to user to tenant_id"]
   TS --> H[handler]
   H --> ORM[ORM flush]
   ORM --> ES[EncryptedString]
-  ES -. "reads" .-> CTX["tenant_ctx = tenant"]
+  ES -. "reads" .-> CTX["tenant_ctx = user.tenant_id"]
   G["before_flush guard"] -. "row.tenant_id == scope" .-> ORM
+  TS -. "no valid session" .-> U["unscoped: encrypted writes fail"]
     </div>
-    <p class="mt-3">Resolver adapter today: <code>API_TENANT_ID</code>
-      env default. A session-backed adapter replaces it when auth
-      lands; nothing else changes.</p>
+    <p class="mt-3">No env tenant. No resolver port. A request has
+      a tenant only through a logged-in user.</p>
   </section>
 
   <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
@@ -60,7 +62,7 @@ flowchart LR
         <div class="bar bg-red-400" style="width:80%">N call sites</div>
       </div>
       <div>
-        <p class="lbl mb-1">after: one middleware, injectable resolver</p>
+        <p class="lbl mb-1">after: one middleware, scope from session user</p>
         <div class="bar bg-emerald-500" style="width:18%">1 module</div>
       </div>
     </div>
@@ -70,22 +72,23 @@ flowchart LR
     <h2 class="font-bold mb-4">Test seam</h2>
     <ul class="list-disc ml-5 space-y-1">
       <li>Tests cross the middleware through <code>TestClient</code>
-        (lifespan running) and a stub resolver; they assert request
-        outcomes and envelopes, never the ContextVar.</li>
-      <li>Startup check test asserts boot fails when encrypted
-        columns exist and the module is unregistered.</li>
+        (lifespan running): register, login, <code>/me</code>,
+        logout. They assert outcomes and rows, never the
+        ContextVar.</li>
+      <li><code>/me</code> reports the ambient scope, so it doubles
+        as the scope probe.</li>
       <li>Flush-guard test writes a <code>tenant_id="b"</code> row
         under scope <code>"a"</code> and expects a raise.</li>
-      <li>Fixture change: <code>with TestClient(app)</code> runs the
-        lifespan in every existing api test.</li>
+      <li>Startup check test asserts boot fails when encrypted
+        columns exist and the module is unregistered.</li>
     </ul>
   </section>
 
   <footer class="bg-slate-800 text-slate-100 rounded-xl p-6">
     <h2 class="font-bold mb-2">Out of scope</h2>
-    <p class="text-slate-300">Auth and session-derived tenants,
-      per-tenant KMS keys, scope helpers for background jobs,
-      crypto package changes.</p>
+    <p class="text-slate-300">Shared tenants, password reset, session
+      management endpoints, rate limiting, per-tenant KMS keys,
+      background-job helpers, crypto package changes.</p>
   </footer>
 </div>
 </body>
