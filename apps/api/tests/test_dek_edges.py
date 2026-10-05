@@ -84,14 +84,14 @@ def live_redis() -> Redis:
     client.close()
 
 
-def test_dek_cache_honors_ttl(live_redis: Redis) -> None:
+def test_dek_cache_honors_configured_ttl(live_redis: Redis) -> None:
     cache = RedisDekCache(live_redis, ttl_seconds=900)
     tenant = unique_tenant()
-    cache.put(tenant, b"dek-bytes", ttl_seconds=1)
+    cache.put(tenant, b"dek-bytes")
     assert cache.get(tenant) == b"dek-bytes"
     # The fake-clock tests own expiry math; this pins that the real Redis
-    # entry carries the caller's per-call TTL instead of the default.
-    assert 0 < live_redis.ttl(KEY_PREFIX + tenant) <= 1
+    # entry carries the adapter's configured TTL.
+    assert 0 < live_redis.ttl(KEY_PREFIX + tenant) <= 900
 
 
 class FakeClock:
@@ -109,8 +109,10 @@ class FakeRedis:
         self.clock = clock
         self.values: dict[str, tuple[bytes, float | None]] = {}
         self.get_calls = 0
+        self.set_ex_values: list[int | None] = []
 
     def set(self, key: str, value: bytes, ex: int | None = None) -> None:
+        self.set_ex_values.append(ex)
         expire_at = self.clock.now + ex if ex is not None else None
         self.values[key] = (value, expire_at)
 
@@ -130,7 +132,7 @@ def test_dek_cache_ttl_contract_on_fake() -> None:
     clock = FakeClock()
     cache = RedisDekCache(FakeRedis(clock), ttl_seconds=60)
     tenant = unique_tenant()
-    cache.put(tenant, b"dek-bytes", ttl_seconds=0)
+    cache.put(tenant, b"dek-bytes")
     assert cache.get(tenant) == b"dek-bytes"
     clock.advance(59)
     assert cache.get(tenant) == b"dek-bytes"
@@ -138,25 +140,20 @@ def test_dek_cache_ttl_contract_on_fake() -> None:
     assert cache.get(tenant) is None
 
 
-def test_dek_cache_per_call_ttl_overrides_default_on_fake() -> None:
-    clock = FakeClock()
-    cache = RedisDekCache(FakeRedis(clock), ttl_seconds=60)
-    tenant = unique_tenant()
-    cache.put(tenant, b"dek-bytes", ttl_seconds=1)
-    assert cache.get(tenant) == b"dek-bytes"
-    clock.advance(0.5)
-    assert cache.get(tenant) == b"dek-bytes"
-    clock.advance(0.5)
-    assert cache.get(tenant) is None
+def test_dek_cache_setex_uses_configured_ttl() -> None:
+    client = FakeRedis(FakeClock())
+    cache = RedisDekCache(client, ttl_seconds=60)
+    cache.put(unique_tenant(), b"dek-bytes")
+    assert client.set_ex_values == [60]
 
 
-def test_two_tier_serves_l1_without_redis_get() -> None:
+def test_two_tier_put_fans_out_and_serves_from_l1() -> None:
     clock = FakeClock()
     redis_fake = FakeRedis(clock)
     cache = TwoTierDekCache(LocalTtlDekCache(60), RedisDekCache(redis_fake, ttl_seconds=60))
     tenant = unique_tenant()
-    cache.put(tenant, b"dek-bytes", ttl_seconds=0)
-    assert redis_fake.get_calls == 0
+    cache.put(tenant, b"dek-bytes")
+    assert redis_fake.values[KEY_PREFIX + tenant][0] == b"dek-bytes"
     assert cache.get(tenant) == b"dek-bytes"
     assert redis_fake.get_calls == 0
 
@@ -165,7 +162,7 @@ def test_two_tier_fills_l1_on_redis_hit() -> None:
     clock = FakeClock()
     redis_fake = FakeRedis(clock)
     tenant = unique_tenant()
-    RedisDekCache(redis_fake, ttl_seconds=60).put(tenant, b"dek-bytes", ttl_seconds=0)
+    RedisDekCache(redis_fake, ttl_seconds=60).put(tenant, b"dek-bytes")
     cache = TwoTierDekCache(LocalTtlDekCache(60), RedisDekCache(redis_fake, ttl_seconds=60))
     assert cache.get(tenant) == b"dek-bytes"
     assert redis_fake.get_calls == 1
@@ -180,16 +177,20 @@ def test_two_tier_l1_expiry_refills_from_redis() -> None:
     tenant = unique_tenant()
     local = LocalTtlDekCache(60, monotonic=lambda: clock.now)
     cache = TwoTierDekCache(local, RedisDekCache(redis_fake, ttl_seconds=900))
-    cache.put(tenant, b"dek-bytes", ttl_seconds=0)
+    cache.put(tenant, b"dek-bytes")
     clock.advance(61)
     assert cache.get(tenant) == b"dek-bytes"
     assert redis_fake.get_calls == 1
+    # The promote kept the local tier's own TTL, not the remote's 900.
+    clock.advance(61)
+    assert cache.get(tenant) == b"dek-bytes"
+    assert redis_fake.get_calls == 2
 
 
 def test_two_tier_serves_cached_dek_while_redis_is_down() -> None:
     cache = TwoTierDekCache(LocalTtlDekCache(60), RedisDekCache(ExplodingRedis(), ttl_seconds=60))
     tenant = unique_tenant()
-    cache.put(tenant, b"dek-bytes", ttl_seconds=0)
+    cache.put(tenant, b"dek-bytes")
     assert cache.get(tenant) == b"dek-bytes"
 
 
@@ -212,7 +213,7 @@ def test_dek_cache_errors_degrade(caplog) -> None:
     assert len(get_warnings) == 1, "a failed cache read must log exactly one warning"
     caplog.clear()
     with caplog.at_level(logging.WARNING):
-        cache.put(tenant, b"dek-bytes", ttl_seconds=60)
+        cache.put(tenant, b"dek-bytes")
     put_warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert len(put_warnings) == 1, "a failed cache write must log exactly one warning"
     assert tenant not in caplog.text
