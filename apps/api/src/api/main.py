@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from api.field_crypto import build_and_register_field_crypto
 from api.models.encrypted_string import set_field_crypto
-from api.routers import users_router
+from api.routers import profiles_router, users_router
 
 
 @asynccontextmanager
@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(users_router, prefix="/api")
+app.include_router(profiles_router, prefix="/api")
 
 
 @app.get("/")
