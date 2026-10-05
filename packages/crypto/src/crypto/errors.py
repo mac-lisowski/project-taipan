@@ -14,6 +14,7 @@ class CryptoCategory(str, Enum):
     WRAP_FAILURE = "wrap_failure"
     MISSING_TENANT_SCOPE = "missing_tenant_scope"
     UNKNOWN_DEK = "unknown_dek"
+    KMS_UNAVAILABLE = "kms_unavailable"
 
 
 class CryptoError(Exception):
