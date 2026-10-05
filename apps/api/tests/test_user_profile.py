@@ -1,0 +1,71 @@
+import pytest
+from api.models import User, UserProfile
+from api.repositories.user import UserRepository
+from sqlalchemy import func, select, text
+from sqlalchemy.exc import IntegrityError
+
+PROFILE_VALUES = {
+    "display_name": "Ada Lovelace",
+    "avatar_url": "https://example.com/ada.png",
+    "bio": "First programmer",
+}
+
+
+@pytest.fixture(autouse=True)
+def _clean_users(engine):
+    """Profile tests assert row counts; leftover users would fake a pass."""
+    yield
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM user_profiles"))
+        conn.execute(text("DELETE FROM users"))
+
+
+def _user_with_profile(session):
+    user = User(email="ada@example.com", hashed_password="x")
+    session.add(user)
+    session.flush()
+    session.add(UserProfile(user_id=user.id, **PROFILE_VALUES))
+    session.commit()
+    return user
+
+
+def test_create_user_makes_no_profile(client, session_factory):
+    client.post("/api/users", json={"email": "ada@example.com", "password": "s3cret"})
+    with session_factory() as session:
+        profile_count = session.scalar(select(func.count()).select_from(UserProfile))
+    assert profile_count == 0
+
+
+def test_profile_roundtrip(session_factory):
+    with session_factory() as session:
+        _user_with_profile(session)
+    with session_factory() as session:
+        profile = session.scalar(select(UserProfile))
+        assert profile.display_name == PROFILE_VALUES["display_name"]
+        assert profile.avatar_url == PROFILE_VALUES["avatar_url"]
+        assert profile.bio == PROFILE_VALUES["bio"]
+        assert profile.user.email == "ada@example.com"
+
+
+def test_profile_one_to_one(session_factory):
+    with session_factory() as session:
+        user = _user_with_profile(session)
+        session.add(UserProfile(user_id=user.id, **PROFILE_VALUES))
+        with pytest.raises(IntegrityError):
+            session.commit()
+
+
+def test_delete_user_cascades_profile(session_factory):
+    with session_factory() as session:
+        user = _user_with_profile(session)
+        UserRepository(session).delete(user)
+    with session_factory() as session:
+        remaining = session.execute(text("SELECT count(*) FROM user_profiles")).scalar_one()
+    assert remaining == 0
+
+
+def test_profile_requires_user(session_factory):
+    with session_factory() as session:
+        session.add(UserProfile(user_id=99999, **PROFILE_VALUES))
+        with pytest.raises(IntegrityError):
+            session.commit()
