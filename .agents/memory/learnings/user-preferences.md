@@ -10,3 +10,4 @@
   shareable and reusable, not app-specific.
 - Keep production setup guidance provider-neutral unless a provider is requested.
 - Keep .agents/memory/current.md a lean snapshot; rewrite it, never append history.
+- No spec/ticket references in code comments (e.g. "Spec story 5"). Code comments state the rule; docs carry the linkage.

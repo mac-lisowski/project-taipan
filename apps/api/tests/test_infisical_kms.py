@@ -16,6 +16,7 @@ from typing import NamedTuple
 
 import pytest
 from kms import InfisicalKms, KmsError
+from kms.infisical_cipher import InfisicalCipher
 
 INFISICAL_URL = os.environ.get("API_INFISICAL_URL", "http://localhost:8080")
 TOKEN = os.environ.get("API_INFISICAL_TOKEN", "")
@@ -36,6 +37,7 @@ live_only = pytest.mark.skipif(
 
 class Keys(NamedTuple):
     client: InfisicalKms
+    cipher: InfisicalCipher
     project_id: str
     key_a: str
 
@@ -43,10 +45,16 @@ class Keys(NamedTuple):
 @pytest.fixture(scope="session")
 def keys() -> Iterator[Keys]:
     client = InfisicalKms(INFISICAL_URL, TOKEN)
+    cipher = InfisicalCipher(INFISICAL_URL, TOKEN)
     project_id = client.create_project(f"taipan-test-{uuid.uuid4().hex}")
     key_a = client.create_key(project_id, "test-key-a")
-    yield Keys(client, project_id, key_a)
-    client.delete_project(project_id)
+    yield Keys(client, cipher, project_id, key_a)
+    try:
+        client.delete_project(project_id)
+    except KmsError as exc:
+        # A lost-response retry 404s; the project is gone either way.
+        if " failed: 404 " not in str(exc):
+            raise
 
 
 @live_only
@@ -94,3 +102,31 @@ def test_transport_error_raises_kmserror() -> None:
     kms = InfisicalKms("http://127.0.0.1:1", "unused-token")
     with pytest.raises(KmsError):
         kms.decrypt("some-key-id", "junk")
+
+
+def test_cipher_has_no_provisioning_methods() -> None:
+    # Two-identity rule lives in the types; structural, so it never skips.
+    cipher = InfisicalCipher("http://127.0.0.1:1", "unused-token")
+    assert hasattr(cipher, "encrypt")
+    assert hasattr(cipher, "decrypt")
+    for name in ("rotate", "create_project", "create_key", "delete_project"):
+        assert not hasattr(cipher, name)
+
+
+@live_only
+def test_cipher_roundtrip_live(keys: Keys) -> None:
+    plaintext = b"taipan cipher secret"
+    ciphertext = keys.cipher.encrypt(keys.key_a, plaintext)
+    assert keys.cipher.decrypt(keys.key_a, ciphertext) == plaintext
+
+
+@live_only
+def test_cipher_garbage_ciphertext_raises_kmserror(keys: Keys) -> None:
+    with pytest.raises(KmsError):
+        keys.cipher.decrypt(keys.key_a, "junk")
+
+
+def test_transport_error_raises_kmserror_via_cipher() -> None:
+    cipher = InfisicalCipher("http://127.0.0.1:1", "unused-token")
+    with pytest.raises(KmsError):
+        cipher.decrypt("some-key-id", "junk")
