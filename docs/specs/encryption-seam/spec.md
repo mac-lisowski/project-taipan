@@ -1,6 +1,6 @@
 # Spec: Decide the seam for encrypted fields
 
-Status: not implemented.
+Status: implemented (ADR-0001 accepted 2026-10-05; feature spec is the next step).
 
 Seam: none yet. This spec exists to choose one. The deliverable is
 an ADR, not code.
