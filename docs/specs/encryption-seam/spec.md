@@ -1,5 +1,7 @@
 # Spec: Decide the seam for encrypted fields
 
+Status: not implemented.
+
 Seam: none yet. This spec exists to choose one. The deliverable is
 an ADR, not code.
 

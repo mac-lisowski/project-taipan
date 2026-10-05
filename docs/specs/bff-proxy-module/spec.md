@@ -1,5 +1,8 @@
 # Spec: Deepen the BFF upstream-proxy module
 
+Status: implemented (PR #7, merged to dev 2026-10-05). Tickets:
+.scratch/bff-proxy-module/issues/01 and 02, both done with reports.
+
 Seam: the new proxy module's interface over standard Fetch
 `Request`/`Response` types. One seam. The route handler stays
 untested framework glue.
