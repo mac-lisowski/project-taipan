@@ -51,6 +51,19 @@ graph LR
 - `src/proxy.ts` - reserved for the Next 16 auth gate once auth
   endpoints exist (replaces the old `middleware.ts` convention).
 
+## Design system (`src/ui/`)
+
+- `src/ui/` is the internal design-system package. App code imports visual
+  pieces from the barrel `@/ui` only; never deep-import its internals from
+  `app/` or `components/`.
+- New visual primitives go in `src/ui/components/` (or a named subdir like
+  `dither/`), accept `className`, merge via `cn()`, and get exported from
+  `src/ui/index.ts`.
+- `components.json` aliases point shadcn's `add` at `src/ui/` - do not move
+  it back under `components/`.
+- `src/app/` and `src/components/` compose `@/ui` exports; they do not
+  define styled primitives.
+
 ## Commands
 
 ```bash

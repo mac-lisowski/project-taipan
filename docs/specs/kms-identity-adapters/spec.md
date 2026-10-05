@@ -1,7 +1,6 @@
 # Spec: Split InfisicalKms along the two-identity seam
 
-Status: implemented (PR #8, opened to dev 2026-10-05). Tickets:
-.scratch/kms-identity-adapters/issues/01-02, all done.
+Status: implemented
 
 Seam: unchanged. The existing `Cipher` and `Provisioning` ports are
 the test surface. What changes is which adapter a token can reach.

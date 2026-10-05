@@ -1,6 +1,13 @@
 # Current state
 
 - Last updated: 2026-10-05
+- Active: branch feat/web-dither-landing (uncommitted). Ported the
+  mivia-monorepo LandingDither WebGL canvas to
+  apps/web/src/components/dither-background.tsx - grayscale, fixed
+  full-viewport, dark-only theme, "project taipan" box on home page.
+  Kept field variant only (dropped motifs, containment, scroll drive,
+  pulse event) to fit the 300 LOC gate (298 lines). Lint + tsc clean.
+  User plans more apps/web updates on this branch.
 - PR #9 open: feat/encryption-seam-adr -> dev (field-encryption
   capability, commit 79358e2). ADR-0001 accepted + amended.
   Encryption-seam + field-encryption specs marked implemented.

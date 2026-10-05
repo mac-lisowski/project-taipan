@@ -17,8 +17,8 @@
   <header class="mb-8">
     <h1 class="text-2xl font-bold mb-2">Decide the seam for encrypted fields</h1>
     <p class="text-slate-500">Visual companion to <code>spec.md</code>.
-      A decision spec: the deliverable is ADR-0001 plus a throwaway
-      prototype, not production code.</p>
+      A decision spec: the deliverable is ADR-0001 verified against
+      the live Cipher port, not production code.</p>
   </header>
 
   <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
@@ -37,7 +37,7 @@ graph TD
   </section>
 
   <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-    <h2 class="font-bold mb-4">Decision criteria (prototype-verified)</h2>
+    <h2 class="font-bold mb-4">Decision criteria</h2>
     <div class="overflow-x-auto">
     <table class="w-full text-left border-collapse">
       <thead>
@@ -82,13 +82,12 @@ graph TD
     <h2 class="font-bold mb-4">Process</h2>
     <div class="mermaid">
 graph LR
-  P["throwaway prototype<br>1 encrypted column,<br>live Cipher port"] --> ADR["ADR-0001 in docs/adr/<br>options + criteria + loser reason"]
+  V["verification round-trip<br>1 encrypted column,<br>live Cipher port"] --> ADR["ADR-0001 in docs/adr/<br>options + criteria + loser reason"]
   ADR --> D["repository fate decided<br>+ key-id sourcing recorded"]
     </div>
-    <p class="text-xs text-slate-500 mt-2">Prototype lives in
-    <code>.scratch/</code> or is deleted. Mechanical DoD check: ADR
-    exists, names both options, states criteria, cites the prototype
-    outcome, answers the repository question.</p>
+    <p class="text-xs text-slate-500 mt-2">Mechanical DoD check: ADR
+    exists, names both options, states criteria, records the
+    verification outcome, answers the repository question.</p>
   </section>
 
   <section class="bg-slate-800 text-slate-100 rounded-xl p-6">
