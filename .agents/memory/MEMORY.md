@@ -15,6 +15,10 @@ this dir holds what the agent learned while working.
 
 - Read `current.md` before starting a task.
 - Update `current.md` when work pauses or finishes.
+- Keep `current.md` a snapshot of now: state, next steps, blockers.
+  Rewrite it; never append history. Completed work, commit shas, and
+  how-you-got-there detail live in git, `decisions/`, and
+  `learnings/`, not in `current.md`.
 - Log a decision as a new file in `decisions/` plus an index link
   when a non-obvious choice is made.
 - Log a lesson as a new file in `learnings/` plus an index link when

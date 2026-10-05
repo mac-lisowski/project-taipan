@@ -30,3 +30,4 @@ dist/
 .zcode/config.local.json
 # Agent working files (spec tickets, scratch state)
 .scratch/
+.worktrees/
