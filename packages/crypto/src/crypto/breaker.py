@@ -42,6 +42,18 @@ class BreakerCipher:
         self._open = False
         self._probing = False
 
+    @property
+    def wrapped(self) -> Cipher:
+        return self._cipher
+
+    @property
+    def threshold(self) -> int:
+        return self._threshold
+
+    @property
+    def cooldown_seconds(self) -> float:
+        return self._cooldown
+
     def encrypt(self, key_id: str, data: bytes) -> str:
         return self._call(self._cipher.encrypt, key_id, data)
 

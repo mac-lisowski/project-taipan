@@ -21,8 +21,11 @@
   cooldown 30s env), apps/api test-helper dedup, public accessors
   (FieldCrypto.cipher/store/cache, TwoTierDekCache.local/remote).
   Seams confirmed by user. Tickets written: issues/01-05. 01
-  done, merged to feat/field-encryption-hardening;
-  frontier is 02, 05.
+  done, merged to feat/field-encryption-hardening; 02
+  (public accessors) and 05 (kms tests move) done on the
+  same branch. 03 (breaker wiring) and 04 (helper dedup)
+  done too. Hardening spec implemented. Next: tightening
+  needs to-tickets.
 - Post-#9 cleanup done: .scratch/encryption-seam/prototype.py
   deleted, implemented spec statuses carry PR numbers.
 - Architecture review run 2026-10-05; report at
@@ -43,15 +46,18 @@
   BaseRepository.add to get_db teardown before repo deletion),
   field-encryption-hardening (packages/kms gets own tests/,
   crypto:dek: prefix pin replaced by accessor assertions).
-- Remaining unimplemented specs: users-slice, field-encryption-
-  hardening, request-tenant-scope, crypto-interface-tightening,
-  docs-url-policy, unreached-ui-cleanup, auth-form-module,
-  bff-seam-hardening. User order: cleanup/hardening/perf first
+- Remaining unimplemented specs: users-slice, extensible-user-entity,
+  request-tenant-scope,
+  crypto-interface-tightening, docs-url-policy, unreached-ui-cleanup,
+  auth-form-module, bff-seam-hardening. User order: cleanup/hardening/perf first
   (hardening, tightening, users-slice, ui-cleanup, docs-url,
   auth-form, bff); tenant scope deferred as feature work. First
   real encrypted model field after hardening + tenant scope
   (one mapped_column(EncryptedString)).
-- Token for live runs: mint via recipe in memory
-  infisical-token-minting.md; /tmp/taipan-infisical-kms-notes/token.md
-  (ephemeral) has a valid one.
+- Token for live runs: /tmp/taipan-infisical-kms-notes/token.md
+  (ephemeral) holds a valid token plus the curl mint sequence.
+  No durable mint recipe exists yet.
 - Open PRs: none - all merged, including dev -> main (per user).
+- CI fix uncommitted: test-crypto + test-kms jobs in ci.yml, api
+  filter covers crypto/kms. Verified fully live: 66 passed,
+  0 skipped (DB 15432 + Infisical token + Redis).

@@ -2,7 +2,7 @@
 
 import os
 
-from crypto import FieldCrypto
+from crypto import BreakerCipher, FieldCrypto
 from kms import InfisicalCipher
 from redis import Redis
 
@@ -13,6 +13,8 @@ from api.models.encrypted_string import set_field_crypto
 
 DEFAULT_DEK_CACHE_TTL_SECONDS = 900
 DEFAULT_DEK_L1_TTL_SECONDS = 60
+DEFAULT_KMS_BREAKER_THRESHOLD = 3
+DEFAULT_KMS_BREAKER_COOLDOWN_SECONDS = 30.0
 
 
 def build_field_crypto() -> FieldCrypto | None:
@@ -22,6 +24,15 @@ def build_field_crypto() -> FieldCrypto | None:
     if not token or not key_id:
         return None
     cipher = InfisicalCipher(os.environ.get("API_INFISICAL_URL", "http://localhost:8080"), token)
+    threshold = int(os.environ.get("API_KMS_BREAKER_THRESHOLD", str(DEFAULT_KMS_BREAKER_THRESHOLD)))
+    if threshold < 1:
+        raise ValueError("API_KMS_BREAKER_THRESHOLD must be at least 1")
+    cooldown = float(
+        os.environ.get("API_KMS_BREAKER_COOLDOWN", str(DEFAULT_KMS_BREAKER_COOLDOWN_SECONDS))
+    )
+    if cooldown <= 0:
+        raise ValueError("API_KMS_BREAKER_COOLDOWN must be positive")
+    cipher = BreakerCipher(cipher, threshold=threshold, cooldown_seconds=cooldown)
     store = PostgresDekStore(SessionLocal, key_id)
     ttl = int(os.environ.get("API_DEK_CACHE_TTL", str(DEFAULT_DEK_CACHE_TTL_SECONDS)))
     if ttl < 1:

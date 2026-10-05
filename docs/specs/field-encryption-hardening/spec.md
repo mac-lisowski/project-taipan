@@ -1,6 +1,6 @@
 # Spec: Field-encryption hardening
 
-Status: not implemented.
+Status: implemented.
 
 The capability is complete and verified live. This spec lands the
 three follow-ups the whole-scope review deferred: fail-fast on KMS

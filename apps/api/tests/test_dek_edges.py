@@ -5,29 +5,27 @@ same convention as conftest. The cache tests use the live test Redis
 when reachable and a contract fake otherwise.
 """
 
-import base64
 import logging
 import os
-import uuid
 
 import pytest
-from api.dek_cache import LocalTtlDekCache, RedisDekCache, TwoTierDekCache
+from api.dek_cache import (
+    KEY_PREFIX,
+    LocalTtlDekCache,
+    RedisDekCache,
+    TwoTierDekCache,
+)
 from api.dek_store import PostgresDekStore
 from api.field_crypto import build_field_crypto
 from api.models import TenantDek
-from crypto import FieldCrypto
+from api_testsupport import KEY_ID, MapStore, StubCipher, unique_tenant
+from crypto import BreakerCipher, FieldCrypto
 from kms import InfisicalCipher
 from redis import Redis, RedisError
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-KEY_ID = "5f0c9a1e-2222-4333-8444-555566667777"
 REDIS_URL = os.environ.get("API_REDIS_URL", "redis://localhost:6379/0")
-
-
-def unique_tenant() -> str:
-    # Rows survive across session-scoped tests; a fresh tenant isolates each.
-    return uuid.uuid4().hex
 
 
 @pytest.fixture
@@ -93,7 +91,7 @@ def test_dek_cache_honors_ttl(live_redis: Redis) -> None:
     assert cache.get(tenant) == b"dek-bytes"
     # The fake-clock tests own expiry math; this pins that the real Redis
     # entry carries the caller's per-call TTL instead of the default.
-    assert 0 < live_redis.ttl("crypto:dek:" + tenant) <= 1
+    assert 0 < live_redis.ttl(KEY_PREFIX + tenant) <= 1
 
 
 class FakeClock:
@@ -220,30 +218,6 @@ def test_dek_cache_errors_degrade(caplog) -> None:
     assert tenant not in caplog.text
 
 
-class StubCipher:
-    """Base64 wrap/unwrap, so the degrade test needs no backend."""
-
-    def encrypt(self, key_id: str, data: bytes) -> str:
-        return base64.urlsafe_b64encode(data).decode().rstrip("=")
-
-    def decrypt(self, key_id: str, ciphertext: str) -> bytes:
-        return base64.urlsafe_b64decode(ciphertext + "=" * (-len(ciphertext) % 4))
-
-
-class MapStore:
-    """In-memory DekStore stand-in, so the degrade test needs no database."""
-
-    def __init__(self) -> None:
-        self.rows: dict[str, str] = {}
-
-    def get(self, tenant_id: str) -> str | None:
-        return self.rows.get(tenant_id)
-
-    def put(self, tenant_id: str, wrapped_dek: str) -> str:
-        self.rows[tenant_id] = wrapped_dek
-        return wrapped_dek
-
-
 def test_raising_cache_does_not_fail_encryption(caplog) -> None:
     module = FieldCrypto(
         cipher=StubCipher(),
@@ -273,9 +247,43 @@ def test_build_field_crypto_wires_real_edges(monkeypatch) -> None:
     monkeypatch.delenv("API_REDIS_URL", raising=False)
     monkeypatch.delenv("API_DEK_CACHE_TTL", raising=False)
     monkeypatch.delenv("API_DEK_CACHE_L1_TTL", raising=False)
+    monkeypatch.delenv("API_KMS_BREAKER_THRESHOLD", raising=False)
+    monkeypatch.delenv("API_KMS_BREAKER_COOLDOWN", raising=False)
     module = build_field_crypto()
     assert isinstance(module, FieldCrypto)
-    assert isinstance(module.cipher, InfisicalCipher)
+    assert isinstance(module.cipher, BreakerCipher)
+    assert isinstance(module.cipher.wrapped, InfisicalCipher)
+    assert module.cipher.threshold == 3
+    assert module.cipher.cooldown_seconds == 30.0
     cache = module.cache
     assert isinstance(cache, TwoTierDekCache)
     assert isinstance(cache.remote, RedisDekCache)
+
+
+def test_build_field_crypto_breaker_env_override(monkeypatch) -> None:
+    monkeypatch.setenv("API_INFISICAL_TOKEN", "test-token")
+    monkeypatch.setenv("API_INFISICAL_KMS_KEY_ID", KEY_ID)
+    monkeypatch.setenv("API_KMS_BREAKER_THRESHOLD", "1")
+    monkeypatch.setenv("API_KMS_BREAKER_COOLDOWN", "5")
+    module = build_field_crypto()
+    assert isinstance(module.cipher, BreakerCipher)
+    assert module.cipher.threshold == 1
+    assert module.cipher.cooldown_seconds == 5.0
+
+
+def test_build_field_crypto_breaker_bad_env(monkeypatch) -> None:
+    monkeypatch.setenv("API_INFISICAL_TOKEN", "test-token")
+    monkeypatch.setenv("API_INFISICAL_KMS_KEY_ID", KEY_ID)
+    monkeypatch.delenv("API_INFISICAL_URL", raising=False)
+    monkeypatch.delenv("API_REDIS_URL", raising=False)
+    monkeypatch.delenv("API_DEK_CACHE_TTL", raising=False)
+    monkeypatch.delenv("API_DEK_CACHE_L1_TTL", raising=False)
+    for var, value in (
+        ("API_KMS_BREAKER_THRESHOLD", "0"),
+        ("API_KMS_BREAKER_COOLDOWN", "0"),
+        ("API_KMS_BREAKER_THRESHOLD", "many"),
+        ("API_KMS_BREAKER_COOLDOWN", "many"),
+    ):
+        monkeypatch.setenv(var, value)
+        with pytest.raises(ValueError):
+            build_field_crypto()

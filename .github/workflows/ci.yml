@@ -24,6 +24,8 @@ jobs:
     outputs:
       shared: ${{ steps.filter.outputs.shared }}
       core: ${{ steps.filter.outputs.core }}
+      crypto: ${{ steps.filter.outputs.crypto }}
+      kms: ${{ steps.filter.outputs.kms }}
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
     steps:
@@ -44,9 +46,15 @@ jobs:
               - 'apps/web/**'
             core:
               - 'packages/core/**'
+            crypto:
+              - 'packages/crypto/**'
+            kms:
+              - 'packages/kms/**'
             api:
               - 'apps/api/**'
               - 'packages/core/**'
+              - 'packages/crypto/**'
+              - 'packages/kms/**'
               - 'docker-compose.yaml'
               - 'docker/**'
 
@@ -119,6 +127,26 @@ jobs:
       - run: uv sync --locked
       - run: uv run pytest packages/core
 
+  test-crypto:
+    needs: changes
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.crypto == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: uv sync --locked
+      - run: uv run pytest packages/crypto
+
+  test-kms:
+    needs: changes
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.kms == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: uv sync --locked
+      - run: uv run pytest packages/kms
+
   test-api:
     needs: changes
     if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.api == 'true') }}
@@ -147,14 +175,14 @@ jobs:
         run: docker run --rm taipan-api python -c "import api.main"
 
   ci-done:
-    needs: [changes, lint, test-core, test-api, test-web]
+    needs: [changes, lint, test-core, test-crypto, test-kms, test-api, test-web]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: verify required jobs passed
         run: |
           status=0
-          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "test-core:${{ needs.test-core.result }}" "test-api:${{ needs.test-api.result }}" "test-web:${{ needs.test-web.result }}"; do
+          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "test-core:${{ needs.test-core.result }}" "test-crypto:${{ needs.test-crypto.result }}" "test-kms:${{ needs.test-kms.result }}" "test-api:${{ needs.test-api.result }}" "test-web:${{ needs.test-web.result }}"; do
             result="${pair##*:}"
             echo "${pair%%:*}: $result"
             case "$result" in success|skipped) ;; *) status=1 ;; esac
