@@ -38,3 +38,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Infisical first boot slow; keep Postgres same-region](learnings/infisical-first-boot.md)
 - [Rewrite current.md, never append history](learnings/memory-hygiene.md)
 - [httpx2 retries requests that lose their response](learnings/httpx2-retry-lost-response.md)
+- [`bl` on PATH is Blaxel, not Bailian](learnings/bl-binary-collision.md)

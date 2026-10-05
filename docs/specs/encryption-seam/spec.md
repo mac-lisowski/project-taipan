@@ -1,7 +1,7 @@
 # Spec: Decide the seam for encrypted fields
 
-Status: implemented (ADR-0001 accepted 2026-10-05; the feature spec
-is docs/specs/field-encryption/spec.md, itself implemented).
+Status: implemented (ADR-0001 accepted; the feature spec is
+docs/specs/field-encryption/spec.md, itself implemented).
 
 Seam: chosen. Column-level `TypeDecorator` + deep crypto module
 (ADR-0001).
@@ -19,11 +19,10 @@ deletion test, so its fate rides on this decision.
 
 ## Solution
 
-Write `docs/adr/` ADR-0001 choosing the seam, backed by a throwaway
-prototype of the preferred shape so the ADR cites verified
-behavior, not guesses. The ADR records both options, the criteria,
-and the reason the loser lost, so future reviews do not re-suggest
-it.
+Write `docs/adr/` ADR-0001 choosing the seam, verified against the
+live Cipher port so the ADR cites verified behavior, not guesses.
+The ADR records both options, the criteria, and the reason the
+loser lost, so future reviews do not re-suggest it.
 
 ## User Stories
 
@@ -32,24 +31,23 @@ it.
    fork.
 2. As a reviewer, I want the rejected option recorded with its
    reason, so that no future architecture review re-suggests it.
-3. As a developer, I want a throwaway prototype of the winning
-   shape, so that the ADR cites verified behavior.
-4. As a developer, I want the decision to account for query
+3. As a developer, I want the decision to account for query
    behavior, so that "cannot filter on ciphertext" is an explicit
    accepted cost, not a surprise.
-5. As a maintainer, I want the ADR under `docs/adr/`, so that it
+4. As a maintainer, I want the ADR under `docs/adr/`, so that it
    survives scratch state and session context.
-6. As a developer, I want the decision to state what happens to
+5. As a developer, I want the decision to state what happens to
    `BaseRepository`, so that the shallow-layer question is closed.
-7. As a developer, I want the decision to state how tests cross
+6. As a developer, I want the decision to state how tests cross
    the chosen seam, so that the test surface is designed now.
-8. As an operator, I want key-id sourcing decided (config vs
+7. As an operator, I want key-id sourcing decided (config vs
    column), so that rotation semantics are part of the record.
 
 ## Implementation Decisions
 
 - Create `docs/adr/` with ADR-0001: "Seam for encrypted model
-  fields". Status: accepted when the prototype confirms the shape.
+  fields". Status: accepted when the preferred shape is verified
+  against the live Cipher port.
 - The two options under evaluation:
   - Option A: column-level `TypeDecorator`. Encryption rides the
     ORM. Every read/write converts transparently. Repositories
@@ -57,7 +55,7 @@ it.
   - Option B: repository-owned conversion. The repository module
     encrypts on write and decrypts on read. Repositories become
     the deep module that owns ciphertext handling.
-- Decision criteria, evaluated by the prototype:
+- Decision criteria:
   - Locality: where does ciphertext logic concentrate, and can a
     caller bypass it?
   - Test surface: can encryption be verified through the seam
@@ -68,9 +66,9 @@ it.
     under each option.
   - Key rotation: where the key id is read, and how a versioned
     key changes existing rows.
-- The prototype is throwaway: it lives in `.scratch/` or is
-  deleted after the ADR is written. It proves one encrypted column
-  round-trips through the live `Cipher` port.
+- Verification: one encrypted column round-trips real bytes
+  through the live `Cipher` port before the ADR is marked
+  accepted.
 - No production code changes in this spec. The output is the ADR
   plus a decision on the repository layer's fate.
 
@@ -78,11 +76,10 @@ it.
 
 - No production code ships, so no test suite additions.
 - Mechanical verification for the DoD: the ADR file exists, names
-  both options, states criteria, cites the prototype outcome, and
-  answers the repository-fate question.
-- The prototype itself must round-trip real bytes through the
-  live Infisical instance, reusing the existing KMS test
-  conventions (skip when instance or token missing).
+  both options, states criteria, records the verification outcome,
+  and answers the repository-fate question.
+- Verification reuses the KMS test conventions against the live
+  Infisical instance (skip when instance or token missing).
 
 ## Out of Scope
 

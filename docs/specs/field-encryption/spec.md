@@ -1,8 +1,6 @@
 # Spec: Field encryption capability
 
-Status: implemented (branch feat/encryption-seam-adr, not yet
-merged). Tickets: .scratch/field-encryption/issues/01-03, all done
-with reports and live-verified.
+Status: implemented
 
 Seam: `packages/crypto`, one deep module: tenant-aware
 `encrypt(tenant_id, plaintext)` and `decrypt(tenant_id, envelope)`
@@ -118,7 +116,7 @@ the first real encrypted field lands in a later feature.
   id and key id as associated data. Decrypt takes the tenant id and
   refuses to decrypt under a different tenant: envelope swapping
   between tenants fails the authentication tag.
-- Envelope format (from the prototype, decision-rich part):
+- Envelope format:
   `v1:<key_id>:<b64url nonce>:<b64url ciphertext>`; exactly four
   fields, literal version `v1`, key id in UUID charset, 12-byte
   nonce, unpadded urlsafe base64. Anything else raises the module
@@ -186,13 +184,9 @@ the first real encrypted field lands in a later feature.
 
 ## Further Notes
 
-- Implements ADR-0001 (`docs/adr/ADR-0001-seam-for-encrypted-model-fields.md`),
-  amended by this spec's challenge review: decrypt is tenant-bound,
-  DEKs are per tenant, and the mixed-scope flush is a documented
-  rule, not a detectable error.
-- The throwaway prototype lives at `.scratch/encryption-seam/` and is
-  deleted after this spec's PR merges; the envelope format above is
-  lifted from it.
+- Implements ADR-0001 (`docs/adr/ADR-0001-seam-for-encrypted-model-fields.md`):
+  decrypt is tenant-bound, DEKs are per tenant, and the mixed-scope
+  flush is a documented rule, not a detectable error.
 - Operator docs touch list for tickets: `docs/infisical.md` (paired
   restore dependency; never delete a KMS key that wrapped DEKs) and
   `.env.example` (two new optional cache TTL vars, no new required

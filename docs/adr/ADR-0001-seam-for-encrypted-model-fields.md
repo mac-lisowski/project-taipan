@@ -1,9 +1,6 @@
 # ADR-0001: Seam for encrypted model fields
 
-Status: accepted (2026-10-05)
-Backed by prototype: .scratch/encryption-seam/prototype.py (throwaway;
-verified against live Infisical v0.165.16, then deleted after this
-record was written)
+Status: accepted
 
 ## Context
 
@@ -13,12 +10,11 @@ live-tested). Two candidate seams place the encrypt/decrypt
 conversion at different layers. Picking during feature work instead
 of now means rework either way.
 
-Tenancy requirement (decided): the system will use a generic
-`tenants` table; a tenant can be a user or an organization, and
-organizations are optional. Every tenantable row carries a
-`tenant_id`. Each tenant may get its own KMS key in the future. The
-encryption seam must speak only of `tenant_id`; tenant type is not
-its concern.
+Tenancy requirement: the system uses a generic `tenants` table; a
+tenant can be a user or an organization, and organizations are
+optional. Every tenantable row carries a `tenant_id`. Each tenant may
+get its own KMS key in the future. The encryption seam speaks only of
+`tenant_id`; tenant type is not its concern.
 
 ## Options
 
@@ -51,8 +47,18 @@ the repository.
   travels inside the envelope: decryption is self-describing, KMS
   rotation (versioned keys) needs no migration, per-tenant keys need
   no extra column, and algorithm changes are additive (v2).
+- Decrypt is tenant-bound: `decrypt(tenant_id, envelope)`; the tenant
+  id and key id are AES-GCM associated data, so an envelope copied
+  into another tenant's row fails the authentication tag.
+- DEKs are per tenant (store keyed by tenant id, not key id); with
+  the default resolver all tenants share one DEK, a stated blast
+  radius.
+- Wrapped-DEK creation is get-or-create with conflict adoption, so
+  racing processes cannot make data undecryptable.
+- Restore pairing: an api Postgres restore is only readable against a
+  restored Infisical (its database plus its encryption key).
 
-## Verified behavior (prototype outcomes)
+## Verified behavior
 
 - A SQLite row stores only the versioned envelope; no plaintext is
   reachable through the ORM or raw SQL.
@@ -62,16 +68,16 @@ the repository.
   different key ids and different ciphertext.
 - DEK cache: exactly one unwrap per tenant, then cache hits.
 
-## Verified constraint: one tenant scope per flush
+## Constraint: one tenant scope per flush
 
-The prototype first failed honestly: the column type reads the
-tenant context at flush time, not at add() time, so rows added under
-two tenant scopes but flushed once were all encrypted under the last
-scope. Rule: one tenant scope per flush. With per-request scoping
-(one request = one tenant) this holds naturally. Background jobs
-must set the scope explicitly per unit of work. The mixed-scope
-flush is a documented rule, not a runtime-detectable error: the
-column reads the context at flush time and cannot see the mixture.
+The column type reads the tenant context at flush time, not at
+add() time, so rows added under two tenant scopes but flushed once
+are all encrypted under the last scope. Rule: one tenant scope per
+flush. With per-request scoping (one request = one tenant) this
+holds naturally. Background jobs must set the scope explicitly per
+unit of work. The mixed-scope flush is a documented rule, not a
+runtime-detectable error: the column reads the context at flush
+time and cannot see the mixture.
 
 ## Why Option B lost
 
@@ -104,22 +110,9 @@ column reads the context at flush time and cannot see the mixture.
 
 ## Resolved questions
 
-- Story 6 (repository fate): deleted in the feature spec.
-- Story 7 (test surface): unit tests stub the crypto module's
-  transport; integration tests round-trip through the live Cipher
-  port with the KMS test conventions (skip when down).
-- Story 8 (key-id sourcing): inside the envelope; rotation is a KMS
-  key version change, not a data migration.
-
-## Amendment (2026-10-05, challenge review of the field-encryption spec)
-
-- Decrypt is tenant-bound: `decrypt(tenant_id, envelope)`; the tenant
-  id and key id are AES-GCM associated data, so an envelope copied
-  into another tenant's row fails the authentication tag.
-- DEKs are per tenant from day one (store keyed by tenant id, not key
-  id); with the default resolver all tenants share one DEK today, and
-  that blast radius is stated in the spec.
-- Wrapped-DEK creation is get-or-create with conflict adoption, so
-  racing processes cannot make data undecryptable.
-- Restore pairing: an api Postgres restore is only readable against a
-  restored Infisical (its database plus its encryption key).
+- Repository fate: deleted in the feature spec.
+- Test surface: unit tests stub the crypto module's transport;
+  integration tests round-trip through the live Cipher port with
+  the KMS test conventions (skip when down).
+- Key-id sourcing: inside the envelope; rotation is a KMS key
+  version change, not a data migration.

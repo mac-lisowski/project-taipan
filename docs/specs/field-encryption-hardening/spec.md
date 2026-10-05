@@ -131,9 +131,9 @@ through public surface.
 
 ## Further Notes
 
-- Origin: whole-scope review of the field-encryption capability,
-  2026-10-05. The perf review measured the outage tail and deferred
-  the breaker; the smell review deferred the helper dedup and the
+- Origin: whole-scope review of the field-encryption capability.
+  The perf review measured the outage tail and deferred the
+  breaker; the smell review deferred the helper dedup and the
   accessor refactor.
 - `docs/specs/field-encryption-hardening/spec.html` visualizes the
   breaker state machine and the accessor surface.

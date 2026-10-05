@@ -1,7 +1,6 @@
 # Spec: Infisical KMS client + integration tests
 
-Status: implemented (PR #5, merged to dev 2026-10-04). Tickets:
-.scratch/infisical-kms/issues/01-03, all done.
+Status: implemented
 
 Seam: `KmsClient` against the real Infisical HTTP API. No mocks.
 One seam, same boundary production code uses.
