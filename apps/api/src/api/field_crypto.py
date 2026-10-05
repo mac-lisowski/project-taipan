@@ -1,6 +1,7 @@
 """Composition root for the crypto module: real edges when config allows."""
 
 import os
+import uuid
 
 from crypto import BreakerCipher, FieldCrypto
 from kms import InfisicalCipher
@@ -23,6 +24,7 @@ def build_field_crypto() -> FieldCrypto | None:
     key_id = os.environ.get("API_INFISICAL_KMS_KEY_ID", "")
     if not token or not key_id:
         return None
+    _require_uuid_key_id(key_id)
     cipher = InfisicalCipher(os.environ.get("API_INFISICAL_URL", "http://localhost:8080"), token)
     threshold = int(os.environ.get("API_KMS_BREAKER_THRESHOLD", str(DEFAULT_KMS_BREAKER_THRESHOLD)))
     if threshold < 1:
@@ -48,6 +50,14 @@ def build_field_crypto() -> FieldCrypto | None:
         ),
     )
     return FieldCrypto(cipher=cipher, store=store, default_key_id=key_id, cache=cache)
+
+
+def _require_uuid_key_id(key_id: str) -> None:
+    # A non-UUID key id would produce envelopes the module cannot decrypt.
+    try:
+        uuid.UUID(key_id)
+    except ValueError as exc:
+        raise ValueError("API_INFISICAL_KMS_KEY_ID must be a UUID") from exc
 
 
 def build_and_register_field_crypto() -> FieldCrypto | None:

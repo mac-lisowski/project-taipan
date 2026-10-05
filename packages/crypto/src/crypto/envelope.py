@@ -36,6 +36,9 @@ def parse(envelope: str) -> tuple[str, bytes, bytes]:
 
 
 def serialize(key_id: str, nonce: bytes, ciphertext: bytes) -> str:
+    # The write path may never emit what parse would reject.
+    if not _is_uuid(key_id):
+        _reject()
     return f"{_VERSION}:{key_id}:{encode(nonce)}:{encode(ciphertext)}"
 
 
