@@ -37,3 +37,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Infisical SITE_URL needs https:// or it 502s](learnings/infisical-site-url.md)
 - [Infisical first boot slow; keep Postgres same-region](learnings/infisical-first-boot.md)
 - [Rewrite current.md, never append history](learnings/memory-hygiene.md)
+- [httpx2 retries requests that lose their response](learnings/httpx2-retry-lost-response.md)
