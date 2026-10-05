@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec: BFF seam hardening</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lbl { font-size: 10px; letter-spacing: .05em;
+         text-transform: uppercase; color: #6b7280; }
+  .bar { height: 14px; border-radius: 4px; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">BFF seam hardening</h1>
+    <p class="text-slate-500">Gate checks the property, not the name;
+      proxy errors stop masquerading as upstream failures. Spec:
+      <code>docs/specs/bff-seam-hardening/spec.md</code>.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Gate: name check → property check</h2>
+    <div class="mermaid">
+flowchart LR
+  subgraph before["before"]
+    G1["grep literal<br/>API_INTERNAL_URL"]
+    G2["grep literal<br/>:8000"]
+    G3["NEXT_PUBLIC_*<br/>name pattern"]
+    H1["hole: renamed var<br/>port-less host<br/>untracked file"]
+  end
+  subgraph after["after"]
+    N1["any *_URL/_ORIGIN/<br/>_HOST/_ENDPOINT read<br/>outside src/app/api"]
+    N2["untracked files via<br/>git ls-files"]
+  end
+  G1 -. widen .-> N1
+  G3 -. widen .-> N1
+  H1 -. close .-> N2
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Proxy: honest failures</h2>
+    <div class="mermaid">
+flowchart LR
+  REQ[Request] --> HDR["requestHeaders<br/>(outside try)"]
+  HDR --> TRY["try: upstream fetch only"]
+  TRY -->|fetch fails| LOG["console.error + 502"]
+  TRY --> RES["browserResponse<br/>(outside try)"]
+  RES -->|build bug| PROP["propagates<br/>not a 502"]
+    </div>
+    <p class="mt-3"><code>PUBLIC_ORIGIN</code> becomes required in
+      production, same shape as <code>API_INTERNAL_URL</code>.</p>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Test seam</h2>
+    <ul class="list-disc ml-5 space-y-1">
+      <li>Tests cross <code>proxyUpstream</code> via the recording
+        fetch, per existing convention.</li>
+      <li>New case: construction-time error must not produce a 502
+        body.</li>
+      <li>Gate verified by a planted violation that the widened
+        check flags, then reverted.</li>
+    </ul>
+  </section>
+
+  <footer class="bg-slate-800 text-slate-100 rounded-xl p-6">
+    <h2 class="font-bold mb-2">Out of scope</h2>
+    <p class="text-slate-300">Path allowlist policy (slot marked),
+      rate limiting, auth gating, telemetry.</p>
+  </footer>
+</div>
+</body>
+</html>

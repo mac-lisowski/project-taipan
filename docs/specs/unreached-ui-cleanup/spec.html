@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec: unreached UI cleanup</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lbl { font-size: 10px; letter-spacing: .05em;
+         text-transform: uppercase; color: #6b7280; }
+  .bar { height: 14px; border-radius: 4px; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">Unreached UI cleanup</h1>
+    <p class="text-slate-500">Delete page-level components with zero
+      importers; keep the design-system barrel; guard against the
+      next accumulation. Spec:
+      <code>docs/specs/unreached-ui-cleanup/spec.md</code>.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">What goes, what stays</h2>
+    <div class="mermaid">
+flowchart LR
+  P["(public)/page.tsx<br/>renders LoginForm only"]
+  subgraph dead["delete: zero importers"]
+    RG["ReleaseGrid 179"]
+    LS["LiveStats 34"]
+    CH["Chrome 37"]
+  end
+  subgraph keep["keep: ui inventory"]
+    NC["NewsCard · Stat ·<br/>Sparkline · CodeTabs"]
+  end
+  P -. "none" .- dead
+    </div>
+    <p class="mt-3">The landing page that would wire the cluster,
+      including <code>dither-background.tsx</code>, is absent from the
+      tree on <code>feat/web-dither-landing</code>.</p>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Dead surface</h2>
+    <div class="space-y-2">
+      <div>
+        <p class="lbl mb-1">before: page-level components with no callers</p>
+        <div class="bar bg-red-400" style="width:42%">250 LOC unreached</div>
+      </div>
+      <div>
+        <p class="lbl mb-1">after: reachable tree only</p>
+        <div class="bar bg-emerald-500" style="width:4%">0</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Test seam</h2>
+    <ul class="list-disc ml-5 space-y-1">
+      <li>Existing gates verify the deletion: <code>pnpm lint</code>,
+        <code>tsc --noEmit</code>, full <code>next build</code>.</li>
+      <li>The new unreachable-export check is proven by running it
+        before (flags the cluster) and after (clean).</li>
+      <li>Gate conventions follow <code>scripts/check-bff.sh</code>
+        and <code>scripts/check-file-size.sh</code>.</li>
+    </ul>
+  </section>
+
+  <footer class="bg-slate-800 text-slate-100 rounded-xl p-6">
+    <h2 class="font-bold mb-2">Out of scope</h2>
+    <p class="text-slate-300">Rebuilding the landing page, deleting
+      ui primitives, auth-form extraction, gate changes.</p>
+  </footer>
+</div>
+</body>
+</html>

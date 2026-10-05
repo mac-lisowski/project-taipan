@@ -1,6 +1,6 @@
 # Spec: Split InfisicalKms along the two-identity seam
 
-Status: implemented
+Status: implemented (#8)
 
 Seam: unchanged. The existing `Cipher` and `Provisioning` ports are
 the test surface. What changes is which adapter a token can reach.

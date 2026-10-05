@@ -1,6 +1,6 @@
 # Spec: Field encryption capability
 
-Status: implemented
+Status: implemented (#9)
 
 Seam: `packages/crypto`, one deep module: tenant-aware
 `encrypt(tenant_id, plaintext)` and `decrypt(tenant_id, envelope)`
@@ -132,7 +132,7 @@ the first real encrypted field lands in a later feature.
   process, a decrypt waits on Postgres plus Infisical (15 s
   transport timeout), and an Infisical outage repeats that wait
   because failures are never cached. A circuit breaker is future
-  work.
+  work, spec'd in `docs/specs/field-encryption-hardening/`.
 - Database schema: the wrapped-DEK table ships as an Alembic
   revision plus an ORM model beside the api models. The
   `cryptography` library belongs to the crypto package, which owns
