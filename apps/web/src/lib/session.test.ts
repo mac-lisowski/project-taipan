@@ -113,6 +113,14 @@ describe("session helpers", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/account");
   });
 
+  it("redirectIfAuthenticated defaults to the dashboard", async () => {
+    mockGet.mockReturnValue({ name: "session", value: "tok-123" });
+    await expect(redirectIfAuthenticated()).rejects.toThrow(
+      "NEXT_REDIRECT:/dashboard",
+    );
+    expect(mockRedirect).toHaveBeenCalledWith("/dashboard");
+  });
+
   it("redirectIfAuthenticated does nothing when no session exists", async () => {
     mockGet.mockReturnValue(undefined);
     await redirectIfAuthenticated("/account");

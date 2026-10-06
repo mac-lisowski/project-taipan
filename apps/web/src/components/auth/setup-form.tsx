@@ -6,7 +6,7 @@ import { Field } from "@/ui";
 import { AuthForm } from "@/components/auth/auth-form";
 
 // First-run setup: posts email plus password to /api/setup, which sets
-// the session cookie, then lands straight on the account page.
+// the session cookie, then lands straight on the dashboard.
 export function SetupForm(): ReactNode {
   const router = useRouter();
 
@@ -24,7 +24,7 @@ export function SetupForm(): ReactNode {
         endpoint="/api/setup"
         submitLabel="set up"
         pendingLabel="setting up…"
-        onSuccess={() => router.push("/account")}
+        onSuccess={() => router.push("/dashboard")}
       >
         <div className="grid grid-cols-2 gap-3">
           <Field
