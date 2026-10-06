@@ -1,4 +1,3 @@
-import os
 from collections.abc import Iterator
 from typing import Annotated
 
@@ -7,11 +6,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from api import tenant_guard
+from api.config import get_config
 
-DATABASE_URL = os.environ.get(
-    "API_DATABASE_URL",
-    "postgresql+psycopg://postgres:postgres@localhost:5432/app",
-)
+DATABASE_URL = get_config().database_url
 
 engine = create_engine(
     DATABASE_URL,

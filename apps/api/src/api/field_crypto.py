@@ -1,65 +1,62 @@
 """Composition root for the crypto module: real edges when config allows."""
 
-import os
-
 from crypto import BreakerCipher, FieldCrypto
-from crypto.envelope import is_valid_key_id
 from kms import InfisicalCipher
 from redis import Redis
 
+from api.config import (
+    DEFAULT_DEK_CACHE_L1_TTL as _DEFAULT_DEK_L1,
+)
+from api.config import (
+    DEFAULT_DEK_CACHE_TTL as _DEFAULT_DEK_TTL,
+)
+from api.config import (
+    DEFAULT_KMS_BREAKER_COOLDOWN as _DEFAULT_KMS_COOLDOWN,
+)
+from api.config import (
+    DEFAULT_KMS_BREAKER_THRESHOLD as _DEFAULT_KMS_THRESHOLD,
+)
+from api.config import (
+    Config,
+    get_config,
+)
 from api.db import SessionLocal
 from api.dek_cache import LocalTtlDekCache, RedisDekCache, TwoTierDekCache
 from api.dek_store import PostgresDekStore
 from api.models.encrypted_string import set_field_crypto
 
-DEFAULT_DEK_CACHE_TTL_SECONDS = 900
-DEFAULT_DEK_L1_TTL_SECONDS = 60
-DEFAULT_KMS_BREAKER_THRESHOLD = 3
-DEFAULT_KMS_BREAKER_COOLDOWN_SECONDS = 30.0
+DEFAULT_DEK_CACHE_TTL_SECONDS = _DEFAULT_DEK_TTL
+DEFAULT_DEK_L1_TTL_SECONDS = _DEFAULT_DEK_L1
+DEFAULT_KMS_BREAKER_THRESHOLD = _DEFAULT_KMS_THRESHOLD
+DEFAULT_KMS_BREAKER_COOLDOWN_SECONDS = _DEFAULT_KMS_COOLDOWN
 
 
-def build_field_crypto() -> FieldCrypto | None:
+def build_field_crypto(config: Config | None = None) -> FieldCrypto | None:
     """The module, or None when Infisical config is absent (capability off)."""
-    token = os.environ.get("API_INFISICAL_TOKEN", "")
-    key_id = os.environ.get("API_INFISICAL_KMS_KEY_ID", "")
-    if not token or not key_id:
+    cfg = config or get_config()
+    if not cfg.infisical_token or not cfg.infisical_kms_key_id:
         return None
-    _require_uuid_key_id(key_id)
-    cipher = InfisicalCipher(os.environ.get("API_INFISICAL_URL", "http://localhost:8080"), token)
-    threshold = int(os.environ.get("API_KMS_BREAKER_THRESHOLD", str(DEFAULT_KMS_BREAKER_THRESHOLD)))
-    if threshold < 1:
-        raise ValueError("API_KMS_BREAKER_THRESHOLD must be at least 1")
-    cooldown = float(
-        os.environ.get("API_KMS_BREAKER_COOLDOWN", str(DEFAULT_KMS_BREAKER_COOLDOWN_SECONDS))
+    cipher = InfisicalCipher(cfg.infisical_url, cfg.infisical_token)
+    cipher = BreakerCipher(
+        cipher,
+        threshold=cfg.kms_breaker_threshold,
+        cooldown_seconds=cfg.kms_breaker_cooldown,
     )
-    if cooldown <= 0:
-        raise ValueError("API_KMS_BREAKER_COOLDOWN must be positive")
-    cipher = BreakerCipher(cipher, threshold=threshold, cooldown_seconds=cooldown)
-    store = PostgresDekStore(SessionLocal, key_id)
-    ttl = int(os.environ.get("API_DEK_CACHE_TTL", str(DEFAULT_DEK_CACHE_TTL_SECONDS)))
-    if ttl < 1:
-        # A non-positive TTL would silently disable every cache write.
-        raise ValueError("API_DEK_CACHE_TTL must be at least 1 second")
-    l1_ttl = int(os.environ.get("API_DEK_CACHE_L1_TTL", str(DEFAULT_DEK_L1_TTL_SECONDS)))
-    if l1_ttl < 1:
-        raise ValueError("API_DEK_CACHE_L1_TTL must be at least 1 second")
+    store = PostgresDekStore(SessionLocal, cfg.infisical_kms_key_id)
     cache = TwoTierDekCache(
-        local=LocalTtlDekCache(l1_ttl),
-        remote=RedisDekCache(
-            Redis.from_url(os.environ.get("API_REDIS_URL", "redis://localhost:6379/0")), ttl
-        ),
+        local=LocalTtlDekCache(cfg.dek_cache_l1_ttl),
+        remote=RedisDekCache(Redis.from_url(cfg.redis_url), cfg.dek_cache_ttl),
     )
-    return FieldCrypto(cipher=cipher, store=store, default_key_id=key_id, cache=cache)
+    return FieldCrypto(
+        cipher=cipher,
+        store=store,
+        default_key_id=cfg.infisical_kms_key_id,
+        cache=cache,
+    )
 
 
-def _require_uuid_key_id(key_id: str) -> None:
-    # Same rule the envelope grammar enforces; a looser check boots configs that fail at first encrypt.
-    if not is_valid_key_id(key_id):
-        raise ValueError("API_INFISICAL_KMS_KEY_ID must be a UUID")
-
-
-def build_and_register_field_crypto() -> FieldCrypto | None:
+def build_and_register_field_crypto(config: Config | None = None) -> FieldCrypto | None:
     """Build and hand the module to the ORM column; None when off."""
-    module = build_field_crypto()
+    module = build_field_crypto(config)
     set_field_crypto(module)
     return module
