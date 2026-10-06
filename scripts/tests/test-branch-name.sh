@@ -45,18 +45,13 @@ check 1 'unknown-type/some-slug'
 check 1 'feat/some_slug'
 check 1 'feat//double-slash'
 
-# Docs mirror the centralized lists (docs/commit-convention.md).
-doc="$root/docs/commit-convention.md"
-for t in $TAIPAN_TYPES; do
-  if grep -q "\`$t\`" "$doc"; then pass=$((pass + 1)); else
-    fail=$((fail + 1)); printf 'FAIL docs missing type: %s\n' "$t"
-  fi
-done
-for s in $TAIPAN_GENERIC_SCOPES; do
-  if grep -q "\`$s\`" "$doc"; then pass=$((pass + 1)); else
-    fail=$((fail + 1)); printf 'FAIL docs missing scope: %s\n' "$s"
-  fi
-done
+# Docs lists are generated from the centralized source; fail on drift.
+if "$root/scripts/sync-conventions-docs.sh" --check >/dev/null 2>&1; then
+  pass=$((pass + 1))
+else
+  fail=$((fail + 1))
+  printf 'FAIL docs drift: run scripts/sync-conventions-docs.sh\n'
+fi
 
 printf 'pass=%d fail=%d\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

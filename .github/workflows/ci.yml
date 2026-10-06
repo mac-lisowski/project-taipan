@@ -116,6 +116,10 @@ jobs:
           else
             scripts/check-branch-name.sh "${{ github.ref_name }}"
           fi
+      - name: shell gate tests and docs sync
+        run: |
+          bash scripts/tests/test-commit-msg.sh
+          bash scripts/tests/test-branch-name.sh
 
   test-web:
     needs: changes

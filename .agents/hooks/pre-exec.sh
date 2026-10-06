@@ -208,8 +208,18 @@ case "$cmd_flat" in
     new_branch=$(printf '%s' "$cmd_flat" | sed -n 's/.*switch -[cC] \([^ ;&|]*\).*/\1/p' | tr -d "'\"")
     ;;
   *"git branch "*)
-    new_branch=$(printf '%s' "$cmd_flat" | sed -n 's/.*git branch \([^ ;&|]*\).*/\1/p' | tr -d "'\"")
+    case "$cmd_flat" in
+      *" -m "*|*" -M "*|*" --move "*|*" -c "*|*" --copy "*)
+        new_branch=$(printf '%s' "$cmd_flat" | sed 's/[;&|].*//' | awk '{print $NF}' | tr -d "'\"")
+        ;;
+      *)
+        new_branch=$(printf '%s' "$cmd_flat" | sed -n 's/.*git branch \([^ ;&|]*\).*/\1/p' | tr -d "'\"")
+        ;;
+    esac
     case "$new_branch" in -*|"") new_branch="" ;; esac
+    ;;
+  *"git worktree add "*)
+    new_branch=$(printf '%s' "$cmd_flat" | sed -n 's/.*-[bB] \([^ ;&|]*\).*/\1/p' | tr -d "'\"")
     ;;
 esac
 case "$new_branch" in -*|"") new_branch="" ;; esac

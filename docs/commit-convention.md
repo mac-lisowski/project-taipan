@@ -20,24 +20,31 @@ All commit messages follow Conventional Commits 1.0.0
 
 ## Types
 
+<!-- conventions:types:start -->
 `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
 `build`, `ci`, `chore`, `revert`.
+<!-- conventions:types:end -->
 
 ## Scopes
 
 App and package scopes come from the repo itself (`apps/*`,
 `packages/*`) and the hook picks them up on its own:
 
-`api`, `web`, `cli`, `core`, `crypto`, `kms`.
+<!-- conventions:areas:start -->
+`api`, `cli`, `core`, `crypto`, `kms`, `web`.
+<!-- conventions:areas:end -->
 
 Generic scopes for repo-wide areas:
 
+<!-- conventions:generic:start -->
 `repo`, `ci`, `docs`, `deps`, `scripts`, `evals`, `docker`,
 `devcontainer`, `agents`, `hooks`, `github`.
+<!-- conventions:generic:end -->
 
-Update rule: adding a top-level area adds its generic scope here
-and in `scripts/conventions.sh`. No gate change is needed
-for a new app or package.
+Update rule: edit `scripts/conventions.sh`, then run
+`scripts/sync-conventions-docs.sh` and commit both. The lists
+above are generated. No gate change is needed for a new app
+or package.
 
 ## Branches
 

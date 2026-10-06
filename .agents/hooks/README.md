@@ -94,8 +94,9 @@ flowchart LR
   Fresh clones get the stage via
   `default_install_hook_types`; existing checkouts need
   `pre-commit install` once.
-- Branch creation (`checkout -b`, `switch -c`, `branch <name>`)
-  is blocked by a pre-exec check enforcing `<type>/<slug>`
+- Branch creation and renames (`checkout -b`, `switch -c`,
+  `branch <name>`, `branch -m`, `worktree add -b`) are blocked
+  by a pre-exec check enforcing `<type>/<slug>`
   (`scripts/check-branch-name.sh`, types from
   `scripts/conventions.sh`); the `pre-commit` and `pre-push`
   stages plus CI re-check the name. Quoted spellings evade
