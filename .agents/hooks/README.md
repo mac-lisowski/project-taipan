@@ -94,6 +94,12 @@ flowchart LR
   Fresh clones get the stage via
   `default_install_hook_types`; existing checkouts need
   `pre-commit install` once.
+- Branch creation (`checkout -b`, `switch -c`, `branch <name>`)
+  is blocked by a pre-exec check enforcing `<type>/<slug>`
+  (`scripts/check-branch-name.sh`, types from
+  `scripts/conventions.sh`); the `pre-commit` and `pre-push`
+  stages plus CI re-check the name. Quoted spellings evade
+  the pre-exec match by design; the later gates do not.
 - `git merge`/`rebase`/`cherry-pick`/`stash`/`am`/`pull` create
   commits without matching `git commit` and are not gated;
   `export SKIP=` set by an earlier command, commits inside scripts

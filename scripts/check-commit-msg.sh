@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # commit-msg gate: Conventional Commits subject, plus 120-char lines.
 # Format: <type>(optional scope)(optional !): <description>
-# Scopes: docs/commit-convention.md. App and package scopes are read
-# from apps/* and packages/*; generic scopes are listed below.
+# Types and generic scopes come from scripts/conventions.sh. App and
+# package scopes are read from apps/* and packages/*.
+# See docs/commit-convention.md for the full convention.
 # Skips #-comment lines and everything under the `commit -v` scissors;
 # git strips those after this hook runs.
 set -u
 msg_file="${1:?usage: check-commit-msg.sh <message-file>}"
 [ -f "$msg_file" ] || { echo "no message file: $msg_file" >&2; exit 1; }
+
+# shellcheck disable=SC1091
+. "$(cd "$(dirname "$0")" && pwd)/conventions.sh"
 
 fail=0
 subject=$(awk '{ sub(/\r$/,""); if ($0 ~ /[^[:space:]]/ && $0 !~ /^#/) { print; exit } }' "$msg_file")
@@ -37,8 +41,8 @@ case "$subject" in
   Merge\ *|Revert\ *|fixup!\ *|squash!\ *|amend!\ *) exit "$fail" ;;
 esac
 
-TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
-GENERIC='repo|ci|docs|deps|scripts|evals|docker|devcontainer|agents|hooks|github'
+TYPES="$(printf '%s' "$TAIPAN_TYPES" | tr ' ' '|')"
+GENERIC="$(printf '%s' "$TAIPAN_GENERIC_SCOPES" | tr ' ' '|')"
 allowed="$GENERIC"
 if top="$(git rev-parse --show-toplevel 2>/dev/null)"; then
   for d in "$top"/apps/*/ "$top"/packages/*/; do
@@ -49,7 +53,7 @@ fi
 
 if ! printf '%s' "$subject" | grep -Eq "^($TYPES)(\([a-z0-9-]+\))?(!)?: .+"; then
   echo "subject must be '<type>(scope)!: description', e.g. 'feat(api): add login'." >&2
-  echo "types: feat fix docs style refactor perf test build ci chore revert." >&2
+  echo "types: $TAIPAN_TYPES." >&2
   echo "scopes: docs/commit-convention.md." >&2
   fail=1
 else

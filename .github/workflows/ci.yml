@@ -109,6 +109,13 @@ jobs:
             done
             exit $fail
           fi
+      - name: lint branch name
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            scripts/check-branch-name.sh "${{ github.head_ref }}"
+          else
+            scripts/check-branch-name.sh "${{ github.ref_name }}"
+          fi
 
   test-web:
     needs: changes

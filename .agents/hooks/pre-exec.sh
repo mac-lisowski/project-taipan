@@ -197,6 +197,27 @@ case "$cmd_flat" in
     fi
     ;;
 esac
+
+# Branch names must be <type>/<slug>; pre-commit, pre-push, and CI re-check.
+new_branch=""
+case "$cmd_flat" in
+  *"git checkout -b "*|*"git checkout -B "*)
+    new_branch=$(printf '%s' "$cmd_flat" | sed -n 's/.*checkout -[bB] \([^ ;&|]*\).*/\1/p' | tr -d "'\"")
+    ;;
+  *"git switch -c "*|*"git switch -C "*)
+    new_branch=$(printf '%s' "$cmd_flat" | sed -n 's/.*switch -[cC] \([^ ;&|]*\).*/\1/p' | tr -d "'\"")
+    ;;
+  *"git branch "*)
+    new_branch=$(printf '%s' "$cmd_flat" | sed -n 's/.*git branch \([^ ;&|]*\).*/\1/p' | tr -d "'\"")
+    case "$new_branch" in -*|"") new_branch="" ;; esac
+    ;;
+esac
+case "$new_branch" in -*|"") new_branch="" ;; esac
+if [ -n "$new_branch" ]; then
+  if ! out=$("$root/scripts/check-branch-name.sh" "$new_branch" 2>&1); then
+    block "$out"
+  fi
+fi
 ctx=$(printf '%s' "$input" | bash "$root/.agents/hooks/route.sh" pre-exec 2>/dev/null || true)
 [ -n "$ctx" ] && jq -nc --arg c "$ctx" '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:$c}}'
 exit 0

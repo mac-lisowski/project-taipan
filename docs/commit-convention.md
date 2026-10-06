@@ -36,8 +36,14 @@ Generic scopes for repo-wide areas:
 `devcontainer`, `agents`, `hooks`, `github`.
 
 Update rule: adding a top-level area adds its generic scope here
-and in `scripts/check-commit-msg.sh`. No gate change is needed
+and in `scripts/conventions.sh`. No gate change is needed
 for a new app or package.
+
+## Branches
+
+Branch names use the same types: `<type>/<slug>`, e.g. `feat/web-bff`.
+Slug chars are lowercase letters, digits, and hyphens.
+`main`, `dev`, `master`, and detached HEAD are exempt.
 
 ## Examples
 

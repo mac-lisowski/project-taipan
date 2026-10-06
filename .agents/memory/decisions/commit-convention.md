@@ -6,3 +6,6 @@
 - CI lints PR titles on pull requests, commit ranges on push.
 - Merge, Revert, fixup!, squash!, amend! subjects skip format check; length gate still runs.
 - Old history is not conformant; gate covers new commits only.
+- Types and generic scopes live once in `scripts/conventions.sh`; hooks source it.
+- Branch names use the same types: `<type>/<slug>`; `main`, `dev`, detached HEAD exempt.
+- Branch gate fires three times: pre-exec nudge at creation, pre-push hook, CI branch step.

@@ -5,6 +5,8 @@
 set -u
 root="$(git rev-parse --show-toplevel)"
 bin="${CHECK_MSG_BIN:-$root/scripts/check-commit-msg.sh}"
+# shellcheck disable=SC1091
+. "$root/scripts/conventions.sh"
 
 pass=0
 fail=0
@@ -35,6 +37,11 @@ check 0 "Merge branch 'feature-x' into dev"
 check 0 'Revert "feat(api): bad change"'
 check 0 'fixup! feat(api): wip'
 check 0 'squash! feat(api): wip'
+# Every centralized type is accepted, with and without a scope.
+for t in $TAIPAN_TYPES; do
+  check 0 "$t(api): some change"
+  check 0 "$t: some change"
+done
 
 # Invalid subjects fail.
 check 1 'foo: bar'
