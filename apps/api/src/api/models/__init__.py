@@ -2,6 +2,7 @@
 # whose module was imported; create_all silently skips the rest.
 from api.models.dek import TenantDek
 from api.models.encrypted_string import EncryptedString
+from api.models.profile import UserProfile
 from api.models.user import User
 
-__all__ = ["EncryptedString", "TenantDek", "User"]
+__all__ = ["EncryptedString", "TenantDek", "User", "UserProfile"]
