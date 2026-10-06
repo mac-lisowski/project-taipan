@@ -250,11 +250,14 @@ jobs:
       - name: install railway cli
         run: npm install -g @railway/cli@5.41.2
       - name: deploy web
+        timeout-minutes: 10
         run: railway up --service "$RAILWAY_SERVICE_WEB" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
       - name: deploy api
+        timeout-minutes: 10
         run: railway up --service "$RAILWAY_SERVICE_API" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
       - name: deploy infisical
         # Skipped until the Railway service exists and the GitHub
         # environment var RAILWAY_SERVICE_INFISICAL is set.
         if: ${{ vars.RAILWAY_SERVICE_INFISICAL != '' }}
+        timeout-minutes: 10
         run: railway up --service "$RAILWAY_SERVICE_INFISICAL" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
