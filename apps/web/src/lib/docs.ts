@@ -10,7 +10,7 @@ export interface DocEntry {
   /** path segments under docs/, without the .md extension */
   slug: string[];
   title: string;
-  /** display section: top dir (adr, specs, learnings) or "guides" for root files */
+  /** display section: top dir (adr, specs) or "guides" for root files */
   section: string;
 }
 
@@ -64,7 +64,7 @@ export async function listDocs(): Promise<DocEntry[]> {
 
 export async function listDocGroups(): Promise<DocGroup[]> {
   const docs = await listDocs();
-  const order = ["guides", "adr", "learnings", "specs"];
+  const order = ["guides", "adr", "specs"];
   const groups = new Map<string, DocEntry[]>();
   for (const doc of docs) {
     groups.set(doc.section, [...(groups.get(doc.section) ?? []), doc]);

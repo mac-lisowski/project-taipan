@@ -102,4 +102,4 @@ way `API_INTERNAL_URL` is required.
 - Candidate 8 from the architecture review, rated speculative
   there: small edge fixes, no new seams. Worth doing cheaply, not
   worth a redesign.
-- `docs/specs/bff-seam-hardening/spec.html` visualizes the gaps.
+- `docs/specs/implemented/bff-seam-hardening/spec.html` visualizes the gaps.

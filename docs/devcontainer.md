@@ -1,7 +1,8 @@
 # Devcontainer guide
 
 The devcontainer gives a full dev environment: Python 3.12, uv, git,
-pre-commit hooks, Node 24 + pnpm, Postgres 17 + pgvector, and Redis.
+pre-commit hooks, Node 24 + pnpm, Postgres 17 + pgvector, Redis,
+Infisical, and a Docker-in-Docker daemon for testcontainers.
 Everything the README commands need is inside.
 
 ## Layout
@@ -12,20 +13,27 @@ graph TD
     A[app<br>mcr devcontainers/python:3.12 + uv + docker CLI<br>+ Node 24 feature + pnpm]
     B[db<br>pgvector/pgvector:pg17]
     E[redis<br>redis:8-alpine]
+    I[infisical<br>secrets + KMS]
+    IB[infisical-db<br>postgres:17-alpine]
     D[dind<br>docker:28-dind, privileged]
     V1[(devcontainer-venv<br>masks host .venv)]
     V2[(devcontainer-pgdata)]
     V3[(devcontainer-uvcache)]
     V4[(devcontainer-dind<br>/var/lib/docker)]
+    V5[(devcontainer-infisical-pgdata)]
   end
   R[repo on host] -->|bind mount| A
   A -->|db:5432| B
   A -->|redis:6379| E
+  A -->|infisical:8080| I
   A -->|DOCKER_HOST tcp://dind:2375| D
+  I --> IB
+  I -->|queues/cache db 1| E
   D -->|spawns| T[testcontainers]
   A --- V1
   A --- V3
   B --- V2
+  IB --- V5
   D --- V4
   B -.->|initdb: CREATE EXTENSION vector| V2
 ```
@@ -34,8 +42,8 @@ Files:
 
 - `.devcontainer/Dockerfile` - dev image. `devcontainers/python:3.12`
   gives git, ssh, zsh, and the `vscode` user. uv is copied in, pinned.
-- `.devcontainer/docker-compose.yml` - `app`, `db`, `redis`, and `dind`
-  services.
+- `.devcontainer/docker-compose.yml` - `app`, `db`, `redis`,
+  `infisical`, `infisical-db`, and `dind` services.
 - `.devcontainer/devcontainer.json` - service, lifecycle hooks, ports,
   editor extensions. Node 24 comes from the `devcontainers/features/node`
   feature; `corepack` in `postCreate` enables pnpm.
@@ -47,8 +55,9 @@ The root `docker-compose.yaml` db publishes `5432:5432` on the host.
 Inside a devcontainer that publish is useless (the dev container reaches
 db over the compose network) and can collide with anything else on the
 host port. So the devcontainer stack is self-contained and publishes
-nothing. Cost: the db service block is duplicated. Keep the image and
-env in sync with `docker-compose.yaml` when Postgres changes.
+nothing. Cost: the `db` and `infisical` service blocks are duplicated.
+Keep their images and env in sync with `docker-compose.yaml` when they
+change.
 
 ## How the app finds the db
 
@@ -66,8 +75,13 @@ graph LR
 - `api.db` reads `API_DATABASE_URL` (always did).
 - `conftest.py` reads `API_TEST_ADMIN_URL` and `API_TEST_URL`. It needs
   an admin URL too because tests create the `app_test` database.
-- `API_REDIS_URL` (session store, owned by the api) points at the
-  `redis` service. It defaults to `localhost:6379` on the host.
+- `API_REDIS_URL` (DEK cache for field encryption; sessions live in
+  Postgres) points at the `redis` service. It defaults to
+  `localhost:6379` on the host.
+- `API_INFISICAL_URL` points at the `infisical` service
+  (`http://infisical:8080`). It defaults to `localhost:8080` on the
+  host. The Infisical UI is not port-forwarded; the api reaches it over
+  the compose network.
 - The api vars are registered in `apps/api/.env.example`, the web
   vars in `apps/web/.env.example`.
 
@@ -98,7 +112,7 @@ Why DinD and not the host socket (DooD):
 
 ```mermaid
 graph LR
-  A[image build + node feature] --> B[db + redis healthy]
+  A[image build + node feature] --> B[db + redis + dind healthy]
   B --> C[postCreate<br>uv sync + pre-commit + pnpm install]
   C --> D[postStart<br>uv run db-upgrade]
   D --> E[you work<br>uv run pytest / api / pnpm dev]
@@ -139,14 +153,21 @@ git commit / git push    # hooks run inside the container
 After editing `.devcontainer/Dockerfile` or `docker-compose.yml`:
 
 - VS Code: `Dev Containers: Rebuild Container`
-- Keeps `devcontainer-venv`, `devcontainer-pgdata`, `devcontainer-uvcache`.
+- Keeps all five volumes: `devcontainer-venv`, `devcontainer-pgdata`,
+  `devcontainer-uvcache`, `devcontainer-dind`,
+  `devcontainer-infisical-pgdata`.
 
 Full reset (drops the dev db data):
 
 ```bash
 devcontainer up --workspace-folder . --remove-existing-container
-docker volume rm devcontainer_devcontainer-pgdata
+docker volume rm project-taipan_devcontainer_devcontainer-pgdata
 ```
+
+The volume prefix follows the compose project name. Under the
+devcontainer CLI it is `project-taipan_devcontainer`; under a manual
+`docker compose -f .devcontainer/docker-compose.yml` run it is
+`devcontainer_`.
 
 ## Troubleshooting
 
@@ -170,6 +191,11 @@ something else (e.g. 5432 for a host-side DB client), add it or publish
 **Pre-commit hook fails on git commit.**
 `postCreateCommand` may not have run. Run
 `uv run pre-commit install && uv run pre-commit install --hook-type pre-push`.
+Note: `.git/hooks` is bind-mounted, so host and container share the
+installed hooks. The hook bakes in an absolute `.venv` path, so the
+last side to run `pre-commit install` wins. If you commit on the host
+after the devcontainer ran postCreate, reinstall the hooks on the host
+(and vice versa).
 
 **testcontainers cannot reach Docker.**
 `DOCKER_HOST` must be `tcp://dind:2375` and `dind` must be healthy:

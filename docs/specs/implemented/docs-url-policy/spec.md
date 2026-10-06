@@ -86,9 +86,9 @@ already knows the slug.
   verified by typecheck and the docs pages building.
 - Prior art: `upstream-proxy.test.ts` and `auth-submit.test.ts`
   for vitest conventions in this app.
-- The verified 404 becomes a regression test: `agents/README.md`
-  from `learnings/README` resolves to `/docs/learnings/agents/
-  README`.
+- The verified 404 becomes a regression test in
+  `apps/web/src/lib/docs-url.test.ts`: a relative link from a section
+  README resolves inside that section, not at the docs root.
 
 ## Out of Scope
 
@@ -102,4 +102,4 @@ already knows the slug.
 - Candidate 4 from the architecture review. The fix is an
   interface fix: `Markdown` was under-provisioned, not buggy in
   isolation.
-- `docs/specs/docs-url-policy/spec.html` visualizes the seam move.
+- `docs/specs/implemented/docs-url-policy/spec.html` visualizes the seam move.

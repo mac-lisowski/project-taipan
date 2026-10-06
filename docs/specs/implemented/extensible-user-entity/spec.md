@@ -89,5 +89,5 @@ Enforce Pattern A (Extension Tables) across the codebase:
 
 ## Further Notes
 
-- `docs/specs/extensible-user-entity/spec.html` visualizes the table
+- `docs/specs/implemented/extensible-user-entity/spec.html` visualizes the table
   composition and separation.

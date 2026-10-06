@@ -63,7 +63,10 @@ credential right.
 
 You can bootstrap by hand instead of running the script:
 
-1. Open `http://localhost:8080`.
+1. Open `http://localhost:8080`. In the devcontainer the `infisical`
+   service publishes no host port, so this only works on the host
+   compose stack. For devcontainer work, use the bootstrap script
+   against `http://infisical:8080` (set `INFISICAL_URL` accordingly).
 2. Sign up on first boot. This account is the admin.
 3. Create the `taipan` organization.
 4. Create a machine identity. Use Token Auth. Give it the admin role
@@ -103,7 +106,7 @@ database plus its `ENCRYPTION_KEY`.
 
 ### Api side
 
-The api reads exactly three Infisical vars. They are registered in
+The api reads three Infisical vars. They are registered in
 `apps/api/.env.example`.
 
 | Var | What it holds | Default |
@@ -111,6 +114,20 @@ The api reads exactly three Infisical vars. They are registered in
 | `API_INFISICAL_URL` | Base URL of the Infisical instance. | `http://localhost:8080` |
 | `API_INFISICAL_TOKEN` | Machine identity token. At runtime this is the `taipan-api` token. In dev it may hold the admin token from the bootstrap script, so tests can self-provision. | Empty until bootstrap |
 | `API_INFISICAL_KMS_KEY_ID` | Id of the KMS key the api uses. | Empty until you create a key |
+
+Four more vars tune the crypto path around that KMS call. All are
+optional and live in `apps/api/.env.example`.
+
+| Var | What it holds | Default |
+| --- | --- | --- |
+| `API_DEK_CACHE_TTL` | Seconds an unwrapped DEK lives in the Redis (L2) cache. | `900` |
+| `API_DEK_CACHE_L1_TTL` | Seconds an unwrapped DEK lives in the process-local (L1) cache before falling back to Redis. | `60` |
+| `API_KMS_BREAKER_THRESHOLD` | Consecutive KMS failures before the circuit breaker opens. | `3` |
+| `API_KMS_BREAKER_COOLDOWN` | Seconds an open breaker waits before a half-open probe. | `30` |
+
+With `API_INFISICAL_TOKEN` or `API_INFISICAL_KMS_KEY_ID` empty, the
+encryption capability stays off: the api boots without a field crypto
+module and `EncryptedString` columns are not usable.
 
 ### Infisical service side
 

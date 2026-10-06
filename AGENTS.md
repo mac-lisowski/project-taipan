@@ -73,7 +73,6 @@ docker/initdb/            DB init scripts (vector extension)
 .devcontainer/            dev container: app + db services, own compose file
 docs/devcontainer.md      devcontainer guide and troubleshooting
 evals/                    eval task specs
-docs/learnings/           study notes
 apps/<name>/AGENTS.md     nested rules for that subtree (e.g. apps/api)
 CLAUDE.md                 symlink -> AGENTS.md
 .claude/settings.json     hook manifest + permissions (Claude, Devin, Grok)

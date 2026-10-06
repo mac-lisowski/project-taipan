@@ -2,7 +2,7 @@
 
 This page teaches how to attach custom data to `User` without
 editing the `users` table. It is the downstream guide for the
-[extensible user entity spec](specs/extensible-user-entity/spec.md).
+[extensible user entity spec](specs/implemented/extensible-user-entity/spec.md).
 The worked example is the landed `user_profiles` table.
 
 ## The rule
@@ -157,5 +157,8 @@ out-of-scope list):
 - Moving `User` to a separate package. Later packaging specs
   handle that.
 
-Tenant-scope guidance for extension tables is a separate open
-decision. This page does not cover it.
+Tenant scope landed after this page was written. `user_tenants` is a
+second Pattern A extension table in-tree: it carries `tenant_id`, and
+the request tenant scope plus the flush-time guard
+(`apps/api/src/api/tenant_guard.py`) apply to it. Extension tables
+that store tenant-owned data should carry `tenant_id` the same way.

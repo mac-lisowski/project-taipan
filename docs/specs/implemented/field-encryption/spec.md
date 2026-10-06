@@ -136,7 +136,7 @@ the first real encrypted field lands in a later feature.
   `API_KMS_BREAKER_THRESHOLD`) it fails fast with
   `kms_unavailable`; one probe per 30 s cooldown (tunable via
   `API_KMS_BREAKER_COOLDOWN`) tests recovery. See
-  `docs/specs/field-encryption-hardening/`.
+  `docs/specs/implemented/field-encryption-hardening/`.
 - Database schema: the wrapped-DEK table ships as an Alembic
   revision plus an ORM model beside the api models. The
   `cryptography` library belongs to the crypto package, which owns
@@ -195,4 +195,4 @@ the first real encrypted field lands in a later feature.
   restore dependency; never delete a KMS key that wrapped DEKs) and
   `.env.example` (two new optional cache TTL vars, no new required
   vars).
-- Visual map: `docs/specs/field-encryption/spec.html`.
+- Visual map: `docs/specs/implemented/field-encryption/spec.html`.

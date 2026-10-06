@@ -21,7 +21,8 @@ graph LR
 - The browser never calls FastAPI directly. The catch-all route
   handler at `src/app/api/[...path]/route.ts` forwards `/api/*` to
   `API_INTERNAL_URL` and re-emits `Set-Cookie`. Do not bypass it.
-- FastAPI owns sessions and Redis. The web side only forwards cookies.
+- FastAPI owns sessions (Postgres `sessions` table). The web side only
+  forwards cookies.
 - `API_INTERNAL_URL` is server-only. Never expose it via
   `NEXT_PUBLIC_` and never reference it outside `src/app/api/`.
 - Env vars are documented in `.env.example`. Local overrides go in
@@ -32,6 +33,9 @@ graph LR
 - `scripts/check-bff.sh` - boundary rules above as a script.
   pre-commit + CI.
 - `scripts/check-file-size.sh` - 300 LOC cap per source file,
+  pre-commit + CI.
+- `scripts/check-unreached-components.sh` - every module under
+  `src/components` must be imported from outside it (`src/ui` exempt),
   pre-commit + CI.
 - `tsconfig.json` - `strict` plus `noUncheckedIndexedAccess`,
   `noImplicitReturns`, `noFallthroughCasesInSwitch`,
@@ -48,8 +52,8 @@ graph LR
 - `Dockerfile` - standalone production image (`next build` with
   `output: "standalone"`). Build context is the repo root:
   `scripts/docker-build.sh web` (root context; the script is canonical)
-- `src/proxy.ts` - reserved for the Next 16 auth gate once auth
-  endpoints exist (replaces the old `middleware.ts` convention).
+- `src/proxy.ts` - does not exist yet. Reserved name for the Next 16
+  auth gate (replaces the old `middleware.ts` convention).
 
 ## Design system (`src/ui/`)
 
@@ -70,6 +74,7 @@ graph LR
 pnpm -C apps/web install
 pnpm -C apps/web dev       # dev server on :3000, proxies to :8000
 pnpm -C apps/web build     # production build (standalone output)
+pnpm -C apps/web test      # vitest unit tests
 pnpm -C apps/web lint
 pnpm -C apps/web exec tsc --noEmit
 ```

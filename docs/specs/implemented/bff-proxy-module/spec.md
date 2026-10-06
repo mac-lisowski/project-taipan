@@ -115,7 +115,7 @@ behavior change for callers or browsers.
 ## Further Notes
 
 - Candidate 1 (Strong) from the architecture review. Origin:
-  `docs/specs/bff-proxy-module/spec.html` visualizes the
+  `docs/specs/implemented/bff-proxy-module/spec.html` visualizes the
   before/after module shape.
 - The module earns its depth immediately: it is the only
   security-critical code in `apps/web`, and the seam makes it
