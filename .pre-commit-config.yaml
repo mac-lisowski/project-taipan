@@ -26,7 +26,7 @@ repos:
         language: system
         pass_filenames: false
       - id: unreached-components
-        name: unreachable component checks (apps/web)
+        name: unreached components check (apps/web)
         entry: scripts/check-unreached-components.sh
         language: system
         pass_filenames: false

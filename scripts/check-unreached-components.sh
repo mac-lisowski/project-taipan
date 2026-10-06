@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Unreachable-export check for apps/web/src/components. Every module
-# in there must be reachable: imported by some file outside the
+# Unreached-export check for apps/web/src/components. Every module
+# in there must be reached: imported by some file outside the
 # components dir, or by a component that is. src/ui is exempt by
 # design - the design-system barrel is library surface, unused
 # exports there are stock, not dead weight. Enforced by pre-commit
@@ -15,11 +15,15 @@ report() { echo "unreached-components: no importer: $1"; fail=1; }
 mods=()
 for file in "$dir"/*.ts "$dir"/*.tsx; do
   [ -f "$file" ] || continue
-  grep -q '\bexport\b' "$file" || continue
+  # Word-boundary via char classes: [[:<:]] is not portable across grep builds.
+  grep -qE '(^|[^A-Za-z0-9_])export([^A-Za-z0-9_]|$)' "$file" || continue
   mods+=("$file")
 done
 
-declare -A live=()   # component path -> reached from outside
+in_live() {
+  for got in $live; do [ "$got" = "$1" ] && return 0; done
+  return 1
+}
 
 # The import specifier, not the symbol: static imports, next/dynamic,
 # React.lazy and bare import() all embed the same module path string.
@@ -29,10 +33,11 @@ spec_re() {
   printf "['\"](@/components/|\\.\\.?/)([A-Za-z0-9_-]+/)*%s['\"]" "${stem%.*}"
 }
 
+live=""
 # Seeds: importers outside src/components (pages, libs, tests).
-for file in "${mods[@]}"; do
+for file in ${mods[@]+"${mods[@]}"}; do
   if git grep -qE "$(spec_re "$file")" -- 'apps/web' ":!$dir" 2>/dev/null; then
-    live[$file]=1
+    live="$live $file"
   fi
 done
 
@@ -40,11 +45,11 @@ done
 changed=1
 while [ "$changed" -eq 1 ]; do
   changed=0
-  for file in "${mods[@]}"; do
-    [ -n "${live[$file]:-}" ] && continue
-    for parent in "${!live[@]}"; do
+  for file in ${mods[@]+"${mods[@]}"}; do
+    in_live "$file" && continue
+    for parent in $live; do
       if git grep -qE "$(spec_re "$file")" -- "$parent" 2>/dev/null; then
-        live[$file]=1
+        live="$live $file"
         changed=1
         break
       fi
@@ -52,8 +57,8 @@ while [ "$changed" -eq 1 ]; do
   done
 done
 
-for file in "${mods[@]}"; do
-  [ -n "${live[$file]:-}" ] && continue
+for file in ${mods[@]+"${mods[@]}"}; do
+  in_live "$file" && continue
   report "$file"
 done
 
