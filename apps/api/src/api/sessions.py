@@ -32,11 +32,9 @@ def mint(session: Session, user_id: int) -> str:
     return token
 
 
-def revoke(session: Session, token: str) -> None:
-    row = session.get(AuthSession, _digest(token))
-    if row is not None:
-        session.delete(row)
-        session.flush()
+def revoke(session: Session, row: AuthSession) -> None:
+    session.delete(row)
+    session.flush()
 
 
 def resolve(session: Session, token: str) -> AuthSession | None:
