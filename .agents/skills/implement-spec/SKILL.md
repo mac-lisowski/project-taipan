@@ -86,7 +86,7 @@ Every merged ticket ships a report at
   <header class="mb-8">
     <h1 class="text-2xl font-bold mb-2">NN: ticket title</h1>
     <p class="text-slate-500">Branch <code>branch</code>, commit
-      <code>sha</code>. Spec <code>docs/specs/slug/spec.md</code>,
+      <code>sha</code>. Spec <code>docs/specs/implemented/slug/spec.md</code>,
       ticket <code>NN-slug.md</code>.</p>
   </header>
 
