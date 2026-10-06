@@ -1,8 +1,8 @@
 # Current state
 
-- Last updated: 2026-10-06. dev == origin/dev at c77fbdd, plus an
-  uncommitted docs-overhaul working tree (not committed on request).
-- Docs overhaul pass (uncommitted): README rewritten to public-facing
+- Last updated: 2026-10-06. dev == origin/dev at ad79a1c; PR #22 open
+  dev -> main (docs overhaul + spec-dir split commits).
+- Docs overhaul (ad79a1c): README rewritten to public-facing
   product docs (features, API surface table, roadmap; sessions =
   Postgres not Redis). Fixed stale claims: API_REDIS_URL is DEK L2
   cache not session store (.env.example, devcontainer docs, compose
@@ -42,6 +42,13 @@
 - Pattern A ruling: user-to-tenant link is user_tenants extension row
   (user_id unique FK cascade, tenant_id NOT NULL FK). Decision file:
   decisions/tenant-link-extension-table.md.
+- Planned spec: docs/specs/planned/setup-wizard (spec.md + spec.html,
+  uncommitted). First-run setup: GET /api/setup probe + POST /api/setup
+  single-shot bootstrap (advisory lock, creates admin via new
+  user_roles extension table, migration backfills earliest user);
+  register endpoint removed, /register page removed, require_admin
+  gates /api/users router, /me gains roles, /account landing page.
+  User picked: real bootstrap + admin (not UX-only), include /account.
 - Test state: api 77 passed / 2 skips (Postgres, both :15432 and
   :5432 app_test DBs). Web vitest 68/68.
 - Trap: a test DB holding tables unknown to the current branch's
