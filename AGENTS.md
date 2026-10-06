@@ -50,7 +50,7 @@
     and reusable capabilities live in `packages/<name>/`. Runnable
     apps in `apps/<name>/` are thin composition roots that wire
     packages and HTTP routes. Packages must never import from apps.
-14. Extensible Entities (Pattern A): core database entities (such as
+14. Extensible Entities: core database entities (such as
     `User`) stay minimal and hold only essential identity fields.
     Never add feature-specific columns directly to core entity
     models. Features attach through separate 1:1 or 1:N extension

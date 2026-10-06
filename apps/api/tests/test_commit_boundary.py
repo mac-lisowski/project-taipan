@@ -36,8 +36,8 @@ def test_handler_error_leaves_no_partial_row(client, session_factory):
         assert db.scalar(select(User).where(User.email == "boom@x.com")) is None
 
 
-def test_clean_post_persists(client, session_factory):
-    resp = client.post("/api/users", json={"email": "clean@x.com", "password": "p"})
+def test_clean_post_persists(admin_client, session_factory):
+    resp = admin_client.post("/api/users", json={"email": "clean@x.com", "password": "p"})
     assert resp.status_code == 201
 
     with session_factory() as db:

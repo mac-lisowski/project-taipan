@@ -39,8 +39,8 @@ def _user_with_profile(session):
     return user
 
 
-def test_create_user_makes_no_profile(client, session_factory):
-    resp = client.post("/api/users", json={"email": "ada@example.com", "password": "s3cret"})
+def test_create_user_makes_no_profile(admin_client, session_factory):
+    resp = admin_client.post("/api/users", json={"email": "ada@example.com", "password": "s3cret"})
     assert resp.status_code == 201
     with session_factory() as session:
         profile_count = session.scalar(select(func.count()).select_from(UserProfile))

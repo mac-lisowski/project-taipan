@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { listDocs } from "@/lib/docs";
-import { Markdown } from "@/components/markdown";
+import { Markdown } from "@/components/docs/markdown";
 
 export default async function DocsIndex(): Promise<ReactNode> {
   const docs = await listDocs();

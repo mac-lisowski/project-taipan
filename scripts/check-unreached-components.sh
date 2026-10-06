@@ -13,12 +13,11 @@ fail=0
 report() { echo "unreached-components: no importer: $1"; fail=1; }
 
 mods=()
-for file in "$dir"/*.ts "$dir"/*.tsx; do
-  [ -f "$file" ] || continue
+while IFS= read -r file; do
   # Word-boundary via char classes: [[:<:]] is not portable across grep builds.
   grep -qE '(^|[^A-Za-z0-9_])export([^A-Za-z0-9_]|$)' "$file" || continue
   mods+=("$file")
-done
+done < <(find "$dir" -type f \( -name '*.ts' -o -name '*.tsx' \) | sort)
 
 in_live() {
   for got in $live; do [ "$got" = "$1" ] && return 0; done

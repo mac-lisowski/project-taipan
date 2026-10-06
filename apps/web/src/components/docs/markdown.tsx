@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { isValidElement, type ReactNode } from "react";
-import { MermaidBlock } from "@/components/mermaid-block";
+import { MermaidBlock } from "@/components/docs/mermaid-block";
 import { assetHref, docHref, slugify } from "@/lib/docs";
 
 function textOf(node: ReactNode): string {

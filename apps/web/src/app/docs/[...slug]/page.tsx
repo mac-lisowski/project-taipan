@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { extractHeadings, listDocs, readDoc } from "@/lib/docs";
-import { Markdown } from "@/components/markdown";
+import { Markdown } from "@/components/docs/markdown";
 
 export async function generateStaticParams(): Promise<{ slug: string[] }[]> {
   const docs = await listDocs();

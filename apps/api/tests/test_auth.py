@@ -12,10 +12,8 @@ def _counts(db):
     return users, links, tenants
 
 
-def test_register_creates_tenant_user_link_and_session(client, session_factory):
-    resp = client.post(
-        "/api/auth/register", json={"email": "ada@example.com", "password": "s3cret123"}
-    )
+def test_setup_creates_tenant_user_link_and_session(client, session_factory):
+    resp = client.post("/api/setup", json={"email": "ada@example.com", "password": "s3cret123"})
     assert resp.status_code == 201
     cookie = resp.headers["set-cookie"]
     assert "session=" in cookie
@@ -39,26 +37,15 @@ def test_register_creates_tenant_user_link_and_session(client, session_factory):
         assert sess.user_id == user.id
 
 
-def test_create_user_endpoint_also_creates_tenant_and_link(client, session_factory):
-    resp = client.post("/api/users", json={"email": "b@example.com", "password": "p"})
+def test_create_user_endpoint_also_creates_tenant_and_link(admin_client, session_factory):
+    resp = admin_client.post("/api/users", json={"email": "b@example.com", "password": "p"})
     assert resp.status_code == 201
     with session_factory() as db:
-        assert _counts(db) == (1, 1, 1)
-        link = db.scalar(select(UserTenant))
-        assert link is not None
-        assert link.tenant_id == db.scalar(select(Tenant.id))
-
-
-def test_auth_register_duplicate_email_returns_409(client):
-    client.post("/api/auth/register", json={"email": "d@example.com", "password": "p"})
-    resp = client.post("/api/auth/register", json={"email": "d@example.com", "password": "p"})
-    assert resp.status_code == 409
+        assert _counts(db) == (2, 2, 2)
 
 
 def test_login_returns_204_and_cookie_and_me_returns_tenant(client, session_factory):
-    reg = client.post(
-        "/api/auth/register", json={"email": "li@example.com", "password": "s3cret123"}
-    )
+    reg = client.post("/api/setup", json={"email": "li@example.com", "password": "s3cret123"})
     assert reg.status_code == 201
     user_id = reg.json()["id"]
 
@@ -83,14 +70,14 @@ def test_login_unknown_email_returns_401(client):
 
 
 def test_login_wrong_password_returns_401(client):
-    client.post("/api/auth/register", json={"email": "w@example.com", "password": "right"})
+    client.post("/api/setup", json={"email": "w@example.com", "password": "right"})
     resp = client.post("/api/auth/login", json={"email": "w@example.com", "password": "wrong"})
     assert resp.status_code == 401
     assert "session" not in resp.headers.get("set-cookie", "")
 
 
 def test_logout_deletes_session_and_clears_cookie(client, session_factory):
-    client.post("/api/auth/register", json={"email": "lo@example.com", "password": "p"})
+    client.post("/api/setup", json={"email": "lo@example.com", "password": "p"})
     assert client.get("/api/auth/me").status_code == 200
 
     resp = client.post("/api/auth/logout")
@@ -110,7 +97,7 @@ def test_me_without_session_returns_401(client):
 
 
 def test_me_session_without_link_returns_401(client, session_factory):
-    client.post("/api/auth/register", json={"email": "nl@example.com", "password": "p"})
+    client.post("/api/setup", json={"email": "nl@example.com", "password": "p"})
     with session_factory() as db:
         db.execute(UserTenant.__table__.delete())
         db.commit()
@@ -118,7 +105,7 @@ def test_me_session_without_link_returns_401(client, session_factory):
 
 
 def test_expired_session_behaves_like_no_session(client, session_factory):
-    client.post("/api/auth/register", json={"email": "ex@example.com", "password": "p"})
+    client.post("/api/setup", json={"email": "ex@example.com", "password": "p"})
     with session_factory() as db:
         db.execute(
             AuthSession.__table__.update().values(expires_at=datetime.now(UTC) - timedelta(hours=1))

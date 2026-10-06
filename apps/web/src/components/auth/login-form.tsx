@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Field } from "@/ui";
-import { AuthForm } from "@/components/auth-form";
+import { AuthForm } from "@/components/auth/auth-form";
 
 // Posts to the BFF catch-all at /api/auth/login; the upstream session
 // cookie is re-emitted by the proxy. Shows the upstream error verbatim.
@@ -35,13 +35,7 @@ export function LoginForm(): ReactNode {
           />
         </div>
       </AuthForm>
-      <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.15em]">
-        <Link
-          href="/register"
-          className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-        >
-          register
-        </Link>
+      <div className="flex items-center justify-end font-mono text-[10px] tracking-[0.15em]">
         <Link
           href="/forgot"
           className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"

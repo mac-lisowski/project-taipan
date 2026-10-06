@@ -88,6 +88,29 @@ def wipe_users(engine):
         conn.execute(text("DELETE FROM users"))
 
 
+def create_user(client, email: str, password: str = "s3cret123") -> int:
+    """Create a user through the gated route; caller holds an admin session."""
+    resp = client.post("/api/users", json={"email": email, "password": password})
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def setup_admin(client, email: str = "admin@x.com", password: str = "s3cret123") -> int:
+    """Run POST setup once; returns the admin user id."""
+    resp = client.post("/api/setup", json={"email": email, "password": password})
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def login(client, email: str, password: str = "s3cret123") -> str:
+    """Log in; returns the session cookie for manual request building."""
+    resp = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert resp.status_code == 204
+    token = resp.cookies.get("session")
+    assert token is not None
+    return token
+
+
 def _stub_register():
     set_field_crypto(FieldCrypto(cipher=StubCipher(), store=MapStore(), default_key_id=KEY_ID))
 
@@ -104,3 +127,11 @@ def client(engine, session_factory, monkeypatch):
     with engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
             conn.execute(table.delete())
+
+
+@pytest.fixture
+def admin_client(client):
+    """Run POST setup once; the client holds the admin session."""
+    resp = client.post("/api/setup", json={"email": "admin@x.com", "password": "s3cret123"})
+    assert resp.status_code == 201
+    return client
