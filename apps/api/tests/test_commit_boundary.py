@@ -1,10 +1,10 @@
 """Pins the commit boundary: only the get_db teardown commits."""
 
 import pytest
+from api import users
 from api.db import DbSession
 from api.main import app
 from api.models import User
-from api.repositories import UserRepository
 from api.security import verify_password
 from sqlalchemy import delete, select
 
@@ -17,10 +17,9 @@ def _wipe_users(engine):
         conn.execute(delete(User))
 
 
-def test_repo_add_does_not_commit(session_factory):
+def test_register_does_not_commit(session_factory):
     with session_factory() as db:
-        user = User(email="uncommitted@x.com", hashed_password="x")
-        UserRepository(db).add(user)
+        users.register(db, "uncommitted@x.com", "x")
         db.rollback()
 
     with session_factory() as db:
@@ -32,8 +31,7 @@ def test_handler_error_leaves_no_partial_row(client, session_factory):
 
     @app.post("/api/_test-boom", status_code=201)
     def boom(db: DbSession) -> dict[str, str]:
-        user = User(email="boom@x.com", hashed_password="x")
-        UserRepository(db).add(user)
+        users.register(db, "boom@x.com", "x")
         raise RuntimeError("forced failure after write")
 
     try:
