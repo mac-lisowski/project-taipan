@@ -1,3 +1,6 @@
+import { sessionCookieHeader } from "../../lib/session";
+
+
 export type Me = {
   id: number;
   email: string;
@@ -58,7 +61,7 @@ export async function revokeSession(session: string): Promise<void> {
   try {
     await fetch(`${apiInternalUrl()}/api/auth/logout`, {
       method: "POST",
-      headers: { Cookie: `session=${session}` },
+      headers: { Cookie: sessionCookieHeader(session) },
     });
   } catch {
     // Logged out locally regardless; the server row expires on its own.
@@ -73,10 +76,11 @@ export async function resolveAccount(
 ): Promise<AccountDecision> {
   if (!session) return { redirect: "/" };
   const res = await fetch(`${apiInternalUrl()}/api/auth/me`, {
-    headers: { Cookie: `session=${session}` },
+    headers: { Cookie: sessionCookieHeader(session) },
     cache: "no-store",
   });
   if (res.status === 401) return { redirect: "/" };
   if (!res.ok) throw new Error(`account lookup failed (${res.status})`);
   return { me: (await res.json()) as Me };
 }
+

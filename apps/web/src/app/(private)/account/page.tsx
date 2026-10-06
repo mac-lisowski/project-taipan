@@ -1,12 +1,12 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { resolveAccount } from "@/app/api/upstream";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { getSessionToken } from "@/lib/session";
 
 // Server component proving the session by rendering the me response.
 export default async function AccountPage(): Promise<ReactNode> {
-  const session = (await cookies()).get("session")?.value;
+  const session = await getSessionToken();
   const decision = await resolveAccount(session);
   if ("redirect" in decision) redirect(decision.redirect);
   const me = decision.me;
