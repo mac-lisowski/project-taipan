@@ -4,6 +4,7 @@
 export { cn } from "./lib/utils";
 export { Button } from "./components/button";
 export { CodeTabs, type CodeTab } from "./components/code-tabs";
+export { Field } from "./components/field";
 export { Input } from "./components/input";
 export { Label } from "./components/label";
 export { NewsCard } from "./components/news-card";

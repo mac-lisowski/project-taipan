@@ -1,6 +1,6 @@
 # Spec: Auth form module
 
-Status: not implemented.
+Status: implemented (PR #17).
 
 Seam: `useAuthSubmit` stays the transport seam. This spec adds a
 presentational `AuthForm` module on top of it and a `Field`
