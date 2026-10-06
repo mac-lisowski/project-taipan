@@ -6,7 +6,8 @@ disable-model-invocation: true
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user; just synthesize what you already know.
 
-Specs are saved as files in `docs/specs/<slug>/spec.md`. There is no
+Specs are saved as files in `docs/specs/planned/<slug>/spec.md` and
+move to `docs/specs/implemented/<slug>/` when the spec ships. There is no
 issue tracker; tickets are scratch files under `.scratch/<slug>/`
 (gitignored) and implement-spec reads the files directly.
 
@@ -19,11 +20,11 @@ issue tracker; tickets are scratch files under `.scratch/<slug>/`
 Check with the user that these seams match their expectations.
 
 3. Write the spec using the template below, then save it to
-`docs/specs/<slug>/spec.md` where `<slug>` is a short kebab-case name
+`docs/specs/planned/<slug>/spec.md` where `<slug>` is a short kebab-case name
 for the feature. Tell the user the file path. Tickets (created later
 by to-tickets) go in `.scratch/<slug>/issues/`, not in docs.
 
-4. Write the visual artifact: `docs/specs/<slug>/spec.html` beside
+4. Write the visual artifact: `docs/specs/planned/<slug>/spec.html` beside
 `spec.md`. Every spec gets one. It is a durable, committed artifact,
 not a temp file - it is what a reader opens to understand the spec's
 shape before reading prose. Rules:

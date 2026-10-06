@@ -10,8 +10,9 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
 Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
 
-There is no issue tracker. Specs live in `docs/specs/<slug>/spec.md`;
-tickets live in `.scratch/<slug>/issues/`.
+There is no issue tracker. Specs live in `docs/specs/planned/<slug>/`
+before merge and `docs/specs/implemented/<slug>/` after; tickets live
+in `.scratch/<slug>/issues/`.
 
 ## Process
 
@@ -35,7 +36,7 @@ Before going further, confirm the fixed point resolves (`git rev-parse <fixed-po
 Look for the originating spec, in this order:
 
 1. A path the user passed as an argument.
-2. A spec file under `docs/specs/` matching the branch name or feature.
+2. A spec file under `docs/specs/planned/` or `docs/specs/implemented/` matching the branch name or feature.
 3. Ticket files under `.scratch/<slug>/issues/` for the feature in
    scope. A ticket is a mini-spec: its Acceptance criteria and
    Definition of done are per-item claims the diff must satisfy.

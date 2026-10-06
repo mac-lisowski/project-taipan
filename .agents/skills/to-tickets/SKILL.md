@@ -11,7 +11,8 @@ Break a plan, spec, or conversation into a set of **tickets**: tracer-bullet ver
 Tickets are local files, not issue tracker entries: one file per
 ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`.
 `.scratch/` is gitignored - tickets are working state, specs in
-`docs/specs/` are the durable artifacts.
+`docs/specs/planned/` (open) and `docs/specs/implemented/` (shipped)
+are the durable artifacts.
 
 A done ticket gets an HTML change report beside it, same basename:
 `.scratch/<feature-slug>/issues/<NN>-<slug>.html`. The implement-spec
@@ -105,7 +106,7 @@ absorb.
 
 ## Context pointers
 
-- Spec: `docs/specs/<slug>/spec.md` (sections that bind this ticket)
+- Spec: `docs/specs/planned/<slug>/spec.md` (sections that bind this ticket)
 - Prior art: files that already show the pattern to copy
 - Decisions: the spec/ADR lines that constrain the shape
 

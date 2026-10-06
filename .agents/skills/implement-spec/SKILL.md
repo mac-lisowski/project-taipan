@@ -4,7 +4,7 @@ description: "Implement the result of /to-spec and /to-tickets in code."
 disable-model-invocation: true
 ---
 
-You have been provided a spec file (`docs/specs/<slug>/spec.md`). Its
+You have been provided a spec file (`docs/specs/planned/<slug>/spec.md`). Its
 tickets live in `.scratch/<slug>/issues/` as one file per ticket
 (`<NN>-<slug>.md`). Each ticket is a self-contained execution
 contract: Status, blocking edges, Parallel-with/Conflicts-with fields,
@@ -47,7 +47,7 @@ Communication to and from subagents should be sparse. Communicate primarily thro
 
 7. Once all tickets are complete, call the Skill tool with `code-review` on the integration branch. Fix all issues raised by the code review in a single **implementer subagent**.
 
-8. If a draft PR exists, mark it ready for review. As each ticket merges: confirm its report file exists, then tick its remaining Definition-of-done items, then flip its Status to `done`. Order matters - `review-stamp.sh` refuses to stamp a done ticket with unchecked boxes or a missing report. Report the integration branch.
+8. If a draft PR exists, mark it ready for review. As each ticket merges: confirm its report file exists, then tick its remaining Definition-of-done items, then flip its Status to `done`. Order matters - `review-stamp.sh` refuses to stamp a done ticket with unchecked boxes or a missing report. Once the PR carries the status line `implemented (PR #N)`, `git mv docs/specs/planned/<slug> docs/specs/implemented/` so the directory shows what is left. Report the integration branch.
 
 9. Clean up all **implementer subagent** worktrees.
 
