@@ -23,6 +23,7 @@ DEFAULT_KMS_BREAKER_COOLDOWN = 30.0
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
+DEFAULT_MAIL_FROM = "noreply@localhost"
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,8 @@ class Config:
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
     session_ttl_seconds: int = DEFAULT_SESSION_TTL_SECONDS
+    resend_api_key: str = ""
+    mail_from_address: str = DEFAULT_MAIL_FROM
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Config:
@@ -106,6 +109,11 @@ class Config:
         if session_ttl < 1:
             raise ValueError("API_SESSION_TTL_SECONDS must be at least 1 second")
 
+        resend_api_key = e.get("API_RESEND_API_KEY", "")
+        mail_from = e.get("API_MAIL_FROM", DEFAULT_MAIL_FROM)
+        if resend_api_key and not mail_from.strip():
+            raise ValueError("API_MAIL_FROM must be non-empty when API_RESEND_API_KEY is set")
+
         return cls(
             database_url=database_url,
             test_admin_url=test_admin_url,
@@ -121,6 +129,8 @@ class Config:
             host=host,
             port=port,
             session_ttl_seconds=session_ttl,
+            resend_api_key=resend_api_key,
+            mail_from_address=mail_from,
         )
 
 

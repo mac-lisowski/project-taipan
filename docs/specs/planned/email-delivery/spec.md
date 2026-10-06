@@ -6,7 +6,7 @@ Seam: one email delivery package with a single sender interface. All app code se
 
 ## Problem Statement
 
-Auth flows need mail. Activation, login links, and resets all send tokens by mail. Today there is no shared seam for sending. Each caller would wire its own client. That spreads keys, templates, and failure modes. Local dev has no safe story. Tests would hit the network or skip mail asserts. The app needs one place that owns sending, templates, and dev safety.
+Auth flows need mail. Activation and resets send tokens by mail. Login keeps the existing password flow and sends no mail. Today there is no shared seam for sending. Each caller would wire its own client. That spreads keys, templates, and failure modes. Local dev has no safe story. Tests would hit the network or skip mail asserts. The app needs one place that owns sending, templates, and dev safety.
 
 ## Solution
 
@@ -15,7 +15,7 @@ Add one reusable email delivery package. It exposes a small sender interface wit
 ## User Stories
 
 1. As a new user, I want an activation mail after sign up, so that I can verify my address.
-2. As a returning user, I want a login link by mail, so that I can sign in without a password.
+2. As a returning user, I keep the existing password login, so that no second sign in path exists.
 3. As a user who forgot access, I want a reset mail, so that I can regain my account.
 4. As a user, I want mail that shows my app name and a clear action link, so that I trust it and know what to do.
 5. As a user, I want short lived single use links, so that a leaked mail does not stay valid.
@@ -39,7 +39,7 @@ Add one reusable email delivery package. It exposes a small sender interface wit
 
 - One new email delivery package owns all sending. It exposes a sender interface with a single send operation. All app code crosses this seam. No direct vendor calls exist outside it.
 - The sender takes a template name plus typed data plus recipient. It returns a typed result of sent, suppressed, or failed with a reason. Callers map the result to user facing behavior.
-- One template per email type. Activation, login link, and reset each own a template with fixed subject and body shape. Shared layout such as brand header and footer is composed inside the package. No generic free form send exists.
+- One template per email type. Activation and reset each own a template with fixed subject and body shape. Shared layout such as brand header and footer is composed inside the package. No generic free form send exists. No login link mail exists. Login stays on the existing password flow.
 - Templates use the Jinja2 engine. Python native rendering keeps sends free of a Node step. One template file per email type lives in the package. Shared brand parts are partials composed inside the package.
 - Template data is validated before render. Missing or bad fields reject the send without network use. Render output stays plain and small.
 - A Resend adapter implements the sender interface for prod. It reads its key from server config at startup. It fails closed when the key is absent. It never logs the key or full token values.
@@ -59,7 +59,7 @@ Add one reusable email delivery package. It exposes a small sender interface wit
 - Template tests pin one case per email type. They assert render with valid data. They assert fast reject with missing data. They assert no token or key material leaks into logs.
 - Adapter tests pin the Resend mapping with a stubbed transport. They assert auth header use from config. They assert fail closed with no key. They assert failure mapping to the typed result. No test hits the real vendor.
 - Bounce tests assert hard bounce adds suppression. They assert repeat sends to a suppressed address return suppressed. They assert soft bounce retries stop at the bound.
-- Auth flow tests use the fake adapter end to end. They request activation or login mail, read the captured link, and complete the flow. They assert landing on the dashboard route after login or activation.
+- Auth flow tests use the fake adapter end to end. They request activation or reset mail, read the captured link, and complete the flow. They assert landing on the dashboard route after login or activation.
 - Token rule tests live with auth. They assert single use, hash at rest, and short expiry. Mail tests only assert the link is present and opaque.
 - After editing tests, run the structural test check first, then the test smell review. A test that cannot fail is removed.
 
