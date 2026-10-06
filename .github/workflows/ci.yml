@@ -76,6 +76,8 @@ jobs:
         run: scripts/check-file-size.sh
       - name: BFF boundary checks
         run: scripts/check-bff.sh
+      - name: unreachable component checks
+        run: scripts/check-unreached-components.sh
       - name: Dockerfile COPY sources
         run: scripts/check-docker.sh
       - name: compose files validate

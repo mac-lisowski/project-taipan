@@ -25,6 +25,11 @@ repos:
         entry: scripts/check-bff.sh
         language: system
         pass_filenames: false
+      - id: unreached-components
+        name: unreachable component checks (apps/web)
+        entry: scripts/check-unreached-components.sh
+        language: system
+        pass_filenames: false
       - id: docker-copy
         name: Dockerfile COPY sources resolve at repo root
         entry: scripts/check-docker.sh
