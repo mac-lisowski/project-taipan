@@ -1,4 +1,4 @@
-// Owns the BFF proxy policy: URL building, header hygiene, timeout, upstream fetch, response build. Env arrives as config so tests drive this seam.
+import { resolveTrustedOrigin } from "./origin";
 
 export type ProxyConfig = {
   // Base URL of the upstream API, resolved by the route handler.
@@ -94,7 +94,7 @@ function badPath(): Response {
 // x-forwarded-* headers are stripped below, so they cannot steer it.
 // Production sets an explicit origin via config.
 function originFor(req: Request, explicit: string | undefined): string {
-  return explicit ?? `http://${req.headers.get("host") ?? "localhost"}`;
+  return resolveTrustedOrigin(req, explicit);
 }
 
 function requestHeaders(req: Request, origin: string): Headers {

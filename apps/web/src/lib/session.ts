@@ -1,5 +1,8 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import type { NextResponse } from "next/server";
+import { resolveAccount, revokeSession, type Me } from "../app/api/upstream";
 
 export const SESSION_COOKIE_NAME = "session";
 
@@ -18,4 +21,31 @@ export async function hasSession(): Promise<boolean> {
 
 export function clearSessionCookie(response: NextResponse): void {
   response.cookies.set(SESSION_COOKIE_NAME, "", { maxAge: 0, path: "/" });
+}
+
+// Guard protected server components by redirecting unauthenticated visitors.
+export const requireAccount = cache(async (): Promise<Me> => {
+  const token = await getSessionToken();
+  const decision = await resolveAccount(token);
+  if ("redirect" in decision) {
+    redirect(decision.redirect);
+  }
+  return decision.me;
+});
+
+
+// Steer authenticated visitors away from public auth forms.
+export async function redirectIfAuthenticated(to = "/account"): Promise<void> {
+  if (await hasSession()) {
+    redirect(to);
+  }
+}
+
+// Combine remote revocation and local cookie clearance for clean logout.
+export async function terminateSession(response: NextResponse): Promise<void> {
+  const token = await getSessionToken();
+  if (token !== undefined) {
+    await revokeSession(token);
+  }
+  clearSessionCookie(response);
 }
