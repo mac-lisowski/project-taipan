@@ -17,7 +17,15 @@ function apiInternalUrl(): string {
   return url;
 }
 
-const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN;
+// Same contract as API_INTERNAL_URL: missing in production fails deploy,
+// or forwarded-proto headers and rewritten redirects go wrong.
+function publicOrigin(): string | undefined {
+  const origin = process.env.PUBLIC_ORIGIN;
+  if (!origin && process.env.NODE_ENV === "production") {
+    throw new Error("PUBLIC_ORIGIN is required in production");
+  }
+  return origin;
+}
 
 // The route is only an adapter: env resolution, the module call, and
 // returning the final browser-facing Response.
@@ -25,7 +33,7 @@ async function proxy(req: NextRequest): Promise<Response> {
   return proxyUpstream(req, {
     upstreamUrl: apiInternalUrl(),
     // The module owns the publicOrigin fallback policy; it is testable there.
-    publicOrigin: PUBLIC_ORIGIN,
+    publicOrigin: publicOrigin(),
   });
 }
 

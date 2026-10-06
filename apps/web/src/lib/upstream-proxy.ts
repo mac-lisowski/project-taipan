@@ -123,6 +123,8 @@ export async function proxyUpstream(
 ): Promise<Response> {
   const url = new URL(req.url);
   if (!url.pathname.startsWith("/api/")) return badPath();
+  // A future /api/* path allowlist plugs in here, when an upstream
+  // route must stay internal.
   const decoded: string[] = [];
   for (const segment of url.pathname.slice("/api/".length).split("/")) {
     try {
@@ -139,15 +141,19 @@ export async function proxyUpstream(
   // segment cannot reshape the upstream path.
   const encoded = decoded.map(encodeURIComponent).join("/");
   const origin = originFor(req, cfg.publicOrigin);
+  const headers = requestHeaders(req, origin);
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
   const doFetch = cfg.fetchImpl ?? globalThis.fetch;
+  // Only a real upstream failure becomes a 502; construction bugs above
+  // and response building below propagate as honest errors.
+  let upstream: Response;
   try {
-    const upstream = await doFetch(
+    upstream = await doFetch(
       `${cfg.upstreamUrl}/api/${encoded}${url.search}`,
       {
         method: req.method,
-        headers: requestHeaders(req, origin),
+        headers,
         body: hasBody ? req.body : undefined,
         redirect: "manual",
         signal: AbortSignal.any([
@@ -158,10 +164,11 @@ export async function proxyUpstream(
         ...{ duplex: "half" },
       } as RequestInit,
     );
-    return browserResponse(upstream, cfg.upstreamUrl, origin);
-  } catch {
+  } catch (err) {
+    console.error("bff proxy: upstream fetch failed:", err);
     return Response.json({ detail: "upstream unavailable" }, { status: 502 });
   }
+  return browserResponse(upstream, cfg.upstreamUrl, origin);
 }
 
 // Build the final Response the browser sees: the request-side result
