@@ -19,9 +19,42 @@
    defaults in code are fine; never hardcode `db`.
 7. JS/TS apps (e.g. `apps/web`) use `pnpm -C apps/<name> <cmd>`. They
    are not uv workspace members.
-8. Hard gates: 300 LOC per source file (`scripts/check-file-size.sh`)
-   and the web BFF boundary (`scripts/check-bff.sh`). Both run in
-   pre-commit and CI. Do not weaken them to make a check pass.
+8. Hard gates: 300 LOC per source file (`scripts/check-file-size.sh`),
+   the web BFF boundary (`scripts/check-bff.sh`), and Dockerfile COPY
+   sources resolving at repo root (`scripts/check-docker.sh`). All run
+   in pre-commit and CI. Do not weaken them to make a check pass.
+9. Tests must catch bugs. After writing or editing test files, review
+   them with the `test-smell-review` skill. Run
+   `uvx falsegreen <files>` first for the structural pass. A test that
+   cannot fail is bloat. Fix it or delete it.
+10. Declare the activity mode when the phase changes:
+    `bash .agents/hooks/agent-mode.sh set <mode>`. Modes: plan,
+    implement, test, review, debug, docs, commit. Mode selects which
+    advisory nudges run (`.agents/hooks/hooks.d/<mode>/`). It never
+    replaces the hard gates.
+11. Before `git commit`: run the `code-review` skill on the
+    uncommitted diff (fixed point `HEAD`, `git diff HEAD` plus
+    untracked files) and `test-smell-review` on touched tests. When
+    clean, stamp with
+    `bash .agents/hooks/review-stamp.sh` - the hook blocks the commit
+    without it and any edit invalidates the stamp. Never use
+    `--no-verify` or `-n`. Commit messages: subject and every line
+    <= 120 chars (`scripts/check-commit-msg.sh`). Comments explain
+    why, not what: one line, no narration blocks.
+12. A done spec ticket carries an HTML change report next to the
+    ticket file: `.scratch/<slug>/issues/<NN>-<slug>.html`. The
+    implement-spec merger writes it from the merged diff before
+    Status flips to done. The review stamp refuses a done ticket
+    whose report is missing.
+13. Modular Monolith: build features as puzzle pieces. Domain logic
+    and reusable capabilities live in `packages/<name>/`. Runnable
+    apps in `apps/<name>/` are thin composition roots that wire
+    packages and HTTP routes. Packages must never import from apps.
+14. Extensible Entities (Pattern A): core database entities (such as
+    `User`) stay minimal and hold only essential identity fields.
+    Never add feature-specific columns directly to core entity
+    models. Features attach through separate 1:1 or 1:N extension
+    tables referencing entity IDs.
 
 ## Project map
 

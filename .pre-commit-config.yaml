@@ -1,3 +1,5 @@
+default_install_hook_types: [pre-commit, pre-push, commit-msg]
+
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.10
@@ -9,7 +11,7 @@ repos:
     hooks:
       - id: no-em-dashes
         name: replace em dashes with hyphens
-        entry: sed -i 's/\xe2\x80\x94/-/g'
+        entry: bash -c 'd=$(printf "\\342\\200\\224"); for f in "$@"; do sed -i.bak "s/$d/-/g" "$f" && rm "$f.bak"; done' --
         language: system
         types: [text]
         exclude: '^(\.agents/skills/|\.devin/|\.claude/|\.grok/|\.zcode/|uv\.lock$|skills-lock\.json$)'
@@ -23,6 +25,21 @@ repos:
         entry: scripts/check-bff.sh
         language: system
         pass_filenames: false
+      - id: unreached-components
+        name: unreached components check (apps/web)
+        entry: scripts/check-unreached-components.sh
+        language: system
+        pass_filenames: false
+      - id: docker-copy
+        name: Dockerfile COPY sources resolve at repo root
+        entry: scripts/check-docker.sh
+        language: system
+        pass_filenames: false
+      - id: commit-msg-len
+        name: commit message line cap (120 chars)
+        entry: scripts/check-commit-msg.sh
+        language: system
+        stages: [commit-msg]
       - id: pytest
         name: pytest
         entry: uv run pytest

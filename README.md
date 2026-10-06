@@ -4,17 +4,54 @@ Learning Python. I know this stack in Node - APIs,
 CLIs, agents, databases. The concepts are familiar; this monorepo is
 where I learn the Python equivalents: FastAPI, Typer, LangChain etc.
 
+![Project Taipan repository overview](docs/project-taipan-repo.webp)
+
+## Prerequisites
+
+- Python 3.12 and `uv` for the workspace.
+- Docker Compose for Postgres, Redis, and Infisical.
+- Node.js 24 and pnpm 11.17 for `apps/web`.
+
+## North star
+
+A production-shaped system, all in Python:
+
+- FastAPI API with Redis-backed sessions
+- user panel in `apps/web` (Next.js BFF, SSR, OAuth)
+- event-driven communication between services
+- CQRS: separate write and read models
+
 A Python monorepo managed with [uv workspaces](https://docs.astral.sh/uv/concepts/workspaces/).
 Shared libraries live in `packages/`, runnable applications live in `apps/`.
 
 ```
 ├── pyproject.toml        # workspace root: members, shared dev tools
-├── packages/
-│   └── core/             # library: core
-└── apps/
-    ├── cli/              # app: cli (depends on core)
-    ├── api/              # app: api (depends on core)
-    └── web/              # Next.js frontend, pnpm - not a uv member
+├── packages/             # puzzle pieces: domain libraries
+│   ├── core/             # shared primitives and protocols
+│   ├── crypto/           # envelope encryption and DEK cache
+│   └── kms/              # Infisical KMS adapter
+└── apps/                 # runnable composition roots
+    ├── cli/              # app: cli
+    ├── api/              # app: FastAPI server assembling packages
+    └── web/              # Next.js frontend, pnpm (not a uv member)
+```
+
+### Architecture: Modular Monolith (Puzzle Pieces)
+
+The system is designed as independent puzzle pieces:
+
+1. **Packages are standalone**: Domain logic lives in `packages/<name>/`. Packages never import from apps.
+2. **Apps are composition roots**: `apps/api` wires packages together and mounts HTTP routers.
+3. **Extensible entities (Pattern A)**: Core database tables (such as `users`) stay lean. They store only essential authentication fields. Applications extend entities using separate 1:1 or 1:N extension tables referencing entity IDs. This prevents schema bloat and merge conflicts.
+
+```mermaid
+flowchart TD
+    App["apps/api (Composition Root)"] --> Core["packages/core"]
+    App --> Crypto["packages/crypto"]
+    App --> Kms["packages/kms"]
+    App --> Ext["Feature Extension Table\n(e.g. user_profiles)"]
+
+    Ext -.->|references user_id| User["Core User Table\n(id, email, password)"]
 ```
 
 ## Everyday commands
@@ -36,7 +73,7 @@ Each app registers a command in its `pyproject.toml` under `[project.scripts]`.
 
 ```bash
 uv run cli                 # CLI app -> prints "Hello, world!"
-docker compose up -d       # Postgres + pgvector :5432, redis :6379 (needed by api/web)
+docker compose up -d       # Postgres + pgvector :5432, redis :6379, Infisical :8080
 uv run db-upgrade          # apply migrations
 uv run api                 # API app -> FastAPI server on http://127.0.0.1:8000 (docs at /docs)
 pnpm -C apps/web install   # one-time: web dependencies
@@ -64,6 +101,27 @@ API tests run against a real `app_test` database on the docker Postgres
 Env vars are registered in `apps/api/.env.example`. Copy to `.env` and run
 with `uv run --env-file apps/api/.env api`.
 
+## Secrets (Infisical)
+
+Self-hosted Infisical runs in the dev compose stack on :8080 (UI + API).
+It gets its own Postgres (`infisical-db` service, no host port) -
+same shape as the cloud deploy where it is a separate instance, not
+a database inside the app postgres.
+
+First run of a new instance needs an admin, org, and machine identity:
+
+```bash
+bash scripts/infisical-bootstrap.sh   # prints the MI token
+```
+
+`docker-compose.yaml` provides development defaults for `ENCRYPTION_KEY`
+and `AUTH_SECRET`. Set both through your production deployment environment.
+Keep a backup of `ENCRYPTION_KEY`; stored secrets cannot be decrypted if
+it is lost.
+
+The full operator checklist (KMS project, key, machine identities,
+Railway gotchas) lives in `docs/infisical.md`.
+
 ## Frontend (web)
 
 `apps/web` is Next.js acting as the BFF: pages are server-rendered and
@@ -73,7 +131,8 @@ cookie. The browser never talks to FastAPI directly.
 - `API_INTERNAL_URL` (server-only) lives in `apps/web/.env.example`.
   Copy to `.env.local` for local overrides.
 - `apps/web/Dockerfile` builds a standalone production image.
-  Build context is `apps/web` itself.
+  Build context is the repo root, same as `apps/api/Dockerfile`:
+  `scripts/docker-build.sh web`
 
 ## Adding a new project
 
@@ -91,7 +150,9 @@ cookie. The browser never talks to FastAPI directly.
 - Tests live under `tests/` inside each member that has them.
 - Python version pinned in `.python-version`; lockfile is `uv.lock`.
 - Source files are capped at 300 lines (`scripts/check-file-size.sh`);
-  the web BFF boundary is checked by `scripts/check-bff.sh`. Both run
+  the web BFF boundary is checked by `scripts/check-bff.sh`; Dockerfile
+  COPY sources must resolve at repo root (`scripts/check-docker.sh`,
+  since `apps/*/Dockerfile` builds use the root as context). All run
   in pre-commit and CI.
 - `pre-commit` runs ruff, an em-dash fixer, and the gate scripts on
   commit; pytest and web lint/typecheck on push.

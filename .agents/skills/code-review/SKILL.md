@@ -10,25 +10,36 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
 Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
 
-The issue tracker should have been provided to you. If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.
+There is no issue tracker. Specs live in `docs/specs/planned/<slug>/`
+before merge and `docs/specs/implemented/<slug>/` after; tickets live
+in `.scratch/<slug>/issues/`.
 
 ## Process
 
 ### 1. Pin the fixed point
 
-Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one, ask for it.
+Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one and the tree has uncommitted changes, use `HEAD` (`git diff HEAD`); otherwise ask.
 
-Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
+For the pre-commit review gate (AGENTS.md rule 11), the change is uncommitted work. Fixed point is `HEAD`; skip the three-dot form and the commit list (there are no commits yet). The diff is:
 
-Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
+- `git diff HEAD` (staged + unstaged changes to tracked files), **plus**
+- every untracked file: `git ls-files --others --exclude-standard -z | xargs -0 -I{} git diff --no-index -- /dev/null {}`
+
+Untracked files go into the commit after `git add` and are part of the stamp hash, so they must be reviewed. Pass both commands to the sub-agents.
+
+Otherwise (committed work), capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
+
+Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. For uncommitted work, "non-empty" means `git status --porcelain --untracked-files=all` prints something. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
 
 ### 2. Identify the spec source
 
 Look for the originating spec, in this order:
 
-1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.), fetched via the workflow in `docs/agents/issue-tracker.md`.
-2. A path the user passed as an argument.
-3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
+1. A path the user passed as an argument.
+2. A spec file under `docs/specs/planned/` or `docs/specs/implemented/` matching the branch name or feature.
+3. Ticket files under `.scratch/<slug>/issues/` for the feature in
+   scope. A ticket is a mini-spec: its Acceptance criteria and
+   Definition of done are per-item claims the diff must satisfy.
 4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
 
 ### 3. Identify the standards sources
@@ -67,7 +78,9 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 
 - The diff command and commit list.
 - The path or fetched contents of the spec.
-- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
+- The paths of any in-scope ticket files under `.scratch/*/issues/`
+  (Status in-progress or done), when they exist.
+- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. (d) For each Acceptance-criteria and Definition-of-done item in the ticket files: verdict met or unmet, quoting evidence from the diff. Be adversarial - flag items ticked or claimed but unproven by the diff. Under 400 words."
 
 If the spec is missing, skip the Spec sub-agent and note this in the final report.
 
@@ -76,6 +89,23 @@ If the spec is missing, skip the Spec sub-agent and note this in the final repor
 Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_).
 
 End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
+
+### 6. Test-smell pass on touched tests
+
+If the diff adds or edits test files, run `uvx falsegreen` on them
+(`npx --yes falsegreen-js` for `.ts`/`.tsx`/`.js`/`.jsx`), then the
+`test-smell-review` judgment pass. False-green findings count as
+unresolved: they block the stamp below.
+
+### 7. Stamp the diff (uncommitted reviews only)
+
+When the review covered the uncommitted diff (`git diff HEAD` plus untracked files) for the commit gate and the findings are clean - or the fixes are applied and the diff re-verified - run:
+
+```bash
+bash .agents/hooks/review-stamp.sh
+```
+
+The stamp binds the exact worktree change against the current HEAD, contents and modes. Any edit after stamping invalidates it, and `git commit` is blocked without a matching stamp. Do not stamp while findings are unresolved.
 
 ## Why two axes
 

@@ -1,0 +1,57 @@
+"""Opaque login sessions: raw token in the cookie, sha256 in the DB."""
+
+from __future__ import annotations
+
+import hashlib
+import secrets
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from api.models import AuthSession, UserTenant
+
+__all__ = ["COOKIE_NAME", "mint", "resolve", "revoke", "tenant_id_for_token"]
+
+SESSION_DAYS = 7
+COOKIE_NAME = "session"
+
+
+def _digest(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def mint(session: Session, user_id: int) -> str:
+    token = secrets.token_urlsafe(32)
+    session.add(
+        AuthSession(
+            token_sha256=_digest(token),
+            user_id=user_id,
+            expires_at=datetime.now(UTC) + timedelta(days=SESSION_DAYS),
+        )
+    )
+    session.flush()
+    return token
+
+
+def revoke(session: Session, row: AuthSession) -> None:
+    session.delete(row)
+    session.flush()
+
+
+def resolve(session: Session, token: str) -> AuthSession | None:
+    row = session.get(AuthSession, _digest(token))
+    if row is None or row.expires_at <= datetime.now(UTC):
+        return None
+    return row
+
+
+def tenant_id_for_token(session: Session, token: str) -> str | None:
+    return session.scalar(
+        select(UserTenant.tenant_id)
+        .join(AuthSession, AuthSession.user_id == UserTenant.user_id)
+        .where(
+            AuthSession.token_sha256 == _digest(token),
+            AuthSession.expires_at > datetime.now(UTC),
+        )
+    )

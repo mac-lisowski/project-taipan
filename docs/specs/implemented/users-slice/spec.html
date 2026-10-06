@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec visual - users slice deepening</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .iface { background: #f59e0b; }
+  .impl  { background: #3b82f6; }
+  .lbl   { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">Deepen the users slice</h1>
+    <p class="text-slate-500">Visual companion to <code>spec.md</code>.
+      Move registration rules out of the HTTP router into a
+      <code>users</code> module over an injected <code>Session</code>.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">The problem: rules live in the adapter</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="border border-slate-200 rounded-lg p-4">
+        <p class="lbl mb-2">Before</p>
+        <div class="iface h-4 rounded mb-1" style="width:80%"></div>
+        <div class="impl h-3 rounded" style="width:45%"></div>
+        <p class="text-xs text-slate-500 mt-1">router holds uniqueness +
+          hashing + construction; repository is a pass-through to
+          Session.</p>
+      </div>
+      <div class="border border-slate-200 rounded-lg p-4">
+        <p class="lbl mb-2">After</p>
+        <div class="iface h-4 rounded mb-1" style="width:30%"></div>
+        <div class="impl h-6 rounded" style="width:70%"></div>
+        <p class="text-xs text-slate-500 mt-1">router maps statuses;
+          module owns rules behind a small interface.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Module shape</h2>
+    <div class="mermaid">
+graph LR
+  subgraph "router - thin adapter"
+    REQ["POST /users"] --> MAP["map errors<br>EmailTaken -> 409<br>NotFound -> 404"]
+  end
+  subgraph "users module - deep"
+    MAP --> REG["register(email, password)<br>get / list / remove"]
+    REG --> RULES["uniqueness check<br>hash_password<br>typed errors"]
+  end
+  RULES --> DB[("Session - injected")]
+  DB -.->|commits at request end| TEAR["get_db teardown"]
+  DEL["BaseRepository + UserRepository: deleted"]
+    </div>
+    <p class="text-xs text-slate-500 mt-2">No FastAPI imports inside the
+    module. Domain errors, not HTTPException. The module uses the
+    session directly; the repository layer is deleted here, and
+    <code>get_db</code> teardown owns the commit.</p>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">The test seam</h2>
+    <div class="mermaid">
+graph LR
+  T["tests: real test-DB session"] --> M["users.register / get / remove"]
+  M --> A["assert: hashed pw, EmailTaken,<br>NotFound, rows persisted"]
+  H["HTTP tests (unchanged)"] --> MAP2["pin error -> status mapping"]
+    </div>
+    <ul class="list-disc ml-5 mt-3 space-y-1">
+      <li>register returns User with hashed (not raw) password</li>
+      <li>duplicate email raises <code>EmailTaken</code></li>
+      <li>get on missing id raises <code>NotFound</code></li>
+      <li>existing HTTP tests pass unchanged</li>
+      <li>a failed request leaves no partial row (commit lives in
+        get_db teardown, not in add())</li>
+    </ul>
+  </section>
+
+  <section class="bg-slate-800 text-slate-100 rounded-xl p-6">
+    <h2 class="font-bold mb-2">Why it matters</h2>
+    <p class="text-slate-300">Locality ahead of growth: auth and
+    sessions land in this slice next. They should land on a deep
+    module with rules in one place, not on routers that accumulate
+    domain logic.</p>
+  </section>
+</div>
+</body>
+</html>

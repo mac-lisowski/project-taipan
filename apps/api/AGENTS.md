@@ -28,3 +28,9 @@ Applies inside `apps/api/` in addition to the root `AGENTS.md`.
 - Local overrides go in `apps/api/.env` (gitignored).
 - `apps/api/.env.example` documents the variables.
 - Run with overrides: `uv run --env-file apps/api/.env api`.
+
+## Extensibility (Pattern A)
+
+- Core models (such as `User`) contain only identity and credential fields.
+- Never add feature-specific columns directly to core models.
+- Create feature models in extension tables referencing the entity id.

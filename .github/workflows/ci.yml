@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, dev]
   push:
-    branches: [main]
+    branches: [main, dev]
   merge_group:
 
 concurrency:
@@ -24,6 +24,8 @@ jobs:
     outputs:
       shared: ${{ steps.filter.outputs.shared }}
       core: ${{ steps.filter.outputs.core }}
+      crypto: ${{ steps.filter.outputs.crypto }}
+      kms: ${{ steps.filter.outputs.kms }}
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
     steps:
@@ -38,13 +40,21 @@ jobs:
               - '.pre-commit-config.yaml'
               - '.github/workflows/**'
               - 'scripts/**'
+              - '.dockerignore'
+              - '**/Dockerfile*'
             web:
               - 'apps/web/**'
             core:
               - 'packages/core/**'
+            crypto:
+              - 'packages/crypto/**'
+            kms:
+              - 'packages/kms/**'
             api:
               - 'apps/api/**'
               - 'packages/core/**'
+              - 'packages/crypto/**'
+              - 'packages/kms/**'
               - 'docker-compose.yaml'
               - 'docker/**'
 
@@ -66,6 +76,14 @@ jobs:
         run: scripts/check-file-size.sh
       - name: BFF boundary checks
         run: scripts/check-bff.sh
+      - name: unreached components check
+        run: scripts/check-unreached-components.sh
+      - name: Dockerfile COPY sources
+        run: scripts/check-docker.sh
+      - name: compose files validate
+        run: |
+          docker compose -f docker-compose.yaml config -q
+          docker compose -f .devcontainer/docker-compose.yml config -q
 
   test-web:
     needs: changes
@@ -88,8 +106,18 @@ jobs:
       # LayoutProps/PageProps are generated; tsc fails without them.
       - run: pnpm -C apps/web exec next typegen
       - run: pnpm -C apps/web exec tsc --noEmit
+      - run: pnpm -C apps/web test
       - run: pnpm -C apps/web build
-      - run: docker build apps/web
+      - run: scripts/docker-build.sh web
+      - name: web image smoke test
+        run: |
+          docker run -d --name web -p 127.0.0.1:0:3000 taipan-web
+          port=$(docker port web 3000 | cut -d: -f2)
+          for i in $(seq 1 30); do
+            curl -fsS -o /dev/null "http://localhost:$port/" && exit 0 || sleep 1
+          done
+          docker logs web
+          exit 1
 
   test-core:
     needs: changes
@@ -100,6 +128,26 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: uv sync --locked
       - run: uv run pytest packages/core
+
+  test-crypto:
+    needs: changes
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.crypto == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: uv sync --locked
+      - run: uv run pytest packages/crypto
+
+  test-kms:
+    needs: changes
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.kms == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: uv sync --locked
+      - run: uv run pytest packages/kms
 
   test-api:
     needs: changes
@@ -124,18 +172,53 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: uv sync --locked
       - run: uv run pytest apps/api
+      - run: scripts/docker-build.sh api
+      - name: api image smoke test
+        run: docker run --rm taipan-api python -c "import api.main"
 
   ci-done:
-    needs: [changes, lint, test-core, test-api, test-web]
+    needs: [changes, lint, test-core, test-crypto, test-kms, test-api, test-web]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: verify required jobs passed
         run: |
           status=0
-          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "test-core:${{ needs.test-core.result }}" "test-api:${{ needs.test-api.result }}" "test-web:${{ needs.test-web.result }}"; do
+          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "test-core:${{ needs.test-core.result }}" "test-crypto:${{ needs.test-crypto.result }}" "test-kms:${{ needs.test-kms.result }}" "test-api:${{ needs.test-api.result }}" "test-web:${{ needs.test-web.result }}"; do
             result="${pair##*:}"
             echo "${pair%%:*}: $result"
             case "$result" in success|skipped) ;; *) status=1 ;; esac
           done
           exit $status
+
+  deploy:
+    needs: ci-done
+    # always() is required: a skipped job anywhere upstream (changes on
+    # push) otherwise propagates a skip through the needs chain even
+    # when ci-done succeeded.
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/dev' && needs.ci-done.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Literal: selects which GitHub environment's secrets/vars resolve.
+    environment: project-taipan / dev
+    env:
+      # Project token scoped to the Railway dev environment.
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
+      RAILWAY_SERVICE_WEB: ${{ vars.RAILWAY_SERVICE_WEB }}
+      RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
+      RAILWAY_SERVICE_INFISICAL: ${{ vars.RAILWAY_SERVICE_INFISICAL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: install railway cli
+        run: npm install -g @railway/cli@5.41.2
+      - name: deploy web
+        run: railway up --service "$RAILWAY_SERVICE_WEB" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
+      - name: deploy api
+        run: railway up --service "$RAILWAY_SERVICE_API" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
+      - name: deploy infisical
+        # Skipped until the Railway service exists and the GitHub
+        # environment var RAILWAY_SERVICE_INFISICAL is set.
+        if: ${{ vars.RAILWAY_SERVICE_INFISICAL != '' }}
+        run: railway up --service "$RAILWAY_SERVICE_INFISICAL" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci

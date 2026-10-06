@@ -1,0 +1,290 @@
+"""Edge-adapter tests: Postgres DekStore and Redis DekCache, no KMS.
+
+The store tests need the app_test Postgres and skip when it is down,
+same convention as conftest. The cache tests use the live test Redis
+when reachable and a contract fake otherwise.
+"""
+
+import logging
+import os
+
+import pytest
+from api.dek_cache import (
+    KEY_PREFIX,
+    LocalTtlDekCache,
+    RedisDekCache,
+    TwoTierDekCache,
+)
+from api.dek_store import PostgresDekStore
+from api.field_crypto import build_field_crypto
+from api.models import TenantDek
+from api_testsupport import KEY_ID, MapStore, StubCipher, unique_tenant
+from crypto import BreakerCipher, FieldCrypto
+from kms import InfisicalCipher
+from redis import Redis, RedisError
+from sqlalchemy import select
+from sqlalchemy.orm import Session, sessionmaker
+
+REDIS_URL = os.environ.get("API_REDIS_URL", "redis://localhost:6379/0")
+
+
+@pytest.fixture
+def store_factory(engine) -> sessionmaker[Session]:
+    return sessionmaker(bind=engine, expire_on_commit=False)
+
+
+@pytest.fixture
+def store(store_factory) -> PostgresDekStore:
+    return PostgresDekStore(store_factory, KEY_ID)
+
+
+def count_rows(engine, tenant_id: str) -> int:
+    with engine.connect() as conn:
+        rows = (
+            conn.execute(select(TenantDek).where(TenantDek.tenant_id == tenant_id)).scalars().all()
+        )
+    return len(rows)
+
+
+def test_dek_store_roundtrip(store: PostgresDekStore) -> None:
+    tenant = unique_tenant()
+    stored = store.put(tenant, "wrapped-1-xxxxxxxxxxxxxxxxxxxxxxxx")
+    assert stored == "wrapped-1-xxxxxxxxxxxxxxxxxxxxxxxx"
+    assert store.get(tenant) == "wrapped-1-xxxxxxxxxxxxxxxxxxxxxxxx"
+    assert store.get(unique_tenant()) is None
+
+
+def test_dek_store_race_adopts_winner(store_factory, store: PostgresDekStore) -> None:
+    tenant = unique_tenant()
+    winner = store.put(tenant, "wrapped-winner-xxxxxxxxxxxxxxxxxxxxxxxx")
+    # A second store inserts its own proposal after the winner landed.
+    loser = PostgresDekStore(store_factory, KEY_ID)
+    adopted = loser.put(tenant, "wrapped-loser-xxxxxxxxxxxxxxxxxxxxxxxx")
+    assert winner == "wrapped-winner-xxxxxxxxxxxxxxxxxxxxxxxx"
+    assert adopted == winner
+    assert store.get(tenant) == winner
+    assert loser.get(tenant) == winner
+
+
+def test_dek_store_uniqueness(store: PostgresDekStore, engine) -> None:
+    tenant = unique_tenant()
+    store.put(tenant, "wrapped-1-xxxxxxxxxxxxxxxxxxxxxxxx")
+    store.put(tenant, "wrapped-2-xxxxxxxxxxxxxxxxxxxxxxxx")
+    assert count_rows(engine, tenant) == 1
+
+
+@pytest.fixture
+def live_redis() -> Redis:
+    client = Redis.from_url(REDIS_URL)
+    try:
+        client.ping()
+    except RedisError:
+        pytest.skip("redis not running")
+    yield client
+    client.close()
+
+
+def test_dek_cache_honors_configured_ttl(live_redis: Redis) -> None:
+    cache = RedisDekCache(live_redis, ttl_seconds=900)
+    tenant = unique_tenant()
+    cache.put(tenant, b"dek-bytes")
+    assert cache.get(tenant) == b"dek-bytes"
+    # The fake-clock tests own expiry math; this pins that the real Redis
+    # entry carries the adapter's configured TTL.
+    assert 0 < live_redis.ttl(KEY_PREFIX + tenant) <= 900
+
+
+class FakeClock:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
+
+class FakeRedis:
+    """Same set/get contract as redis.Redis, expiry judged by a fake clock."""
+
+    def __init__(self, clock: FakeClock) -> None:
+        self.clock = clock
+        self.values: dict[str, tuple[bytes, float | None]] = {}
+        self.get_calls = 0
+        self.set_ex_values: list[int | None] = []
+
+    def set(self, key: str, value: bytes, ex: int | None = None) -> None:
+        self.set_ex_values.append(ex)
+        expire_at = self.clock.now + ex if ex is not None else None
+        self.values[key] = (value, expire_at)
+
+    def get(self, key: str) -> bytes | None:
+        self.get_calls += 1
+        item = self.values.get(key)
+        if item is None:
+            return None
+        value, expire_at = item
+        if expire_at is not None and self.clock.now >= expire_at:
+            del self.values[key]
+            return None
+        return value
+
+
+def test_dek_cache_ttl_contract_on_fake() -> None:
+    clock = FakeClock()
+    cache = RedisDekCache(FakeRedis(clock), ttl_seconds=60)
+    tenant = unique_tenant()
+    cache.put(tenant, b"dek-bytes")
+    assert cache.get(tenant) == b"dek-bytes"
+    clock.advance(59)
+    assert cache.get(tenant) == b"dek-bytes"
+    clock.advance(1)
+    assert cache.get(tenant) is None
+
+
+def test_dek_cache_setex_uses_configured_ttl() -> None:
+    client = FakeRedis(FakeClock())
+    cache = RedisDekCache(client, ttl_seconds=60)
+    cache.put(unique_tenant(), b"dek-bytes")
+    assert client.set_ex_values == [60]
+
+
+def test_two_tier_put_fans_out_and_serves_from_l1() -> None:
+    clock = FakeClock()
+    redis_fake = FakeRedis(clock)
+    cache = TwoTierDekCache(LocalTtlDekCache(60), RedisDekCache(redis_fake, ttl_seconds=60))
+    tenant = unique_tenant()
+    cache.put(tenant, b"dek-bytes")
+    assert redis_fake.values[KEY_PREFIX + tenant][0] == b"dek-bytes"
+    assert cache.get(tenant) == b"dek-bytes"
+    assert redis_fake.get_calls == 0
+
+
+def test_two_tier_fills_l1_on_redis_hit() -> None:
+    clock = FakeClock()
+    redis_fake = FakeRedis(clock)
+    tenant = unique_tenant()
+    RedisDekCache(redis_fake, ttl_seconds=60).put(tenant, b"dek-bytes")
+    cache = TwoTierDekCache(LocalTtlDekCache(60), RedisDekCache(redis_fake, ttl_seconds=60))
+    assert cache.get(tenant) == b"dek-bytes"
+    assert redis_fake.get_calls == 1
+    # The second read is served from the L1 the first read filled.
+    assert cache.get(tenant) == b"dek-bytes"
+    assert redis_fake.get_calls == 1
+
+
+def test_two_tier_l1_expiry_refills_from_redis() -> None:
+    clock = FakeClock()
+    redis_fake = FakeRedis(clock)
+    tenant = unique_tenant()
+    local = LocalTtlDekCache(60, monotonic=lambda: clock.now)
+    cache = TwoTierDekCache(local, RedisDekCache(redis_fake, ttl_seconds=900))
+    cache.put(tenant, b"dek-bytes")
+    clock.advance(61)
+    assert cache.get(tenant) == b"dek-bytes"
+    assert redis_fake.get_calls == 1
+    # The promote kept the local tier's own TTL, not the remote's 900.
+    clock.advance(61)
+    assert cache.get(tenant) == b"dek-bytes"
+    assert redis_fake.get_calls == 2
+
+
+def test_two_tier_serves_cached_dek_while_redis_is_down() -> None:
+    cache = TwoTierDekCache(LocalTtlDekCache(60), RedisDekCache(ExplodingRedis(), ttl_seconds=60))
+    tenant = unique_tenant()
+    cache.put(tenant, b"dek-bytes")
+    assert cache.get(tenant) == b"dek-bytes"
+
+
+class ExplodingRedis:
+    """Every backend call raises, standing in for Redis downtime."""
+
+    def get(self, key: str) -> bytes:
+        raise RedisError("connection refused")
+
+    def set(self, key: str, value: bytes, ex: int | None = None) -> None:
+        raise RedisError("connection refused")
+
+
+def test_dek_cache_errors_degrade(caplog) -> None:
+    tenant = unique_tenant()
+    cache = RedisDekCache(ExplodingRedis(), ttl_seconds=60)
+    with caplog.at_level(logging.WARNING):
+        assert cache.get(tenant) is None
+    get_warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(get_warnings) == 1, "a failed cache read must log exactly one warning"
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        cache.put(tenant, b"dek-bytes")
+    put_warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(put_warnings) == 1, "a failed cache write must log exactly one warning"
+    assert tenant not in caplog.text
+
+
+def test_raising_cache_does_not_fail_encryption(caplog) -> None:
+    module = FieldCrypto(
+        cipher=StubCipher(),
+        store=MapStore(),
+        default_key_id=KEY_ID,
+        cache=RedisDekCache(ExplodingRedis(), ttl_seconds=60),
+    )
+    tenant = unique_tenant()
+    with caplog.at_level(logging.WARNING):
+        envelope = module.encrypt(tenant, "secret")
+    assert module.decrypt(tenant, envelope) == "secret"
+    assert any(record.levelno == logging.WARNING for record in caplog.records)
+    assert tenant not in caplog.text
+
+
+def test_build_field_crypto_requires_infisical_config(monkeypatch) -> None:
+    monkeypatch.delenv("API_INFISICAL_TOKEN", raising=False)
+    monkeypatch.delenv("API_INFISICAL_KMS_KEY_ID", raising=False)
+    assert build_field_crypto() is None
+
+
+def test_build_field_crypto_wires_real_edges(monkeypatch) -> None:
+    # Pin every var the builder reads so ambient env cannot flip the result.
+    monkeypatch.setenv("API_INFISICAL_TOKEN", "test-token")
+    monkeypatch.setenv("API_INFISICAL_KMS_KEY_ID", KEY_ID)
+    monkeypatch.delenv("API_INFISICAL_URL", raising=False)
+    monkeypatch.delenv("API_REDIS_URL", raising=False)
+    monkeypatch.delenv("API_DEK_CACHE_TTL", raising=False)
+    monkeypatch.delenv("API_DEK_CACHE_L1_TTL", raising=False)
+    monkeypatch.delenv("API_KMS_BREAKER_THRESHOLD", raising=False)
+    monkeypatch.delenv("API_KMS_BREAKER_COOLDOWN", raising=False)
+    module = build_field_crypto()
+    assert isinstance(module, FieldCrypto)
+    assert isinstance(module.cipher, BreakerCipher)
+    assert isinstance(module.cipher.wrapped, InfisicalCipher)
+    assert module.cipher.threshold == 3
+    assert module.cipher.cooldown_seconds == 30.0
+    cache = module.cache
+    assert isinstance(cache, TwoTierDekCache)
+    assert isinstance(cache.remote, RedisDekCache)
+
+
+def test_build_field_crypto_breaker_env_override(monkeypatch) -> None:
+    monkeypatch.setenv("API_INFISICAL_TOKEN", "test-token")
+    monkeypatch.setenv("API_INFISICAL_KMS_KEY_ID", KEY_ID)
+    monkeypatch.setenv("API_KMS_BREAKER_THRESHOLD", "1")
+    monkeypatch.setenv("API_KMS_BREAKER_COOLDOWN", "5")
+    module = build_field_crypto()
+    assert isinstance(module.cipher, BreakerCipher)
+    assert module.cipher.threshold == 1
+    assert module.cipher.cooldown_seconds == 5.0
+
+
+def test_build_field_crypto_breaker_bad_env(monkeypatch) -> None:
+    monkeypatch.setenv("API_INFISICAL_TOKEN", "test-token")
+    monkeypatch.setenv("API_INFISICAL_KMS_KEY_ID", KEY_ID)
+    monkeypatch.delenv("API_INFISICAL_URL", raising=False)
+    monkeypatch.delenv("API_REDIS_URL", raising=False)
+    monkeypatch.delenv("API_DEK_CACHE_TTL", raising=False)
+    monkeypatch.delenv("API_DEK_CACHE_L1_TTL", raising=False)
+    for var, value in (
+        ("API_KMS_BREAKER_THRESHOLD", "0"),
+        ("API_KMS_BREAKER_COOLDOWN", "0"),
+        ("API_KMS_BREAKER_THRESHOLD", "many"),
+        ("API_KMS_BREAKER_COOLDOWN", "many"),
+    ):
+        monkeypatch.setenv(var, value)
+        with pytest.raises(ValueError):
+            build_field_crypto()

@@ -241,11 +241,23 @@
       "skillPath": "skills/engineering/tdd/SKILL.md",
       "computedHash": "9ce12c4a1e209e557fcf9d02086ade3d7ffdb976186018fc1b063b4164246004"
     },
+    "test-smell-review": {
+      "source": "collectiveai-team/botica",
+      "sourceType": "github",
+      "skillPath": "skills/quality/test-smell-review/SKILL.md",
+      "computedHash": "8185b78e956dc00c994ace9e75cfae98763fe38e3f9a5123722b1053fbaefd0d"
+    },
     "to-spec": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/to-spec/SKILL.md",
       "computedHash": "3fa1a0695d4ea242fae9e569e4d22aa1788623197abb33bfadafae7315789bbf"
+    },
+    "to-tickets": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/to-tickets/SKILL.md",
+      "computedHash": "bf5e6ebcb4f1272de0c188d5b3901f265a03d1fa9935a21a7a56938e21e2e761"
     }
   }
 }

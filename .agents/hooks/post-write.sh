@@ -6,12 +6,14 @@ input=$(cat)
 file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // ""' 2>/dev/null) || exit 0
 [ -z "$file" ] && exit 0
 
-root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+root="${DEVIN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd)}}"
+[ -z "$root" ] && root=$PWD
 cd "$root" 2>/dev/null || exit 0
+[ -f "$root/.agents/hooks/mode-lib.sh" ] && . "$root/.agents/hooks/mode-lib.sh"
 [ -f "$file" ] || exit 0
 
 case "$file" in
-  *.agents/skills/*|*.venv/*) exit 0 ;;
+  *.agents/skills/*|*.venv/*|*node_modules/*) exit 0 ;;
 esac
 
 notes=""
@@ -27,10 +29,27 @@ case "$file" in
     ;;
 esac
 
+# Comment runs: 4+ consecutive comment lines after the header zone.
+# Advisory only; explains why, not what (AGENTS.md rule 11).
+case "$file" in
+  *.py|*.ts|*.tsx|*.js|*.jsx)
+    crun=$(awk '
+      NR <= 10 { run = 0; next }
+      /^[[:space:]]*#/ || /^[[:space:]]*\/\// || /^[[:space:]]*\*/ || /^[[:space:]]*\/\*/ {
+        if (run == 0) start = NR; run++; next
+      }
+      { if (run > 3) { printf "%d (%d lines)", start, run; found = 1; exit } run = 0 }
+      END { if (!found && run > 3) printf "%d (%d lines)", start, run }
+    ' "$file" 2>/dev/null)
+    [ -n "$crun" ] && notes="$notes comment run at line $crun in $file - keep comments to one line, why not what."
+    ;;
+esac
+
 case "$file" in
   *.py)
-    out=$(uv run ruff check --output-format concise "$file" 2>/dev/null || true)
-    [ -n "$out" ] && notes="$notes ruff issues in $file: $out"
+    out=$(uv run ruff check --output-format concise "$file" 2>/dev/null)
+    rc=$?
+    [ $rc -ne 0 ] && [ -n "$out" ] && notes="$notes ruff issues in $file: $out"
     ;;
   *apps/web/src/*.ts|*apps/web/src/*.tsx)
     case "$file" in
@@ -43,6 +62,37 @@ case "$file" in
     esac
     ;;
 esac
+
+# Test files: deterministic false-green scan (AGENTS.md rule 9).
+case "$file" in
+  */tests/*|*/__tests__/*|*/test_*.py|*conftest.py|*.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx|*.test.js|*.test.jsx|*.spec.js|*.spec.jsx)
+    fg=""
+    case "$file" in
+      *.py)
+        fg=$(taipan_timeout 8 uvx falsegreen "$file" 2>/dev/null || true)
+        ;;
+      *.ts|*.tsx|*.js|*.jsx)
+        fg=$(taipan_timeout 8 npx --yes falsegreen-js "$file" 2>/dev/null || true)
+        ;;
+    esac
+    case "$fg" in
+      *[Nn]"o false-positive"*|"") ;;
+      *)
+        hits=$(printf '%s\n' "$fg" | grep -E '\[[A-Z0-9]+\]|^Summary:| (HIGH|LOW) +[A-Z][0-9]+|^[0-9]+ high' | sed 's/^ *//' | tr '\n' ' ' | cut -c1-500)
+        [ -n "$hits" ] && notes="$notes falsegreen: $hits"
+        ;;
+    esac
+    [ -f "$root/.agents/hooks/mode-lib.sh" ] && . "$root/.agents/hooks/mode-lib.sh"
+    nmark="/tmp/taipan-nudge-$(taipan_key 2>/dev/null || printf '%s' "$root" | cksum | awk '{printf "%012x", $1}')-test"
+    if [ ! -f "$nmark" ]; then
+      touch "$nmark"
+      notes="$notes Test file changed: finish with the test-smell-review judgment pass (J1-J6)."
+    fi
+    ;;
+esac
+
+route_out=$(printf '%s' "$input" | bash "$root/.agents/hooks/route.sh" post-write 2>/dev/null || true)
+[ -n "$route_out" ] && notes="$notes $route_out"
 
 [ -z "$notes" ] && exit 0
 jq -nc --arg ctx "${notes# }" '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$ctx}}'

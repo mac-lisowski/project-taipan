@@ -16,4 +16,5 @@ pnpm exec next typegen && pnpm exec tsc --noEmit   # typecheck (typegen first on
 Env: copy `.env.example` to `.env.local` to override. Only
 `API_INTERNAL_URL` exists and it is server-only.
 
-Deploy: `Dockerfile` builds a standalone image; context is this dir.
+Deploy: `scripts/docker-build.sh web` from the
+repo root (context is the root, same as `apps/api/Dockerfile`).

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec visual - KMS identity adapters</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">Split InfisicalKms along the two-identity seam</h1>
+    <p class="text-slate-500">Visual companion to <code>spec.md</code>.
+      Two adapters over a shared transport, so the type structure
+      encodes the documented identity model.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">The problem: the identity rule is prose-only</h2>
+    <p class="mb-4">Docs describe two tokens with different powers. One
+    class implements both ports, so a runtime-token object still offers
+    <code>rotate</code> and fails only at runtime (HTTP 4xx).</p>
+    <div class="mermaid">
+graph LR
+  subgraph Before
+    RT["runtime token<br>cryptographic-operator"] --> K["InfisicalKms<br>Cipher + Provisioning<br>rotate callable, fails at runtime"]
+    AT["admin token<br>bootstrap identity"] --> K
+  end
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">After: two adapters, one transport</h2>
+    <div class="mermaid">
+graph LR
+  RT2["runtime token"] --> C["InfisicalCipher<br>encrypt / decrypt"]
+  AT2["admin token"] --> P["InfisicalProvisioner<br>+ project / key / delete / rotate"]
+  C -.-> TR["private transport<br>base_url, auth, timeout,<br>KmsError mapping"]
+  P -.-> TR
+  C --> INF[("Infisical")]
+  P --> INF
+    </div>
+    <p class="text-xs text-slate-500 mt-2">Rotation becomes unnameable
+    for a runtime token, not merely unauthorized. The provisioner
+    keeps Cipher powers because the admin identity can encrypt too.</p>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">What changes vs what doesn't</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        <p class="lbl mb-2">Changes</p>
+        <ul class="list-disc ml-5 space-y-1">
+          <li><code>InfisicalKms</code> removed, two adapters exported</li>
+          <li>fixture uses provisioner; crypto tests pick per case</li>
+          <li>new structural test: cipher has no provisioning methods</li>
+        </ul>
+      </div>
+      <div>
+        <p class="lbl mb-2">Unchanged</p>
+        <ul class="list-disc ml-5 space-y-1">
+          <li>HTTP contract, endpoints, envelopes (verified v0.165.16)</li>
+          <li><code>KmsError</code> semantics</li>
+          <li>skip-when-unreachable test convention</li>
+          <li>the four live tests' assertions</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-slate-800 text-slate-100 rounded-xl p-6">
+    <h2 class="font-bold mb-2">Honest counterweight</h2>
+    <p class="text-slate-300">Today the only consumer is the test
+    fixture, which legitimately wants both powers. The split pays off
+    when runtime code lands; doing it now keeps that future diff
+    small.</p>
+  </section>
+</div>
+</body>
+</html>

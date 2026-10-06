@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec visual - Extensible User Entity</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .core { background: #3b82f6; }
+  .ext  { background: #10b981; }
+  .lbl  { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">Extensible User Entity (Pattern A)</h1>
+    <p class="text-slate-500">Visual companion to <code>spec.md</code>.
+      Keep core User minimal and extend via separate 1:1 or 1:N extension tables.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Architecture: Extension Tables vs Bloated Core</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="border border-red-200 rounded-lg p-4 bg-red-50/30">
+        <p class="lbl text-red-600 mb-2">Anti-Pattern (Bloated Core)</p>
+        <p class="text-xs text-slate-600 mb-2 font-mono">Table: users</p>
+        <ul class="text-xs space-y-1 text-slate-500 font-mono">
+          <li>- id (PK)</li>
+          <li>- email</li>
+          <li>- hashed_password</li>
+          <li class="text-red-500 font-semibold">- display_name (pollutes core)</li>
+          <li class="text-red-500 font-semibold">- avatar_url (pollutes core)</li>
+          <li class="text-red-500 font-semibold">- billing_address (pollutes core)</li>
+        </ul>
+        <p class="text-xs text-red-600 mt-3">High coupling and frequent schema merge conflicts.</p>
+      </div>
+      <div class="border border-emerald-200 rounded-lg p-4 bg-emerald-50/30">
+        <p class="lbl text-emerald-600 mb-2">Pattern A: Extension Tables (Selected)</p>
+        <div class="space-y-3 font-mono text-xs">
+          <div class="p-2 bg-blue-50 border border-blue-200 rounded">
+            <p class="font-bold text-blue-800">users (Core Auth)</p>
+            <p class="text-slate-600">id, email, hashed_password, is_active</p>
+          </div>
+          <div class="p-2 bg-emerald-50 border border-emerald-200 rounded">
+            <p class="font-bold text-emerald-800">user_profiles (Extension Table)</p>
+            <p class="text-slate-600">id, user_id (FK), display_name, bio, avatar_url</p>
+          </div>
+        </div>
+        <p class="text-xs text-emerald-600 mt-3">Clean isolation. Downstream additions never touch core tables.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Entity Relationship Flow</h2>
+    <div class="mermaid">
+erDiagram
+    users ||--o| user_profiles : "1:1 extension (CASCADE)"
+    users {
+        int id PK
+        string email UK
+        string hashed_password
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+    user_profiles {
+        int id PK
+        int user_id FK "UNIQUE, ON DELETE CASCADE"
+        string display_name
+        string avatar_url
+        string bio
+        datetime created_at
+        datetime updated_at
+    }
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

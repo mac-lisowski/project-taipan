@@ -1,8 +1,12 @@
 import os
 
 import pytest
-from api.db import Base, get_db
+from api import db as db_module
+from api.db import Base
 from api.main import app
+from api.models.encrypted_string import set_field_crypto
+from api_testsupport import KEY_ID, MapStore, StubCipher
+from crypto import FieldCrypto
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
@@ -47,18 +51,27 @@ def session_factory(engine):
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
-@pytest.fixture
-def client(engine, session_factory):
-    def override_get_db():
-        db = session_factory()
-        try:
-            yield db
-        finally:
-            db.close()
+@pytest.fixture(autouse=True)
+def wipe_users(engine):
+    """User-row hygiene for every test; guards red runs that leave rows."""
+    yield
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM users"))
 
-    app.dependency_overrides[get_db] = override_get_db
-    yield TestClient(app)
-    app.dependency_overrides.clear()
+
+def _stub_register():
+    set_field_crypto(FieldCrypto(cipher=StubCipher(), store=MapStore(), default_key_id=KEY_ID))
+
+
+@pytest.fixture
+def client(engine, session_factory, monkeypatch):
+    # Point the production get_db at the test factory: the boundary under
+    # test is the real teardown, not a replica of it.
+    monkeypatch.setattr(db_module, "SessionLocal", session_factory)
+    # The lifespan runs for real; registration is stubbed, not Infisical.
+    monkeypatch.setattr("api.main.build_and_register_field_crypto", _stub_register)
+    with TestClient(app) as test_client:
+        yield test_client
     with engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
             conn.execute(table.delete())

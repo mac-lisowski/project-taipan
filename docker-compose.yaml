@@ -10,11 +10,60 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   redis:
     image: redis:8-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Dedicated Postgres for Infisical - mirrors the cloud setup where
+  # the secrets store gets its own instance, not a db inside app pg.
+  # No host port: only the infisical service talks to it.
+  infisical-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: infisical
+      POSTGRES_PASSWORD: infisical
+      POSTGRES_DB: infisical
+    volumes:
+      - infisical-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infisical"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  infisical:
+    build:
+      context: .
+      dockerfile: docker/infisical/Dockerfile
+    environment:
+      # Dev-only defaults, committed like POSTGRES_PASSWORD. Prod
+      # values are Railway variables - losing ENCRYPTION_KEY makes
+      # every stored secret unreadable.
+      ENCRYPTION_KEY: ${INFISICAL_ENCRYPTION_KEY:-acd3c124a3551e4ebfc938dd6c324df4}
+      AUTH_SECRET: ${INFISICAL_AUTH_SECRET:-5rAezL8iu7mu1uzfOMoXH8bt7zoPUEfZM470M9AT8jc=}
+      DB_CONNECTION_URI: postgresql://infisical:infisical@infisical-db:5432/infisical
+      REDIS_URL: redis://redis:6379/1
+      SITE_URL: http://localhost:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      infisical-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   pgdata:
+  infisical-pgdata:

@@ -1,49 +1,41 @@
-# Learnings
+# Learnings index
+
+Durable lessons, gotchas, user preferences. One topic per file in
+`learnings/`; when you add a file, add its link here.
 
 ## User preferences
 
-- Wants short output, STE100 style, no essays.
-- No em dashes.
-- New to Python; explain basics briefly, do not over-explain.
-- Agent stack notes live in docs/learnings/agents/README.md.
-- Wants generic groundwork first (db, repository pattern, structure).
-  Evals are later; do not push eval flow before basics exist.
-- Wants domain-named packages where they fit. Packages should be
-  shareable and reusable, not app-specific.
+- [User preferences](learnings/user-preferences.md)
 
 ## Gotchas
 
-- Docker daemon is rootless. `rootless` context created and set current;
-  system dockerd is off. If docker commands fail, check `docker context ls`.
-- Postgres+pgvector runs via `docker compose up -d` (db `app`, port 5432,
-  dev creds postgres/postgres). api tests need that Postgres: they create
-  and wipe an `app_test` database, and skip if Postgres is down.
-- Dev dep is `httpx2`, an httpx fork. starlette's TestClient imports it as
-  `httpx` automatically; plain `import httpx` fails. Not a typo.
-- Rootless Docker uid mapping: host uid 1000 = container uid 0.
-  Bind mounts look root-owned inside. Non-root container users cannot
-  write them. Devcontainers on this host must run as root.
-- `pre-commit install` bakes an absolute `INSTALL_PYTHON` into
-  `.git/hooks/*`. Host and devcontainer share `.git` but use different
-  `.venv` paths (`/home/mac/...` vs `/workspaces/...`), so whichever
-  side installs last breaks the other (`pre-commit not found`). Fix:
-  both sides need `pre-commit` on PATH for the hook's `command -v`
-  fallback - host: `uv tool install pre-commit`; container: symlink
-  `.venv/bin/pre-commit` to `/usr/local/bin` (in postCreateCommand).
-- uv workspace `members = ["apps/*"]` glob matches apps/web (no
-  pyproject.toml). `uv sync --frozen` passes but `uv run` fails:
-  "workspace member is missing a pyproject.toml". Fix is
-  `exclude = ["apps/web"]` under `[tool.uv.workspace]`.
-- GitHub Actions: `setup-node` with `cache: pnpm` runs pnpm during
-  its own step to resolve cache paths, so pnpm must already exist.
-  `corepack enable` in a later step is too late. Use
-  `pnpm/action-setup` BEFORE `setup-node`, and set its
-  `package_json_file: apps/web/package.json` - it defaults to the
-  repo-root package.json which does not exist here.
-- Next 16 emits `LayoutProps`/`PageProps` global types into
-  `.next/types` only. On a clean checkout `tsc --noEmit` fails
-  (TS2304). Run `pnpm exec next typegen` before `tsc`; it is fast.
-- Verify CI jobs locally with `act` before claiming they pass:
-  `DOCKER_HOST=unix:///run/user/1000/docker.sock act push -j <job>
-  -P ubuntu-latest=catthehacker/ubuntu:act-24.04
-  --container-daemon-socket /run/user/1000/docker.sock`.
+- [Docker daemon is rootless](learnings/docker-rootless.md)
+- [Postgres+pgvector via compose; tests need it](learnings/postgres-compose.md)
+- [httpx2 imports as httpx](learnings/httpx2-import.md)
+- [Rootless uid mapping breaks bind-mount writes](learnings/rootless-uid.md)
+- [pre-commit install bakes INSTALL_PYTHON](learnings/pre-commit-install-python.md)
+- [uv workspace glob matches apps/web](learnings/uv-workspace-glob.md)
+- [setup-node cache needs pnpm first](learnings/gha-pnpm-order.md)
+- [next typegen before tsc on clean checkout](learnings/next-typegen.md)
+- [Verify CI jobs locally with act](learnings/act-local-ci.md)
+- [docker build apps/web tested a different context](learnings/docker-context-mismatch.md)
+- [corepack resolves packageManager from cwd, not -C](learnings/corepack-pnpm-cwd.md)
+- [Rootless containers cannot reach host-bound services](learnings/rootless-no-host-access.md)
+- [nextUrl.origin is client-controlled](learnings/nexturl-origin-untrusted.md)
+- [Module-level env throws break next build](learnings/next-build-env-eval.md)
+- [CI smoke tests bind ephemeral ports](learnings/ci-ephemeral-ports.md)
+- [.dockerignore patterns are root-anchored](learnings/dockerignore-anchored.md)
+- [Railway deploys run from CI, not the GitHub app](learnings/railway-github-deployments.md)
+- [Job skipped because an upstream needs job was skipped](learnings/gha-skip-propagates.md)
+- [npx skills CLI behavior in this repo](learnings/skills-cli.md)
+- [Heredoc payloads tripped pre-exec gates](learnings/hook-heredoc-false-positive.md)
+- [falsegreen vs falsegreen-js output formats differ](learnings/falsegreen-js-format.md)
+- [Hook root resolution: script location before cwd](learnings/hook-root-resolution.md)
+- [Editing live hook files is a loaded gun](learnings/hook-editing-lockout.md)
+- [Diff hash binds worktree content, not diff position](learnings/diff-hash-staging-invariance.md)
+- [Canonicalize paths via pwd -P, never string surgery](learnings/path-normalization-squeeze.md)
+- [Infisical SITE_URL needs https:// or it 502s](learnings/infisical-site-url.md)
+- [Infisical first boot slow; keep Postgres same-region](learnings/infisical-first-boot.md)
+- [Rewrite current.md, never append history](learnings/memory-hygiene.md)
+- [httpx2 retries requests that lose their response](learnings/httpx2-retry-lost-response.md)
+- [`bl` on PATH is Blaxel, not Bailian](learnings/bl-binary-collision.md)
