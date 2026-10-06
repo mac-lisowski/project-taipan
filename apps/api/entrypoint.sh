@@ -8,4 +8,9 @@ if [ "${API_AUTO_MIGRATE:-1}" = "1" ] || [ "${API_AUTO_MIGRATE:-1}" = "true" ]; 
   fi
 fi
 
+# Respect platform PORT when set (e.g. Railway internal routing)
+if [ "${1:-}" = "uvicorn" ] && [ -n "${PORT:-}" ]; then
+  exec uvicorn api.main:app --host "${HOST:-0.0.0.0}" --port "$PORT"
+fi
+
 exec "$@"
