@@ -41,10 +41,23 @@ def root() -> dict[str, str]:
     return {"message": greet("world")}
 
 
-def main() -> None:
+def _serve(*, reload: bool) -> None:
+    import os
+
     import uvicorn
 
-    uvicorn.run("api.main:app", host="127.0.0.1", port=8000)
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "8000"))
+    uvicorn.run("api.main:app", host=host, port=port, reload=reload)
+
+
+def main() -> None:
+    _serve(reload=False)
+
+
+def dev() -> None:
+    # Dev only: autoreload, so saves apply like next dev.
+    _serve(reload=True)
 
 
 if __name__ == "__main__":
