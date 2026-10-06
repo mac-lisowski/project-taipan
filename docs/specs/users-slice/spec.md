@@ -1,6 +1,6 @@
 # Spec: Deepen the users slice
 
-Status: not implemented.
+Status: implemented (PR #15).
 
 Seam: a `users` module with a small interface over an injected
 SQLAlchemy `Session`. One seam. Routers and tests cross the same

@@ -1,6 +1,6 @@
 # Spec: Tighten the crypto module's interface
 
-Status: not implemented.
+Status: implemented (PR #13).
 
 Seam: the crypto package's public surface. No new seams; this spec
 removes surface that lets callers bypass the module's own rules.

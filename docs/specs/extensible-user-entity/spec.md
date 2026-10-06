@@ -1,6 +1,6 @@
 # Spec: Extensible user entity via extension tables
 
-Status: not implemented.
+Status: implemented (PR #12).
 
 Seam: the `User` model boundary and extension table attachment protocol.
 

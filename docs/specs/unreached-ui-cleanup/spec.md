@@ -1,6 +1,6 @@
 # Spec: Unreached UI cleanup
 
-Status: not implemented.
+Status: implemented (PR #14).
 
 Seam: none new. This spec deletes modules with zero callers and
 keeps the `@/ui` barrel honest about what is library versus dead
