@@ -35,7 +35,7 @@ export const requireAccount = cache(async (): Promise<Me> => {
 
 
 // Steer authenticated visitors away from public auth forms.
-export async function redirectIfAuthenticated(to = "/account"): Promise<void> {
+export async function redirectIfAuthenticated(to = "/dashboard"): Promise<void> {
   if (await hasSession()) {
     redirect(to);
   }
