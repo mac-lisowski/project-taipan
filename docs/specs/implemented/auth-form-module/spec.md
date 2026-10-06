@@ -88,4 +88,4 @@ the repeated `Label` + `Input` cluster. The error has one channel:
 - Candidate 7 from the architecture review. Modest leverage win;
   the forms are mock-backed today, so this is preparation for the
   real auth slice.
-- `docs/specs/auth-form-module/spec.html` visualizes the collapse.
+- `docs/specs/implemented/auth-form-module/spec.html` visualizes the collapse.

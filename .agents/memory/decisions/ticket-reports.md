@@ -4,7 +4,7 @@
 `.scratch/<slug>/issues/`. Audience: the human skimming what
 changed (md tickets are hard to scan). Working state, not durable:
 reports stay gitignored like the tickets themselves. Committed
-precedent is `docs/specs/<slug>/spec.html` for style only.
+precedent is `docs/specs/implemented/<slug>/spec.html` for style only.
 
 The implement-spec merger writes it at merge time, into the main
 checkout (a worktree has no `.scratch/`), from

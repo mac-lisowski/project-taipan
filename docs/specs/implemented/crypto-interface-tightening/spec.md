@@ -101,5 +101,5 @@ construction time, not at first decrypt.
 - Candidate 3 from the architecture review. Pure tightening: the
   module stays the deep module the ADR ordered, with an interface
   that finally matches what callers actually use.
-- `docs/specs/crypto-interface-tightening/spec.html` visualizes the
+- `docs/specs/implemented/crypto-interface-tightening/spec.html` visualizes the
   surface cut.

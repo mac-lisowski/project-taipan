@@ -1,74 +1,57 @@
 # Current state
 
-- Last updated: 2026-10-05
-- Branch feat/web-dither-landing is clean: dither-background.tsx is
-  NOT in the tree. The 298-line WebGL port recorded earlier never
-  landed or was reverted; treat it as lost work, not stash.
-- Merged into dev: PR #9 field-encryption capability (c652d13) and
-  PR #10 web landing/auth/docs (89cfd66). ADR-0001 accepted +
-  amended. Encryption-seam + field-encryption specs implemented.
-- Shipped in the PR: packages/crypto (envelope grammar, DekManager
-  adopt-on-conflict + tenant single-flight, FieldCrypto, CryptoError
-  6 codes, context), PostgresDekStore (tenant_deks, alembic
-  a3f8c2d91b47), two-tier DEK cache (60s L1 + Redis L2, warm op 47us
-  -> 2us, API_DEK_CACHE_L1_TTL), composition root, EncryptedString
-  TypeDecorator + lifespan wiring. 56 passed / 0 skipped live.
-- Reviews: three full rounds (standards, spec, PG design) clean; the
-  round-2 catch was ORM/migration type drift (model now Text +
-  timestamptz, catalog-verified on both paths).
-- New spec docs/specs/field-encryption-hardening/ (spec.md + html):
-  Cipher-port circuit breaker (kms_unavailable, threshold 3 /
-  cooldown 30s env), apps/api test-helper dedup, public accessors
-  (FieldCrypto.cipher/store/cache, TwoTierDekCache.local/remote).
-  Seams confirmed by user. Tickets written: issues/01-05. 01
-  done, merged to feat/field-encryption-hardening; 02
-  (public accessors) and 05 (kms tests move) done on the
-  same branch. 03 (breaker wiring) and 04 (helper dedup)
-  done too. Hardening spec implemented. Landed as d0512c3
-  (commit-all: hardening 03/04 + CI jobs + tenant-scope
-  rewrite + Pattern A track). Next: tightening needs
-  to-tickets.
-- Known gap: breaker singleton-ness unenforced. Story 4
-  (one breaker per process) holds only because the lifespan
-  calls the builder once; a second build_field_crypto caller
-  would fork breaker state. No test pins it.
-- Open decision: Pattern A rule 14 vs users.tenant_id in the
-  tenant-scope spec. Recommendation given (keep column:
-  tenancy is identity infrastructure, not feature data).
-  User has not ruled yet. Foreign entity spec route paths
-  fixed to /api prefix, uncommitted.
-- Post-#9 cleanup done: .scratch/encryption-seam/prototype.py
-  deleted, implemented spec statuses carry PR numbers.
-- Architecture review run 2026-10-05; report at
-  /tmp/architecture-review-20261005-210214.html (ephemeral). Six new
-  specs written, all "not implemented": request-tenant-scope (top
-  pick - nothing sets tenant_scope in prod; rewritten 2026-10-05:
-  tenants table + session-cookie auth + middleware, env-tenant
-  draft deleted per user; lifespan check + before_flush guard kept),
-  crypto-interface-tightening (drop DekCache.put ttl_seconds,
-  unexport tenant_ctx/DekManager, serialize enforces UUID key id),
-  docs-url-policy (docHref/assetHref/resolveDocPath in lib/docs;
-  fixes verified 404 in docs/learnings/README.md),
-  unreached-ui-cleanup (delete release-grid/live-stats/chrome; keep
-  ui primitives), auth-form-module (AuthForm shell + ui Field),
-  bff-seam-hardening (property-based check-bff, narrow proxy try,
-  PUBLIC_ORIGIN required in prod).
-- Amended specs: users-slice (commit boundary moves from
-  BaseRepository.add to get_db teardown before repo deletion),
-  field-encryption-hardening (packages/kms gets own tests/,
-  crypto:dek: prefix pin replaced by accessor assertions).
-- Remaining unimplemented specs: users-slice, extensible-user-entity,
-  request-tenant-scope,
-  crypto-interface-tightening, docs-url-policy, unreached-ui-cleanup,
-  auth-form-module, bff-seam-hardening. User order: cleanup/hardening/perf first
-  (hardening, tightening, users-slice, ui-cleanup, docs-url,
-  auth-form, bff); tenant scope deferred as feature work. First
-  real encrypted model field after hardening + tenant scope
-  (one mapped_column(EncryptedString)).
-- Token for live runs: /tmp/taipan-infisical-kms-notes/token.md
-  (ephemeral) holds a valid token plus the curl mint sequence.
-  No durable mint recipe exists yet.
-- Open PRs: none - all merged, including dev -> main (per user).
-- CI fix uncommitted: test-crypto + test-kms jobs in ci.yml, api
-  filter covers crypto/kms. Verified fully live: 66 passed,
-  0 skipped (DB 15432 + Infisical token + Redis).
+- Last updated: 2026-10-06. dev == origin/dev at c77fbdd, plus an
+  uncommitted docs-overhaul working tree (not committed on request).
+- Docs overhaul pass (uncommitted): README rewritten to public-facing
+  product docs (features, API surface table, roadmap; sessions =
+  Postgres not Redis). Fixed stale claims: API_REDIS_URL is DEK L2
+  cache not session store (.env.example, devcontainer docs, compose
+  comment), devcontainer docs now cover infisical/infisical-db +
+  API_INFISICAL_URL, .env.example gained API_KMS_BREAKER_THRESHOLD/
+  COOLDOWN, web .env.example gained DOCS_DIR. Spec self-links moved to
+  docs/specs/implemented/*. docs/learnings/ deleted on user request;
+  docs.ts nav order and docs-url.test.ts slugs updated (learnings ->
+  guides). evals/README.md added. Reviewer-verified twice; remaining
+  known gap: infisical-kms spec dir lacks spec.html (historical).
+- Tenant scope shape: POST /api/auth/register creates tenant + user +
+  user_tenants link inside crypto.tenant_scope, one commit via get_db;
+  sets cookie `session` (raw token, sha256 in DB, 7 day expiry,
+  HttpOnly/Lax/Path=/, no Secure). login 204+cookie/generic 401,
+  logout always 204, GET /api/auth/me returns {id,email,tenant_id}
+  from ambient scope or 401 (session without link included).
+- TenantScopeMiddleware (apps/api/src/api/middleware.py) resolves
+  cookie -> sessions.tenant_id_for_token (one join, expiry inline) in a
+  short-lived SessionLocal, wraps request in tenant_scope; unresolved
+  sessions run unscoped. MUST use db_module.SessionLocal so conftest
+  monkeypatch reaches it.
+- before_flush guard (api/tenant_guard.py, installed at db.py import)
+  raises CryptoError(MISSING_TENANT_SCOPE) when a new/dirty object's
+  __dict__ tenant_id disagrees with ambient (absent ambient counts).
+  PostgresDekStore.put self-scopes its write to the row tenant.
+- Lifespan check: main.py raises RuntimeError when any Base.metadata
+  column is EncryptedString and get_field_crypto() is None. conftest
+  client fixture runs real lifespan (`with TestClient(app)`) with
+  build_and_register_field_crypto monkeypatched to a StubCipher/
+  MapStore FieldCrypto.
+- No model uses EncryptedString yet; crypto capability is wired but
+  dormant. No authorization on /api/users* or profile routes.
+- BFF hardening: upstream-proxy try wraps only the fetch; fetch errors
+  log once and 502; construction/response errors propagate. Route
+  requires PUBLIC_ORIGIN in production. check-bff.sh covers
+  tracked+untracked files, env exemption narrowed to real basenames.
+- Pattern A ruling: user-to-tenant link is user_tenants extension row
+  (user_id unique FK cascade, tenant_id NOT NULL FK). Decision file:
+  decisions/tenant-link-extension-table.md.
+- Test state: api 77 passed / 2 skips (Postgres, both :15432 and
+  :5432 app_test DBs). Web vitest 68/68.
+- Trap: a test DB holding tables unknown to the current branch's
+  Base.metadata breaks conftest drop_all (dependent FKs). Fix is
+  DROP SCHEMA public CASCADE + recreate; conftest rebuilds.
+- Devcontainer/host share bind-mounted .git/hooks: last
+  `pre-commit install` wins; reinstall on the side you commit from.
+- Ops notes: devcontainer DB password reset to postgres:postgres on
+  port 15432. Infisical live-run token + mint sequence at
+  /tmp/taipan-infisical-kms-notes/token.md (ephemeral).
+Activity mode: docs. Set when the phase changes: bash
+.agents/hooks/agent-mode.sh set <plan|implement|test|review|debug|docs|commit>
+(AGENTS.md rule 10).

@@ -1,7 +1,7 @@
 # Spec: Decide the seam for encrypted fields
 
 Status: implemented (#9; ADR-0001 accepted, the feature spec is
-docs/specs/field-encryption/spec.md, itself implemented).
+docs/specs/implemented/field-encryption/spec.md, itself implemented).
 
 Seam: chosen. Column-level `TypeDecorator` + deep crypto module
 (ADR-0001).
@@ -94,5 +94,5 @@ loser lost, so future reviews do not re-suggest it.
 - Candidate 4 (Speculative) from the architecture review. It is
   deliberately a decision spec: the wrong outcome is not "pick A
   over B" but "let the feature spec improvise the seam".
-- `docs/specs/encryption-seam/spec.html` visualizes the two
+- `docs/specs/implemented/encryption-seam/spec.html` visualizes the two
   candidate seams.

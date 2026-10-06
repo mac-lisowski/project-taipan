@@ -172,5 +172,5 @@ with the ambient scope.
   `.agents/memory/decisions/tenant-link-extension-table.md`.
 - The users-slice refactor later moves the register paths
   into the users module. This spec does not block on it.
-- `docs/specs/request-tenant-scope/spec.html` visualizes the
+- `docs/specs/implemented/request-tenant-scope/spec.html` visualizes the
   seam.

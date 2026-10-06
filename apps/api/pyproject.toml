@@ -1,7 +1,7 @@
 [project]
 name = "api"
 version = "0.1.0"
-description = "Example API app depending on core"
+description = "FastAPI composition root: auth, tenancy, field encryption"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.20.0",

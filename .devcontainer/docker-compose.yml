@@ -23,8 +23,8 @@ services:
       API_DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/app
       API_TEST_ADMIN_URL: postgresql+psycopg://postgres:postgres@db:5432/postgres
       API_TEST_URL: postgresql+psycopg://postgres:postgres@db:5432/app_test
-      # Session store for the api (FastAPI owns sessions; the web BFF
-      # only forwards cookies).
+      # DEK cache (L2 tier) for field encryption. Sessions live in
+      # Postgres, not here.
       API_REDIS_URL: redis://redis:6379/0
       # Self-hosted secrets/KMS service, reachable on this network.
       API_INFISICAL_URL: http://infisical:8080

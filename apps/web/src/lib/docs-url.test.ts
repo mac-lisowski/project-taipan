@@ -4,11 +4,11 @@ import path from "node:path";
 import { expect, test, vi } from "vitest";
 import { assetHref, docHref, resolveDocPath } from "./docs";
 
-// The verified live 404: a relative link from learnings/README must
-// resolve inside learnings/, not at the docs root.
+// The verified live 404 regression: a relative link inside a docs
+// section must resolve inside that section, not at the docs root.
 test("docHref resolves a sibling link against the doc's directory", () => {
-  expect(docHref("learnings/README", "agents/README.md")).toBe(
-    "/docs/learnings/agents/README",
+  expect(docHref("guides/README", "agents/README.md")).toBe(
+    "/docs/guides/agents/README",
   );
 });
 
@@ -18,7 +18,7 @@ test("docHref strips .md and ./ from relative links", () => {
 });
 
 test("docHref resolves ../ upward", () => {
-  expect(docHref("learnings/deep/page", "../adr/0001.md")).toBe("/docs/learnings/adr/0001");
+  expect(docHref("guides/deep/page", "../adr/0001.md")).toBe("/docs/guides/adr/0001");
 });
 
 test("docHref keeps anchors, absolute urls, and root paths untouched", () => {
@@ -32,11 +32,11 @@ test("docHref leaves a root-escaping link unchanged (it 404s harmlessly)", () =>
 });
 
 test("assetHref resolves relative images next to the doc", () => {
-  expect(assetHref("learnings/README", "img/diagram.png")).toBe(
-    "/docs-asset/learnings/img/diagram.png",
+  expect(assetHref("guides/README", "img/diagram.png")).toBe(
+    "/docs-asset/guides/img/diagram.png",
   );
-  expect(assetHref("learnings/README", "./x.png")).toBe("/docs-asset/learnings/x.png");
-  expect(assetHref("learnings/README", "../shared/y.png")).toBe("/docs-asset/shared/y.png");
+  expect(assetHref("guides/README", "./x.png")).toBe("/docs-asset/guides/x.png");
+  expect(assetHref("guides/README", "../shared/y.png")).toBe("/docs-asset/shared/y.png");
 });
 
 test("assetHref passes through external and absolute sources", () => {
@@ -47,9 +47,9 @@ test("assetHref passes through external and absolute sources", () => {
 });
 
 test("resolveDocPath stays inside the docs root", () => {
-  const inside = resolveDocPath(["learnings", "README.md"]);
+  const inside = resolveDocPath(["guides", "README.md"]);
   expect(inside).not.toBeNull();
-  expect(inside?.endsWith("learnings/README.md")).toBe(true);
+  expect(inside?.endsWith("guides/README.md")).toBe(true);
 });
 
 test("resolveDocPath returns null on traversal that escapes the root", () => {

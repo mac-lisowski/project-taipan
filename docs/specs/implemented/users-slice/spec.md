@@ -113,4 +113,4 @@ database session, without TestClient or HTTP semantics.
   The review added the commit-boundary relocation: the repository
   slated for deletion secretly owns the app's only commit, so it
   moves to session teardown before the repo goes.
-- `docs/specs/users-slice/spec.html` visualizes the refactor.
+- `docs/specs/implemented/users-slice/spec.html` visualizes the refactor.

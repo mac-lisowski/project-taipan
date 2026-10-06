@@ -89,5 +89,5 @@ silent accumulation.
 
 - Candidate 5 from the architecture review. The deletion test is
   the whole argument: complexity vanishes, nothing reappears.
-- `docs/specs/unreached-ui-cleanup/spec.html` visualizes the dead
+- `docs/specs/implemented/unreached-ui-cleanup/spec.html` visualizes the dead
   surface.

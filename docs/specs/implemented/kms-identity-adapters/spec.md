@@ -98,5 +98,5 @@ from documentation into the types.
   recorded there: today's only consumer is the test fixture, which
   legitimately wants both powers. The split pays off when runtime
   code lands; doing it now keeps that future diff small.
-- `docs/specs/kms-identity-adapters/spec.html` visualizes the
+- `docs/specs/implemented/kms-identity-adapters/spec.html` visualizes the
   adapter split.
