@@ -11,7 +11,7 @@ the seam through `TestClient` with the lifespan running.
 `EncryptedString` reads the tenant from `crypto.tenant_scope`.
 No production code ever sets that scope. The column cannot be
 called from any request path today. There is no login, no
-session, and no tenants table. The `User` row has no `tenant_id`.
+session, and no tenants table. No row links a user to a tenant.
 The web login and register forms post to `/api/auth/login` and
 `/api/auth/register`. Those endpoints do not exist. A tenant id
 from config would scope every request to one shared value. That
@@ -20,11 +20,12 @@ logged-in user instead.
 
 ## Solution
 
-Register creates a personal tenant plus the user. Login checks
-the password and mints an opaque session. The session token
-travels in an HttpOnly cookie. A middleware resolves cookie to
-session to user to `tenant_id` once per request. It wraps the
-request in `tenant_scope`. Handlers and the ORM column never
+Register creates a personal tenant, the user, and the link
+between them. Login checks the password and mints an opaque
+session. The session token travels in an HttpOnly cookie. A
+middleware resolves cookie to session to user to tenant link
+once per request. It wraps the request in `tenant_scope`.
+Handlers and the ORM column never
 touch the context again. Requests without a valid session run
 unscoped. Encrypted writes then fail loudly. A lifespan check
 refuses to start the app when encrypted columns exist but no
@@ -65,9 +66,13 @@ with the ambient scope.
   uuid4 hex. The id type matches the crypto tenant id (`str`).
   No database-side generation, so SQLite and Postgres behave
   the same.
-- `users` gains `tenant_id` Text, foreign key to `tenants`,
-  not null. The Alembic revision backfills one personal tenant
-  per existing user. Only dev data exists today.
+- New `user_tenants` extension table under Pattern A:
+  `user_id` unique foreign key to `users` with cascade delete,
+  `tenant_id` Text foreign key to `tenants`, not null. `users`
+  itself gains no columns; the identity-field list in
+  `docs/extensible-user-entity.md` stays closed. The Alembic
+  revision backfills one tenant row and one link row per
+  existing user. Only dev data exists today.
 - New `sessions` table: `token_sha256` Text primary key,
   `user_id` foreign key, `expires_at` timestamptz,
   `created_at`. The cookie holds the raw token
@@ -76,12 +81,18 @@ with the ambient scope.
 - Cookie name `session`. HttpOnly, SameSite=Lax, Path=/. The
   Secure flag stays out until the app serves https only.
 - `POST /api/auth/register` takes JSON `{email, password}`.
-  It creates a tenant and a user in one transaction. A
-  duplicate email returns 409 with `detail`. Success returns
-  201 with `UserOut` and sets the session cookie. The existing
-  `POST /api/users` creates a personal tenant the same way,
-  through one shared helper, so no path can make a
-  tenantless user.
+  It creates a tenant, a user, and the `user_tenants` link in
+  one transaction, inside `tenant_scope` of the new tenant id
+  so the link row itself passes the flush guard. A duplicate
+  email returns 409 with `detail`. Success returns 201 with
+  `UserOut` and sets the session cookie.
+- The existing `POST /api/users` uses the same shared helper,
+  so no path can make a tenantless user. The invariant is
+  helper- and test-enforced (one link row per user), not
+  column-enforced: `users` holds no `tenant_id` under Pattern
+  A. A user whose link row is missing fails closed: requests
+  run unscoped and encrypted writes raise instead of landing
+  under a wrong tenant.
 - `POST /api/auth/login` takes JSON `{email, password}`.
   Unknown email or bad password returns 401 with a generic
   `detail`. Success sets the session cookie and returns 204.
@@ -89,21 +100,26 @@ with the ambient scope.
   the cookie. It returns 204 even without a session.
 - `GET /api/auth/me` returns 200 `{id, email, tenant_id}`
   with a valid session, else 401. The `tenant_id` comes from
-  the ambient scope, so `/me` doubles as the scope probe.
+  the ambient scope, so `/me` doubles as the scope probe. A
+  session without a link row scopes nothing, so `/me` answers
+  401 for it too.
 - Session lifetime is 7 days, fixed. No sliding expiry and no
   refresh endpoint.
 - `TenantScope` middleware reads the session cookie and loads
-  session plus `user.tenant_id` in one short-lived session,
-  then closes it. It enters `crypto.tenant_scope` around the
-  request. A missing, unknown, or expired session leaves the
-  request unscoped. The middleware speaks only `tenant_scope`.
+  the session plus the user's `tenant_id` via the
+  `user_tenants` join in one short-lived session, then closes
+  it. It enters `crypto.tenant_scope` around the request. A
+  missing, unknown, or expired session leaves the request
+  unscoped. The middleware speaks only `tenant_scope`.
 - Lifespan check: after crypto registration, if any mapped
   model uses `EncryptedString` and the module is `None`,
   startup raises instead of serving.
 - Flush guard: an ORM `before_flush` hook raises `CryptoError`
   when a dirty object defines `tenant_id` that disagrees with
-  the ambient scope. Objects without `tenant_id` are
-  unaffected.
+  the ambient scope. An absent ambient scope counts as
+  disagreement, so every tenant-carrying write runs inside
+  `tenant_scope`, register included. Objects without
+  `tenant_id` are unaffected.
 - The api `TestClient` fixture runs the lifespan
   (`with TestClient(app)`), so registration and teardown are
   covered by existing request tests.
@@ -115,8 +131,8 @@ with the ambient scope.
 - Good tests cross the new seam through HTTP: they assert
   request outcomes and stored rows, never the ContextVar
   directly.
-- Register test: 201, sets the cookie, creates one tenant row
-  and one user row pointing at it.
+- Register test: 201, sets the cookie, creates one tenant row,
+  one user row, and one link row pointing at both.
 - Login test: wrong password returns 401 without a cookie;
   right password sets the cookie; `/me` returns the tenant.
 - Logout test: the cookie clears and `/me` returns 401 after.
@@ -151,6 +167,9 @@ with the ambient scope.
   from the logged-in user, never from config.
 - Implements ADR-0001's `tenants` table and the "one request
   = one tenant" assumption.
+- The user-to-tenant link is a `user_tenants` extension row,
+  not a `users` column: the Pattern A ruling lives in
+  `.agents/memory/decisions/tenant-link-extension-table.md`.
 - The users-slice refactor later moves the register paths
   into the users module. This spec does not block on it.
 - `docs/specs/request-tenant-scope/spec.html` visualizes the

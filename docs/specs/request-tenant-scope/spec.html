@@ -41,12 +41,12 @@ flowchart LR
     <h2 class="font-bold mb-4">After: session user owns the scope</h2>
     <div class="mermaid">
 flowchart LR
-  REG["register: tenant + user<br/>login: session + cookie"] --> R[Request]
-  R --> TS["TenantScope middleware<br/>cookie to session to user to tenant_id"]
+  REG["register: tenant + user + link<br/>login: session + cookie"] --> R[Request]
+  R --> TS["TenantScope middleware<br/>cookie to session to user to tenant link"]
   TS --> H[handler]
   H --> ORM[ORM flush]
   ORM --> ES[EncryptedString]
-  ES -. "reads" .-> CTX["tenant_ctx = user.tenant_id"]
+  ES -. "reads" .-> CTX["tenant_ctx = user_tenants.tenant_id"]
   G["before_flush guard"] -. "row.tenant_id == scope" .-> ORM
   TS -. "no valid session" .-> U["unscoped: encrypted writes fail"]
     </div>
