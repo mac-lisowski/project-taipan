@@ -50,9 +50,14 @@ def session_factory(engine):
 @pytest.fixture
 def client(engine, session_factory):
     def override_get_db():
+        # Mirror get_db: the request boundary commits clean work, rolls back errors.
         db = session_factory()
         try:
             yield db
+            db.commit()
+        except BaseException:
+            db.rollback()
+            raise
         finally:
             db.close()
 

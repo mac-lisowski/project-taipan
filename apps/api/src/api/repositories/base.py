@@ -20,10 +20,10 @@ class BaseRepository[T: Base]:
 
     def add(self, obj: T) -> T:
         self._session.add(obj)
-        self._session.commit()
+        self._session.flush()
         self._session.refresh(obj)
         return obj
 
     def delete(self, obj: T) -> None:
         self._session.delete(obj)
-        self._session.commit()
+        self._session.flush()
