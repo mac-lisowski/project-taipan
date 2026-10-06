@@ -11,5 +11,5 @@ export default async function DocsIndex(): Promise<ReactNode> {
     "",
     ...docs.map((d) => `- [${d.title}](/docs/${d.slug.join("/")})`),
   ].join("\n");
-  return <Markdown source={body} />;
+  return <Markdown source={body} slug="README" />;
 }

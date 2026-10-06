@@ -26,7 +26,7 @@ export default async function DocPage({
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60">
           docs / {crumb}
         </p>
-        <Markdown source={source} />
+        <Markdown source={source} slug={slug.join("/")} />
       </div>
       {toc.length > 1 && (
         <nav className="sticky top-10 hidden h-fit w-44 shrink-0 lg:block">

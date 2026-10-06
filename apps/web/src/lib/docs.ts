@@ -79,11 +79,43 @@ export async function listDocGroups(): Promise<DocGroup[]> {
 }
 
 export async function readDoc(slug: string[]): Promise<string | null> {
-  const filePath = path.resolve(DOCS_DIR, ...slug) + ".md";
-  if (!filePath.startsWith(DOCS_DIR + path.sep)) return null;
+  const filePath = resolveDocPath([...slug.slice(0, -1), `${slug.at(-1)}.md`]);
+  if (filePath === null) return null;
   try {
     return await fs.readFile(filePath, "utf8");
   } catch {
     return null;
   }
+}
+
+/** True when resolved stays inside DOCS_DIR; traversal must not escape. */
+function contained(resolved: string): boolean {
+  return resolved === DOCS_DIR || resolved.startsWith(DOCS_DIR + path.sep);
+}
+
+/** Single containment check for every docs/ read; the rule changes in one place. */
+export function resolveDocPath(parts: string[]): string | null {
+  const resolved = path.resolve(DOCS_DIR, ...parts);
+  return contained(resolved) ? resolved : null;
+}
+
+/** Directory of a doc slug: everything before the last segment. */
+function slugDir(slug: string): string {
+  return slug.split("/").slice(0, -1).join("/");
+}
+
+/** Relative links resolve against the doc's own directory; escaping links pass through. */
+export function docHref(slug: string, href: string): string {
+  if (href.startsWith("#") || href.startsWith("http") || href.startsWith("/")) return href;
+  const target = path.posix.normalize(path.posix.join(slugDir(slug), href.replace(/\.md$/, "")));
+  // A link escaping the docs root keeps its original href: it 404s harmlessly.
+  if (target.startsWith("..")) return href;
+  return `/docs/${target}`;
+}
+
+/** Same resolution as docHref, prefixed /docs-asset/ for the asset route. */
+export function assetHref(slug: string, src: string): string {
+  if (src.startsWith("http") || src.startsWith("/")) return src;
+  const target = path.posix.normalize(path.posix.join(slugDir(slug), src));
+  return `/docs-asset/${target}`;
 }

@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { DOCS_DIR } from "@/lib/docs";
+import { resolveDocPath } from "@/lib/docs";
 
 const TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -18,9 +18,9 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> },
 ): Promise<Response> {
   const { path: parts } = await params;
-  const filePath = path.resolve(DOCS_DIR, ...parts);
-  const ext = path.extname(filePath).toLowerCase();
-  if (!filePath.startsWith(DOCS_DIR + path.sep) || !(ext in TYPES)) {
+  const filePath = resolveDocPath(parts);
+  const ext = path.extname(filePath ?? "").toLowerCase();
+  if (filePath === null || !(ext in TYPES)) {
     return new Response("not found", { status: 404 });
   }
   try {

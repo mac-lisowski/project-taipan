@@ -2,7 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { isValidElement, type ReactNode } from "react";
 import { MermaidBlock } from "@/components/mermaid-block";
-import { slugify } from "@/lib/docs";
+import { assetHref, docHref, slugify } from "@/lib/docs";
 
 function textOf(node: ReactNode): string {
   if (typeof node === "string") return node;
@@ -15,7 +15,7 @@ function textOf(node: ReactNode): string {
 }
 
 // Props are picked by name, not spread - spreading leaks node= into the DOM.
-export function Markdown({ source }: { source: string }): ReactNode {
+export function Markdown({ source, slug }: { source: string; slug: string }): ReactNode {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -47,7 +47,7 @@ export function Markdown({ source }: { source: string }): ReactNode {
         ),
         a: ({ href, children }) => (
           <a
-            href={rewriteHref(href)}
+            href={href === undefined ? undefined : docHref(slug, href)}
             className="text-foreground underline underline-offset-4 hover:text-signal"
             {...(href?.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}
           >
@@ -103,7 +103,7 @@ export function Markdown({ source }: { source: string }): ReactNode {
         img: ({ src, alt }) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={rewriteAsset(typeof src === "string" ? src : undefined)}
+            src={typeof src === "string" ? assetHref(slug, src) : undefined}
             alt={alt ?? ""}
             className="mt-4 max-w-full border border-border"
           />
@@ -115,15 +115,4 @@ export function Markdown({ source }: { source: string }): ReactNode {
       {source}
     </ReactMarkdown>
   );
-}
-
-function rewriteHref(href: string | undefined): string | undefined {
-  if (href === undefined || href.startsWith("#") || href.startsWith("http")) return href;
-  const clean = href.replace(/^\.\//, "").replace(/\.md$/, "");
-  return `/docs/${clean}`;
-}
-
-function rewriteAsset(src: string | undefined): string | undefined {
-  if (src === undefined || src.startsWith("http") || src.startsWith("/")) return src;
-  return `/docs-asset/${src.replace(/^\.\//, "").replace(/^docs\//, "")}`;
 }
