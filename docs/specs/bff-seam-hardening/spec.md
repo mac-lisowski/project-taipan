@@ -1,6 +1,6 @@
 # Spec: BFF seam hardening
 
-Status: not implemented.
+Status: implemented (PR #20).
 
 Seam: the existing proxy seam in apps/web. This spec hardens its
 edges; it adds no new module.
