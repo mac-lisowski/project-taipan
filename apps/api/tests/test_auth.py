@@ -1,7 +1,5 @@
-import hashlib
-from datetime import UTC, datetime, timedelta
-
-from api.models import AuthSession, Tenant, User, UserTenant
+from api import sessions
+from api.models import Tenant, User, UserTenant
 from sqlalchemy import func, select
 
 
@@ -32,9 +30,10 @@ def test_setup_creates_tenant_user_link_and_session(client, session_factory):
         assert link is not None and user is not None and tenant is not None
         assert link.user_id == user.id
         assert link.tenant_id == tenant.id
-        sess = db.get(AuthSession, hashlib.sha256(token.encode()).hexdigest())
+        sess = sessions.resolve(token)
         assert sess is not None
         assert sess.user_id == user.id
+        assert sess.tenant_id == tenant.id
 
 
 def test_create_user_endpoint_also_creates_tenant_and_link(admin_client, session_factory):
@@ -76,16 +75,17 @@ def test_login_wrong_password_returns_401(client):
     assert "session" not in resp.headers.get("set-cookie", "")
 
 
-def test_logout_deletes_session_and_clears_cookie(client, session_factory):
+def test_logout_deletes_session_and_clears_cookie(client):
     client.post("/api/setup", json={"email": "lo@example.com", "password": "p"})
+    token = client.cookies.get("session")
+    assert token is not None
     assert client.get("/api/auth/me").status_code == 200
 
     resp = client.post("/api/auth/logout")
     assert resp.status_code == 204
     assert client.cookies.get("session") is None
     assert client.get("/api/auth/me").status_code == 401
-    with session_factory() as db:
-        assert db.scalar(select(func.count()).select_from(AuthSession)) == 0
+    assert sessions.resolve(token) is None
 
 
 def test_logout_without_session_returns_204(client):
@@ -96,19 +96,16 @@ def test_me_without_session_returns_401(client):
     assert client.get("/api/auth/me").status_code == 401
 
 
-def test_me_session_without_link_returns_401(client, session_factory):
+def test_me_deleted_user_returns_401(client, session_factory):
     client.post("/api/setup", json={"email": "nl@example.com", "password": "p"})
     with session_factory() as db:
-        db.execute(UserTenant.__table__.delete())
+        db.execute(User.__table__.delete())
         db.commit()
     assert client.get("/api/auth/me").status_code == 401
 
 
-def test_expired_session_behaves_like_no_session(client, session_factory):
+def test_expired_session_behaves_like_no_session(client, memory_session_store):
     client.post("/api/setup", json={"email": "ex@example.com", "password": "p"})
-    with session_factory() as db:
-        db.execute(
-            AuthSession.__table__.update().values(expires_at=datetime.now(UTC) - timedelta(hours=1))
-        )
-        db.commit()
+    assert client.get("/api/auth/me").status_code == 200
+    memory_session_store.clock.advance(86400 * 30)
     assert client.get("/api/auth/me").status_code == 401

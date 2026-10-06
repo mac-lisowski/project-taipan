@@ -87,6 +87,23 @@ class RedisSessionStore:
         self._client.delete(self._prefixed(key))
 
 
+_session_store: SessionStore | None = None
+
+
+def get_session_store() -> SessionStore:
+    """Return active session store, initializing default Redis adapter if unset."""
+    global _session_store
+    if _session_store is None:
+        _session_store = build_session_store()
+    return _session_store
+
+
+def set_session_store(store: SessionStore | None) -> None:
+    """Set active session store for testing or lifecycle wiring."""
+    global _session_store
+    _session_store = store
+
+
 def build_session_store(config: Config | None = None) -> SessionStore:
     """Build production Redis session store from configuration."""
     cfg = config or get_config()
