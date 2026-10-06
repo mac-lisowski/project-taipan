@@ -1,4 +1,6 @@
 import os
+import uuid
+from pathlib import Path
 
 import pytest
 from api import db as db_module
@@ -9,6 +11,7 @@ from api_testsupport import KEY_ID, MapStore, StubCipher
 from crypto import FieldCrypto
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
@@ -20,6 +23,32 @@ TEST_URL = os.environ.get(
     "API_TEST_URL",
     "postgresql+psycopg://postgres:postgres@localhost:5432/app_test",
 )
+ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
+
+
+@pytest.fixture
+def scratch_url(monkeypatch):
+    """Unique scratch database per run; env rewired so env.py uses it."""
+    try:
+        admin = create_engine(ADMIN_URL, isolation_level="AUTOCOMMIT")
+        with admin.connect():
+            pass
+    except OperationalError:
+        pytest.skip("postgres not running (docker compose up -d)")
+
+    dbname = f"app_test_alembic_{uuid.uuid4().hex[:10]}"
+    with admin.connect() as conn:
+        conn.execute(text(f'CREATE DATABASE "{dbname}"'))
+
+    url = make_url(TEST_URL).set(database=dbname).render_as_string(hide_password=False)
+    # env.py imports DATABASE_URL from api.db at run time, so both must
+    # point at the scratch DB before any alembic command executes.
+    monkeypatch.setattr("api.db.DATABASE_URL", url)
+    monkeypatch.setenv("API_DATABASE_URL", url)
+    yield url
+    with admin.connect() as conn:
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{dbname}" WITH (FORCE)'))
+    admin.dispose()
 
 
 @pytest.fixture(scope="session")
@@ -59,6 +88,29 @@ def wipe_users(engine):
         conn.execute(text("DELETE FROM users"))
 
 
+def create_user(client, email: str, password: str = "s3cret123") -> int:
+    """Create a user through the gated route; caller holds an admin session."""
+    resp = client.post("/api/users", json={"email": email, "password": password})
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def setup_admin(client, email: str = "admin@x.com", password: str = "s3cret123") -> int:
+    """Run POST setup once; returns the admin user id."""
+    resp = client.post("/api/setup", json={"email": email, "password": password})
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def login(client, email: str, password: str = "s3cret123") -> str:
+    """Log in; returns the session cookie for manual request building."""
+    resp = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert resp.status_code == 204
+    token = resp.cookies.get("session")
+    assert token is not None
+    return token
+
+
 def _stub_register():
     set_field_crypto(FieldCrypto(cipher=StubCipher(), store=MapStore(), default_key_id=KEY_ID))
 
@@ -75,3 +127,11 @@ def client(engine, session_factory, monkeypatch):
     with engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
             conn.execute(table.delete())
+
+
+@pytest.fixture
+def admin_client(client):
+    """Run POST setup once; the client holds the admin session."""
+    resp = client.post("/api/setup", json={"email": "admin@x.com", "password": "s3cret123"})
+    assert resp.status_code == 201
+    return client

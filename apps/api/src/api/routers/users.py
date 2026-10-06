@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from api import users
+from api.authz import require_admin
 from api.db import DbSession
 from api.models import User
 from api.schemas import UserCreate, UserOut
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["users"], dependencies=[Depends(require_admin)])
 
 
 @router.get("", response_model=list[UserOut])

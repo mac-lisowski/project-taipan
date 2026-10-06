@@ -7,7 +7,7 @@ from api.db import Base
 from api.field_crypto import build_and_register_field_crypto
 from api.middleware import TenantScopeMiddleware
 from api.models.encrypted_string import EncryptedString, get_field_crypto, set_field_crypto
-from api.routers import auth_router, profiles_router, users_router
+from api.routers import auth_router, profiles_router, setup_router, users_router
 
 
 def _encrypted_columns_exist() -> bool:
@@ -34,6 +34,7 @@ app.add_middleware(TenantScopeMiddleware)
 app.include_router(users_router, prefix="/api")
 app.include_router(profiles_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
+app.include_router(setup_router, prefix="/api")
 
 
 @app.get("/")
@@ -41,10 +42,23 @@ def root() -> dict[str, str]:
     return {"message": greet("world")}
 
 
-def main() -> None:
+def _serve(*, reload: bool) -> None:
+    import os
+
     import uvicorn
 
-    uvicorn.run("api.main:app", host="127.0.0.1", port=8000)
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "8000"))
+    uvicorn.run("api.main:app", host=host, port=port, reload=reload)
+
+
+def main() -> None:
+    _serve(reload=False)
+
+
+def dev() -> None:
+    # Dev only: autoreload, so saves apply like next dev.
+    _serve(reload=True)
 
 
 if __name__ == "__main__":

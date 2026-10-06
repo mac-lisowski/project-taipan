@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class UserTenant(Base):
-    """Pattern A extension table: the user-to-tenant link, never on users."""
+    """Extension table: the user-to-tenant link, never on users."""
 
     __tablename__ = "user_tenants"
 

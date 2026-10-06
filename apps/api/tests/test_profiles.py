@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from api.models import UserProfile
+from conftest import create_user
 from sqlalchemy import func, select
 
 
@@ -11,9 +12,10 @@ def _assert_tz_aware(body, key):
 
 
 def _create_user(client, email: str) -> int:
-    resp = client.post("/api/users", json={"email": email, "password": "p"})
-    assert resp.status_code == 201
-    return resp.json()["id"]
+    if client.get("/api/setup").json()["needs_setup"]:
+        setup = client.post("/api/setup", json={"email": "admin@x.com", "password": "p"})
+        assert setup.status_code == 201
+    return create_user(client, email, "p")
 
 
 def test_get_profile_of_user_without_profile(client):
@@ -86,7 +88,9 @@ def test_get_unknown_user_404(client):
     assert resp.json() == {"detail": "user not found"}
 
 
-def test_user_routes_unchanged(client):
+def test_user_routes_work_for_admin(client):
+    setup = client.post("/api/setup", json={"email": "admin@x.com", "password": "p"})
+    assert setup.status_code == 201
     resp = client.post("/api/users", json={"email": "guard@x.com", "password": "p"})
     assert resp.status_code == 201
     user_id = resp.json()["id"]

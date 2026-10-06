@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ViewTransition } from "react";
 import type { ReactNode } from "react";
 import { listDocGroups } from "@/lib/docs";
-import { DocsNav } from "@/components/docs-nav";
+import { DocsNav } from "@/components/docs/docs-nav";
 
 // Docs shell: own layout outside the auth panel - grouped sidebar on the
 // left, content on the right. Same dark surface language.
