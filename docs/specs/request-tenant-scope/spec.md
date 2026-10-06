@@ -1,6 +1,6 @@
 # Spec: Request-scoped tenant context
 
-Status: not implemented.
+Status: implemented (PR #19).
 
 Seam: one middleware module owning request-to-tenant scope in the
 api app, plus the auth endpoints that mint sessions. Tests cross

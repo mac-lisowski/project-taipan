@@ -2,13 +2,24 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
+from crypto import tenant_scope
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from api.models import User
-from api.security import hash_password
+from api.models import Tenant, User, UserTenant
+from api.security import hash_password, verify_password
 
-__all__ = ["EmailTaken", "NotFound", "get", "list", "register", "remove"]
+__all__ = [
+    "EmailTaken",
+    "NotFound",
+    "authenticate",
+    "get",
+    "list",
+    "register",
+    "remove",
+]
 
 
 class EmailTaken(Exception):
@@ -22,10 +33,23 @@ class NotFound(Exception):
 def register(session: Session, email: str, password: str) -> User:
     if session.scalar(select(User).where(User.email == email)) is not None:
         raise EmailTaken(email)
-    user = User(email=email, hashed_password=hash_password(password))
-    session.add(user)
-    session.flush()
-    session.refresh(user)
+    tenant = Tenant(id=uuid4().hex)
+    # Tenant-carrying writes must run inside the scope they point at.
+    with tenant_scope(tenant.id):
+        session.add(tenant)
+        user = User(email=email, hashed_password=hash_password(password))
+        session.add(user)
+        session.flush()
+        session.add(UserTenant(user_id=user.id, tenant_id=tenant.id))
+        session.flush()
+        session.refresh(user)
+    return user
+
+
+def authenticate(session: Session, email: str, password: str) -> User | None:
+    user = session.scalar(select(User).where(User.email == email))
+    if user is None or not verify_password(password, user.hashed_password):
+        return None
     return user
 
 

@@ -8,6 +8,7 @@ from api.db import Base
 
 if TYPE_CHECKING:
     from api.models.profile import UserProfile
+    from api.models.user_tenant import UserTenant
 
 
 class User(Base):
@@ -24,4 +25,7 @@ class User(Base):
     # user_profiles extension table. ORM cascade mirrors the DB cascade.
     profile: Mapped["UserProfile | None"] = relationship(
         "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    tenant_link: Mapped["UserTenant | None"] = relationship(
+        "UserTenant", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )

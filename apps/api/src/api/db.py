@@ -6,6 +6,8 @@ from fastapi import Depends
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
+from api import tenant_guard
+
 DATABASE_URL = os.environ.get(
     "API_DATABASE_URL",
     "postgresql+psycopg://postgres:postgres@localhost:5432/app",
@@ -16,6 +18,9 @@ engine = create_engine(
     connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
 )
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+
+# The guard is session-global: every flush checks tenant-carrying rows.
+tenant_guard.install()
 
 
 class Base(DeclarativeBase):
