@@ -1,6 +1,6 @@
 # Current state
 
-- Branch: `feat/wire-session-store`.
-- State: SessionStore wired into session and tenant resolution; changes committed.
-- Next: push branch, open PR to dev.
+- Branch: `feat/profiles-module`.
+- State: profiles domain module ready to commit, push, and PR.
+- Next: push branch and open PR to dev.
 - Blockers: none.
