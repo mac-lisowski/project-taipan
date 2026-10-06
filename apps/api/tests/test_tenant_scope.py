@@ -90,3 +90,28 @@ def test_me_never_reports_another_users_tenant(client, session_factory):
     assert login.status_code == 204
     second = client.get("/api/auth/me").json()["tenant_id"]
     assert first != second
+
+
+def test_tenant_scope_middleware_resolves_without_db():
+    from api import sessions
+    from api.middleware import TenantScopeMiddleware
+    from crypto import current_tenant
+    from starlette.applications import Starlette
+    from starlette.responses import PlainTextResponse
+    from starlette.routing import Route
+
+    token = sessions.mint(user_id=1, tenant_id="scoped-123")
+    captured_tenant = None
+
+    async def endpoint(request):
+        nonlocal captured_tenant
+        captured_tenant = current_tenant()
+        return PlainTextResponse("ok")
+
+    app = Starlette(routes=[Route("/", endpoint)])
+    app.add_middleware(TenantScopeMiddleware)
+    client = TestClient(app)
+    client.cookies.set(sessions.COOKIE_NAME, token)
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert captured_tenant == "scoped-123"

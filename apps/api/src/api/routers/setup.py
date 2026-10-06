@@ -19,8 +19,6 @@ def setup(payload: UserCreate, response: Response, db: DbSession) -> User:
         user = users.bootstrap(db, payload.email, payload.password)
     except users.AlreadySetup as exc:
         raise HTTPException(status_code=409, detail="setup already completed") from exc
-    # Secure stays out until the app serves https only.
-    response.set_cookie(
-        sessions.COOKIE_NAME, sessions.mint(db, user.id), httponly=True, samesite="lax", path="/"
-    )
+    tenant_id = users.tenant_id_for_user(db, user.id)
+    sessions.set_session_cookie(response, sessions.mint(user.id, tenant_id))
     return user

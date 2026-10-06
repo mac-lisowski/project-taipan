@@ -8,7 +8,7 @@ from api import sessions
 from api.db import DbSession
 from api.models import Role, User, UserRole
 
-__all__ = ["require_admin", "roles_for"]
+__all__ = ["current_user", "require_admin", "resolve_session", "roles_for"]
 
 
 def roles_for(db: Session, user_id: int) -> list[str]:
@@ -16,12 +16,23 @@ def roles_for(db: Session, user_id: int) -> list[str]:
     return list(db.scalars(query).all())
 
 
-def require_admin(request: Request, db: DbSession) -> User:
+def resolve_session(request: Request) -> sessions.SessionData | None:
     token = request.cookies.get(sessions.COOKIE_NAME)
-    row = sessions.resolve(db, token) if token else None
-    user = db.get(User, row.user_id) if row else None
+    return sessions.resolve(token) if token else None
+
+
+def current_user(request: Request, db: DbSession) -> User:
+    sess = resolve_session(request)
+    if sess is None:
+        raise HTTPException(status_code=401, detail="not authenticated")
+    user = db.get(User, sess.user_id)
     if user is None:
         raise HTTPException(status_code=401, detail="not authenticated")
+    return user
+
+
+def require_admin(request: Request, db: DbSession) -> User:
+    user = current_user(request, db)
     if Role.ADMIN not in roles_for(db, user.id):
         raise HTTPException(status_code=403, detail="admin role required")
     return user

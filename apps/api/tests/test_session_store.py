@@ -7,6 +7,8 @@ from api.session_store import (
     RedisSessionStore,
     SessionStore,
     build_session_store,
+    get_session_store,
+    set_session_store,
 )
 
 
@@ -156,3 +158,12 @@ def test_build_session_store_wires_redis_adapter(monkeypatch: pytest.MonkeyPatch
     store = build_session_store(cfg)
     assert isinstance(store, RedisSessionStore)
     assert captured_urls == ["redis://localhost:6379/9"]
+
+
+def test_get_and_set_session_store() -> None:
+    custom_store = MemorySessionStore()
+    set_session_store(custom_store)
+    try:
+        assert get_session_store() is custom_store
+    finally:
+        set_session_store(None)

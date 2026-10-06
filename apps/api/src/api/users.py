@@ -23,6 +23,7 @@ __all__ = [
     "needs_setup",
     "register",
     "remove",
+    "tenant_id_for_user",
 ]
 
 # Stable advisory-lock key for first-run setup; any fixed 64-bit int works.
@@ -95,3 +96,11 @@ def bootstrap(session: Session, email: str, password: str) -> User:
     session.add(UserRole(user_id=user.id, role=Role.ADMIN))
     session.flush()
     return user
+
+
+def tenant_id_for_user(session: Session, user_id: int) -> str:
+    """Return the personal tenant id for user_id; raises NotFound if user has none."""
+    tenant_id = session.scalar(select(UserTenant.tenant_id).where(UserTenant.user_id == user_id))
+    if tenant_id is None:
+        raise NotFound(user_id)
+    return tenant_id
