@@ -92,6 +92,8 @@ def test_session_cookie_helpers() -> None:
     assert "samesite=lax" in raw.lower()
     assert "path=/" in raw.lower()
 
-    sessions.clear_session_cookie(resp)
-    # Deleting cookie expires it
-    assert "session=" in resp.headers.get("set-cookie", "")
+    clear_resp = Response()
+    sessions.clear_session_cookie(clear_resp)
+    clear_raw = clear_resp.headers.get("set-cookie", "").lower()
+    assert 'session=""' in clear_raw
+    assert "max-age=0" in clear_raw
