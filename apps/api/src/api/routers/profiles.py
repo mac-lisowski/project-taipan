@@ -1,18 +1,18 @@
 from fastapi import APIRouter, HTTPException
 
+from api import users
 from api.db import DbSession
 from api.models import User, UserProfile
-from api.repositories import UserRepository
 from api.schemas import ProfileRead, ProfileUpdate
 
 router = APIRouter(prefix="/users", tags=["profiles"])
 
 
 def _require_user(user_id: int, db: DbSession) -> User:
-    user = UserRepository(db).get(user_id)
-    if user is None:
+    try:
+        return users.get(db, user_id)
+    except users.NotFound:
         raise HTTPException(status_code=404, detail="user not found")
-    return user
 
 
 @router.get("/{user_id}/profile", response_model=ProfileRead)
@@ -34,6 +34,7 @@ def upsert_profile(user_id: int, payload: ProfileUpdate, db: DbSession) -> UserP
         for field, value in payload.model_dump().items():
             setattr(profile, field, value)
     db.add(profile)
-    db.commit()
+    # The get_db teardown owns the commit; flush only gets the PK out.
+    db.flush()
     db.refresh(profile)
     return profile

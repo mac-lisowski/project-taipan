@@ -1,6 +1,6 @@
 import pytest
+from api import users
 from api.models import User, UserProfile
-from api.repositories.user import UserRepository
 from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 
@@ -69,7 +69,9 @@ def test_profile_one_to_one(session_factory):
 def test_delete_user_cascades_profile(session_factory):
     with session_factory() as session:
         user = _user_with_profile(session)
-        UserRepository(session).delete(user)
+        users.remove(session, user.id)
+        # The module flushes; the caller owns the commit now.
+        session.commit()
     with session_factory() as session:
         remaining = session.execute(text("SELECT count(*) FROM user_profiles")).scalar_one()
     assert remaining == 0
