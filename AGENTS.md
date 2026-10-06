@@ -38,8 +38,10 @@
     clean, stamp with
     `bash .agents/hooks/review-stamp.sh` - the hook blocks the commit
     without it and any edit invalidates the stamp. Never use
-    `--no-verify` or `-n`. Commit messages: subject and every line
-    <= 120 chars (`scripts/check-commit-msg.sh`). Comments explain
+    `--no-verify` or `-n`. Commit messages follow Conventional
+    Commits: `<type>(scope): description` (scopes in
+    `docs/commit-convention.md`); subject and every line <= 120
+    chars (`scripts/check-commit-msg.sh`). Comments explain
     why, not what: one line, no narration blocks.
 12. A done spec ticket carries an HTML change report next to the
     ticket file: `.scratch/<slug>/issues/<NN>-<slug>.html`. The

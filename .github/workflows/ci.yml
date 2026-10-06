@@ -85,6 +85,31 @@ jobs:
           docker compose -f docker-compose.yaml config -q
           docker compose -f .devcontainer/docker-compose.yml config -q
 
+  commit-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: lint commit messages
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            printf '%s\n' "${{ github.event.pull_request.title }}" > /tmp/pr-title.txt
+            scripts/check-commit-msg.sh /tmp/pr-title.txt
+          else
+            before="${{ github.event.before }}"
+            case "$before" in
+              0000000000000000000000000000000000000000|"") range="HEAD" ;;
+              *) range="$before..${{ github.sha }}" ;;
+            esac
+            fail=0
+            for c in $(git log --format=%H "$range"); do
+              git log -1 --format=%B "$c" > /tmp/commit-msg.txt
+              scripts/check-commit-msg.sh /tmp/commit-msg.txt || fail=1
+            done
+            exit $fail
+          fi
+
   test-web:
     needs: changes
     if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.web == 'true') }}
@@ -177,14 +202,14 @@ jobs:
         run: docker run --rm taipan-api python -c "import api.main"
 
   ci-done:
-    needs: [changes, lint, test-core, test-crypto, test-kms, test-api, test-web]
+    needs: [changes, lint, commit-lint, test-core, test-crypto, test-kms, test-api, test-web]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: verify required jobs passed
         run: |
           status=0
-          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "test-core:${{ needs.test-core.result }}" "test-crypto:${{ needs.test-crypto.result }}" "test-kms:${{ needs.test-kms.result }}" "test-api:${{ needs.test-api.result }}" "test-web:${{ needs.test-web.result }}"; do
+          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "commit-lint:${{ needs.commit-lint.result }}" "test-core:${{ needs.test-core.result }}" "test-crypto:${{ needs.test-crypto.result }}" "test-kms:${{ needs.test-kms.result }}" "test-api:${{ needs.test-api.result }}" "test-web:${{ needs.test-web.result }}"; do
             result="${pair##*:}"
             echo "${pair%%:*}: $result"
             case "$result" in success|skipped) ;; *) status=1 ;; esac
