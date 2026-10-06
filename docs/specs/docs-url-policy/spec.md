@@ -1,6 +1,6 @@
 # Spec: Docs URL policy module
 
-Status: not implemented.
+Status: implemented (PR #16).
 
 Seam: `lib/docs.ts` in apps/web owns all docs URL policy.
 `Markdown` delegates to it; tests cross it as pure functions.
