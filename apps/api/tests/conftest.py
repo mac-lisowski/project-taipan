@@ -1,9 +1,9 @@
-import os
 import uuid
 from pathlib import Path
 
 import pytest
 from api import db as db_module
+from api.config import get_config
 from api.db import Base
 from api.main import app
 from api.models.encrypted_string import set_field_crypto
@@ -15,14 +15,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
-ADMIN_URL = os.environ.get(
-    "API_TEST_ADMIN_URL",
-    "postgresql+psycopg://postgres:postgres@localhost:5432/postgres",
-)
-TEST_URL = os.environ.get(
-    "API_TEST_URL",
-    "postgresql+psycopg://postgres:postgres@localhost:5432/app_test",
-)
+ADMIN_URL = get_config().test_admin_url
+TEST_URL = get_config().test_database_url
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
 
