@@ -8,7 +8,6 @@ from email_delivery.suppression import (
     BounceKind,
     GuardedEmailSender,
     MemorySuppressionStore,
-    guarded_send,
 )
 
 
@@ -31,7 +30,7 @@ def test_suppression_checked_before_render() -> None:
     inner, guarded = _guarded()
     guarded.store.suppress("ada@example.com")
 
-    result = guarded_send(guarded, "activation", "ada@example.com", {"bad": "data"})
+    result = guarded.send("activation", "ada@example.com", {"bad": "data"})
 
     assert result.status.value == "suppressed"
     assert inner.list_sent() == []

@@ -4,8 +4,10 @@ from contextlib import asynccontextmanager
 from core import greet
 from fastapi import FastAPI
 
+from api.config import get_config
 from api.db import Base
 from api.field_crypto import build_and_register_field_crypto
+from api.mail import build_email_sender
 from api.middleware import TenantScopeMiddleware
 from api.models.encrypted_string import EncryptedString, get_field_crypto, set_field_crypto
 from api.routers import auth_router, profiles_router, setup_router, users_router
@@ -27,6 +29,9 @@ async def lifespan(app: FastAPI):
         db_cli.upgrade()
     # Registers the crypto module when Infisical config exists; off otherwise.
     build_and_register_field_crypto()
+    # Picks the mail adapter once from server config. Routes use it
+    # through get_email_sender and never see the key.
+    app.state.email_sender = build_email_sender(get_config())
     if _encrypted_columns_exist() and get_field_crypto() is None:
         raise RuntimeError("EncryptedString columns exist but no crypto module is registered")
     yield

@@ -55,6 +55,11 @@ class GuardedEmailSender(EmailSender):
         self._sent_counts: dict[str, int] = {}
         self._sent_template_counts: dict[tuple[str, str], int] = {}
 
+    @property
+    def inner(self) -> EmailSender:
+        """The wrapped adapter. Tests pin adapter choice through this."""
+        return self._inner
+
     def record_bounce(self, address: str, kind: BounceKind) -> None:
         if kind == BounceKind.HARD:
             self.store.suppress(address)
@@ -77,12 +82,3 @@ class GuardedEmailSender(EmailSender):
                 self._sent_template_counts.get(template_key, 0) + 1
             )
         return result
-
-
-def guarded_send(
-    sender: GuardedEmailSender, template: str, recipient: str, data: Mapping[str, Any]
-) -> SendResult:
-    """Suppression pre-check that runs before any render or delegate work."""
-    if sender.store.is_suppressed(recipient):
-        return SendResult(status=SendStatus.SUPPRESSED, reason="suppressed")
-    return sender.send(template, recipient, data)

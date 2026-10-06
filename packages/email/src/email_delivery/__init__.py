@@ -15,7 +15,6 @@ from email_delivery.suppression import (
     BounceKind,
     GuardedEmailSender,
     MemorySuppressionStore,
-    guarded_send,
 )
 
 __all__ = [
@@ -32,5 +31,4 @@ __all__ = [
     "SendResult",
     "SendStatus",
     "SentEmail",
-    "guarded_send",
 ]
