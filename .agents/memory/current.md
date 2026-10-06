@@ -1,8 +1,8 @@
 # Current state
 
-- Branch: `feat/web-session-and-logout-origin`.
-- State: implemented private group layout guard, unified session helpers, trusted origin resolution, env extraction, and container/app auto-migration with DB readiness check.
-- Next: push commit to branch and PR #28.
+- Branch: `dev`.
+- State: PR #28 merged into dev; local dev up to date.
+- Next: await next user task.
 - Blockers: none.
 
 
