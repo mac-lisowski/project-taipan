@@ -3,6 +3,7 @@
 import os
 
 from crypto import BreakerCipher, FieldCrypto
+from crypto.envelope import is_valid_key_id
 from kms import InfisicalCipher
 from redis import Redis
 
@@ -23,6 +24,7 @@ def build_field_crypto() -> FieldCrypto | None:
     key_id = os.environ.get("API_INFISICAL_KMS_KEY_ID", "")
     if not token or not key_id:
         return None
+    _require_uuid_key_id(key_id)
     cipher = InfisicalCipher(os.environ.get("API_INFISICAL_URL", "http://localhost:8080"), token)
     threshold = int(os.environ.get("API_KMS_BREAKER_THRESHOLD", str(DEFAULT_KMS_BREAKER_THRESHOLD)))
     if threshold < 1:
@@ -48,6 +50,12 @@ def build_field_crypto() -> FieldCrypto | None:
         ),
     )
     return FieldCrypto(cipher=cipher, store=store, default_key_id=key_id, cache=cache)
+
+
+def _require_uuid_key_id(key_id: str) -> None:
+    # Same rule the envelope grammar enforces; a looser check boots configs that fail at first encrypt.
+    if not is_valid_key_id(key_id):
+        raise ValueError("API_INFISICAL_KMS_KEY_ID must be a UUID")
 
 
 def build_and_register_field_crypto() -> FieldCrypto | None:

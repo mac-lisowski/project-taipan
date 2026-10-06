@@ -33,7 +33,7 @@ class _NullDekCache:
     def get(self, tenant_id: str) -> bytes | None:
         return None
 
-    def put(self, tenant_id: str, dek: bytes, ttl_seconds: int) -> None:
+    def put(self, tenant_id: str, dek: bytes) -> None:
         return
 
 
@@ -116,7 +116,7 @@ class DekManager:
 
     def _cache_put(self, tenant_id: str, dek: bytes) -> None:
         try:
-            self._cache.put(tenant_id, dek, ttl_seconds=0)
+            self._cache.put(tenant_id, dek)
         except Exception:  # noqa: BLE001 - degrade, never fail the operation
             _log.warning("dek cache write failed; continuing without the cache")
 

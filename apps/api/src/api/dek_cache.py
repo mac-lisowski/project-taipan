@@ -33,11 +33,9 @@ class LocalTtlDekCache:
                 return None
             return dek
 
-    def put(self, tenant_id: str, dek: bytes, ttl_seconds: int) -> None:
-        # A caller TTL under the floor wins: never outlive the remote tier.
-        ttl = min(self._ttl, ttl_seconds) if ttl_seconds > 0 else self._ttl
+    def put(self, tenant_id: str, dek: bytes) -> None:
         with self._lock:
-            self._entries[tenant_id] = (dek, self._monotonic() + ttl)
+            self._entries[tenant_id] = (dek, self._monotonic() + self._ttl)
 
 
 class RedisDekCache:
@@ -55,11 +53,9 @@ class RedisDekCache:
             _log.warning("dek cache read failed; continuing without the cache")
             return None
 
-    def put(self, tenant_id: str, dek: bytes, ttl_seconds: int) -> None:
-        # The caller may defer the choice; the configured default applies then.
-        ttl = ttl_seconds if ttl_seconds > 0 else self._ttl_seconds
+    def put(self, tenant_id: str, dek: bytes) -> None:
         try:
-            self._client.set(KEY_PREFIX + tenant_id, dek, ex=ttl)
+            self._client.set(KEY_PREFIX + tenant_id, dek, ex=self._ttl_seconds)
         except RedisError:
             _log.warning("dek cache write failed; continuing without the cache")
 
@@ -89,9 +85,9 @@ class TwoTierDekCache:
             return hit
         dek = self._remote.get(tenant_id)
         if dek is not None:
-            self._local.put(tenant_id, dek, ttl_seconds=0)
+            self._local.put(tenant_id, dek)
         return dek
 
-    def put(self, tenant_id: str, dek: bytes, ttl_seconds: int) -> None:
-        self._local.put(tenant_id, dek, ttl_seconds)
-        self._remote.put(tenant_id, dek, ttl_seconds)
+    def put(self, tenant_id: str, dek: bytes) -> None:
+        self._local.put(tenant_id, dek)
+        self._remote.put(tenant_id, dek)

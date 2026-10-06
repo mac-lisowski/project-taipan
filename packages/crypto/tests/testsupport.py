@@ -19,7 +19,7 @@ class InMemoryDekCache:
     def get(self, tenant_id: str) -> bytes | None:
         return self._deks.get(tenant_id)
 
-    def put(self, tenant_id: str, dek: bytes, ttl_seconds: int) -> None:
+    def put(self, tenant_id: str, dek: bytes) -> None:
         self._deks[tenant_id] = dek
 
 

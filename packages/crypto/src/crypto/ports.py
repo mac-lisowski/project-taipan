@@ -16,14 +16,11 @@ class DekStore(Protocol):
 
 
 class DekCache(Protocol):
-    """Optional cache for unwrapped DEKs. Errors here must degrade, not fail.
-
-    A non-positive ``ttl_seconds`` defers to the adapter's configured default.
-    """
+    """Optional cache for unwrapped DEKs. Errors here must degrade, not fail."""
 
     def get(self, tenant_id: str) -> bytes | None: ...
 
-    def put(self, tenant_id: str, dek: bytes, ttl_seconds: int) -> None: ...
+    def put(self, tenant_id: str, dek: bytes) -> None: ...
 
 
 class KeyResolver(Protocol):

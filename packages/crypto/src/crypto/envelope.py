@@ -26,7 +26,7 @@ def parse(envelope: str) -> tuple[str, bytes, bytes]:
     if len(parts) != 4:
         _reject()
     version, key_id, nonce_b64, ciphertext_b64 = parts
-    if version != _VERSION or not _is_uuid(key_id):
+    if version != _VERSION or not is_valid_key_id(key_id):
         _reject()
     nonce = _decode(nonce_b64)
     ciphertext = _decode(ciphertext_b64)
@@ -36,6 +36,9 @@ def parse(envelope: str) -> tuple[str, bytes, bytes]:
 
 
 def serialize(key_id: str, nonce: bytes, ciphertext: bytes) -> str:
+    # The write path may never emit what parse would reject.
+    if not is_valid_key_id(key_id):
+        _reject()
     return f"{_VERSION}:{key_id}:{encode(nonce)}:{encode(ciphertext)}"
 
 
@@ -43,7 +46,7 @@ def _reject() -> None:
     raise CryptoError(CryptoCategory.ENVELOPE_GRAMMAR, "envelope does not match the v1 grammar")
 
 
-def _is_uuid(key_id: str) -> bool:
+def is_valid_key_id(key_id: str) -> bool:
     if not key_id or not set(key_id) <= _UUID_CHARS:
         return False
     try:
