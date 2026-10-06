@@ -5,21 +5,32 @@ from __future__ import annotations
 from uuid import uuid4
 
 from crypto import tenant_scope
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from api.models import Role, Tenant, User, UserRole, UserTenant
 from api.security import hash_password, verify_password
 
 __all__ = [
+    "SETUP_LOCK_KEY",
+    "AlreadySetup",
     "EmailTaken",
     "NotFound",
     "authenticate",
+    "bootstrap",
     "get",
     "list",
+    "needs_setup",
     "register",
     "remove",
 ]
+
+# Stable advisory-lock key for first-run setup; any fixed 64-bit int works.
+SETUP_LOCK_KEY = 829101
+
+
+class AlreadySetup(Exception):
+    """Setup ran before; the users table is not empty."""
 
 
 class EmailTaken(Exception):
@@ -69,3 +80,18 @@ def list(session: Session) -> list[User]:
 def remove(session: Session, user_id: int) -> None:
     session.delete(get(session, user_id))
     session.flush()
+
+
+def needs_setup(session: Session) -> bool:
+    return session.scalar(select(func.count()).select_from(User)) == 0
+
+
+def bootstrap(session: Session, email: str, password: str) -> User:
+    """First-run setup; a concurrent second caller gets AlreadySetup. Lost role rows need a manual insert."""
+    session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": SETUP_LOCK_KEY})
+    if not needs_setup(session):
+        raise AlreadySetup()
+    user = register(session, email, password)
+    session.add(UserRole(user_id=user.id, role=Role.ADMIN))
+    session.flush()
+    return user

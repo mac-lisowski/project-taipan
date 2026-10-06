@@ -7,7 +7,7 @@ from api.db import Base
 from api.field_crypto import build_and_register_field_crypto
 from api.middleware import TenantScopeMiddleware
 from api.models.encrypted_string import EncryptedString, get_field_crypto, set_field_crypto
-from api.routers import auth_router, profiles_router, users_router
+from api.routers import auth_router, profiles_router, setup_router, users_router
 
 
 def _encrypted_columns_exist() -> bool:
@@ -34,6 +34,7 @@ app.add_middleware(TenantScopeMiddleware)
 app.include_router(users_router, prefix="/api")
 app.include_router(profiles_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
+app.include_router(setup_router, prefix="/api")
 
 
 @app.get("/")

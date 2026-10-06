@@ -6,3 +6,7 @@ class MeOut(BaseModel):
     email: EmailStr
     tenant_id: str
     roles: list[str] = []
+
+
+class SetupStatus(BaseModel):
+    needs_setup: bool
