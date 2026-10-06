@@ -9,7 +9,7 @@ def test_probe_reports_setup_needed_on_empty_table(client):
 
 
 def test_probe_reports_setup_done_after_user_exists(client):
-    seed = client.post("/api/users", json={"email": "u@example.com", "password": "p"})
+    seed = client.post("/api/setup", json={"email": "u@example.com", "password": "p"})
     assert seed.status_code == 201
     assert client.get("/api/setup").json() == {"needs_setup": False}
 
@@ -37,6 +37,8 @@ def test_second_setup_returns_409(client):
 
 
 def test_setup_after_plain_user_exists_returns_409(client):
+    first = client.post("/api/setup", json={"email": "admin@x.com", "password": "p"})
+    assert first.status_code == 201
     seed = client.post("/api/users", json={"email": "u@example.com", "password": "p"})
     assert seed.status_code == 201
     resp = client.post("/api/setup", json={"email": "op@example.com", "password": "p"})

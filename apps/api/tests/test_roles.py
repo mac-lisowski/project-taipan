@@ -30,6 +30,7 @@ def test_require_admin_without_session_returns_401(client, session_factory):
 
 
 def test_require_admin_without_role_returns_403(client, session_factory):
+    _setup(client, "admin@example.com")
     created = client.post(
         "/api/users", json={"email": "plain@example.com", "password": "s3cret123"}
     )
@@ -48,6 +49,7 @@ def test_require_admin_with_admin_role_passes(client, session_factory):
 
 
 def test_register_grants_member_role_by_default(client):
+    _setup(client, "admin@example.com")
     created = client.post(
         "/api/users", json={"email": "regular@example.com", "password": "s3cret123"}
     )
