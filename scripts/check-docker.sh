@@ -57,4 +57,19 @@ for df in apps/*/Dockerfile* docker/*/Dockerfile* .devcontainer/Dockerfile*; do
   done < "$df"
 done
 
+# Completeness: a Dockerfile that installs workspace deps must copy every
+# local package. New packages build locally (editable checkout) and break
+# only in CI without this.
+for df in apps/*/Dockerfile* docker/*/Dockerfile* .devcontainer/Dockerfile*; do
+  [ -f "$df" ] || continue
+  # Normalize like the main loop: join continuations, drop comments.
+  norm=$(sed -e ':a' -e '/\\$/N; s/\\\n/ /; ta' "$df" | grep -vE '^[[:space:]]*#')
+  printf '%s' "$norm" | grep -qiE '^[[:space:]]*run[[:space:]].*uv sync' || continue
+  for manifest in packages/*/pyproject.toml; do
+    pkg=${manifest%/pyproject.toml}
+    printf '%s' "$norm" | grep -qiE "^[[:space:]]*(copy|add)[[:space:]]+.*${pkg}(/| )" \
+      || report "$df missing COPY source for workspace package '$pkg'"
+  done
+done
+
 exit "$fail"
