@@ -117,10 +117,84 @@ def _table_exists(url, name):
         eng.dispose()
 
 
+def _assert_tenancy_ddl(url):
+    """Assert the DDL the migration must ship for the tenancy tables."""
+    eng = create_engine(url)
+    try:
+        with eng.connect() as conn:
+            unique_indexes = (
+                conn.execute(
+                    text(
+                        "SELECT indexname FROM pg_indexes "
+                        "WHERE tablename = 'user_tenants' "
+                        "AND indexdef LIKE '%UNIQUE%user_id%'"
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            assert "ix_user_tenants_user_id" in unique_indexes
+            for table in ("tenants", "user_tenants", "sessions"):
+                assert _table_exists(url, table)
+            on_delete = dict(
+                conn.execute(
+                    text(
+                        "SELECT kcu.column_name, c.confdeltype FROM pg_constraint c "
+                        "JOIN information_schema.key_column_usage kcu "
+                        "ON kcu.constraint_name = c.conname "
+                        "WHERE c.contype = 'f' AND c.conrelid IN "
+                        "('user_tenants'::regclass, 'sessions'::regclass) "
+                        "AND kcu.table_name IN ('user_tenants', 'sessions')"
+                    )
+                ).all()
+            )
+            # user_id cascades on both tables; the tenant link does not.
+            assert on_delete["user_id"] == "c"
+            assert on_delete["tenant_id"] == "a"
+            tenant_id_nullable = conn.execute(
+                text(
+                    "SELECT is_nullable FROM information_schema.columns "
+                    "WHERE table_name = 'user_tenants' AND column_name = 'tenant_id'"
+                )
+            ).scalar_one()
+            assert tenant_id_nullable == "NO"
+    finally:
+        eng.dispose()
+
+
 def test_upgrade_head_builds_expected_user_profiles_ddl(scratch_url):
     cfg = Config(str(ALEMBIC_INI))
     command.upgrade(cfg, "head")
     _assert_profiles_ddl(scratch_url)
+
+
+def test_tenancy_backfill_links_every_user(scratch_url):
+    """Users present before the tenancy migration get a personal tenant."""
+    cfg = Config(str(ALEMBIC_INI))
+    command.upgrade(cfg, "7100c73337f1")
+    eng = create_engine(scratch_url)
+    with eng.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO users (email, hashed_password, is_active) "
+                "VALUES ('a@x.com', 'h', true), ('b@x.com', 'h', true)"
+            )
+        )
+    command.upgrade(cfg, "head")
+    with eng.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT u.id, ut.tenant_id FROM users u "
+                "JOIN user_tenants ut ON ut.user_id = u.id "
+                "ORDER BY u.id"
+            )
+        ).all()
+        assert len(rows) == 2
+        assert len({r.tenant_id for r in rows}) == 2
+        tenant_count = conn.execute(text("SELECT count(*) FROM tenants")).scalar_one()
+        assert tenant_count == 2
+    eng.dispose()
+    _assert_tenancy_ddl(scratch_url)
 
 
 def test_downgrade_upgrade_round_trip(scratch_url):
