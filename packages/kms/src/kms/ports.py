@@ -1,16 +1,15 @@
 """Ports for key management backends.
 
 Call sites depend on these protocols, so swapping the backend is a
-new adapter, not a rewrite.
+new adapter, not a rewrite. Cipher lives in crypto.ports; this
+re-export keeps one definition.
 """
 
 from typing import Protocol
 
+from crypto.ports import Cipher
 
-class Cipher(Protocol):
-    def encrypt(self, key_id: str, data: bytes) -> str: ...
-
-    def decrypt(self, key_id: str, ciphertext: str) -> bytes: ...
+__all__ = ["Cipher", "Provisioning"]
 
 
 class Provisioning(Protocol):

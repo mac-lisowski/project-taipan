@@ -4,12 +4,11 @@ import os
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from kms.ports import Cipher
 
 from crypto.deks import DefaultKeyResolver, DekManager
 from crypto.envelope import NONCE_BYTES, parse, serialize
 from crypto.errors import CryptoCategory, CryptoError
-from crypto.ports import DekCache, DekStore, KeyResolver
+from crypto.ports import Cipher, DekCache, DekStore, KeyResolver
 
 
 class FieldCrypto:

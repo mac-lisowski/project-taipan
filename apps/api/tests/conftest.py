@@ -1,7 +1,8 @@
 import os
 
 import pytest
-from api.db import Base, get_db
+from api import db as db_module
+from api.db import Base
 from api.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
@@ -47,23 +48,20 @@ def session_factory(engine):
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
-@pytest.fixture
-def client(engine, session_factory):
-    def override_get_db():
-        # Mirror get_db: the request boundary commits clean work, rolls back errors.
-        db = session_factory()
-        try:
-            yield db
-            db.commit()
-        except BaseException:
-            db.rollback()
-            raise
-        finally:
-            db.close()
+@pytest.fixture(autouse=True)
+def wipe_users(engine):
+    """User-row hygiene for every test; guards red runs that leave rows."""
+    yield
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM users"))
 
-    app.dependency_overrides[get_db] = override_get_db
+
+@pytest.fixture
+def client(engine, session_factory, monkeypatch):
+    # Point the production get_db at the test factory: the boundary under
+    # test is the real teardown, not a replica of it.
+    monkeypatch.setattr(db_module, "SessionLocal", session_factory)
     yield TestClient(app)
-    app.dependency_overrides.clear()
     with engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
             conn.execute(table.delete())

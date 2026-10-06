@@ -1,6 +1,4 @@
-"""BreakerCipher unit tests. Fake clock, no sleeps, no live KMS."""
-
-import threading
+"""BreakerCipher unit tests. Fake clock, no sleeps, no threads, no live KMS."""
 
 from crypto.breaker import BreakerCipher
 from crypto.errors import CryptoCategory, CryptoError
@@ -162,15 +160,19 @@ def test_non_kms_errors_never_trip():
     assert cipher.decrypt_calls == 5
 
 
-class BlockingCipher:
-    """Cipher that fails fast a set number of times, then blocks
-    until released; signals entry."""
+class ReentrantCipher:
+    """The first decrypt re-enters the breaker mid-probe.
+
+    Deterministic stand-in for a concurrent second caller while the
+    probe is in flight: the nested call must be denied, the outer
+    call completes and closes the breaker.
+    """
 
     def __init__(self, fail_first: int) -> None:
         self.decrypt_calls = 0
-        self.entered = threading.Event()
-        self.release = threading.Event()
+        self.nested: list = []
         self._fail_first = fail_first
+        self.breaker: BreakerCipher | None = None
 
     def encrypt(self, key_id: str, data: bytes) -> str:
         raise AssertionError("not used")
@@ -179,43 +181,31 @@ class BlockingCipher:
         self.decrypt_calls += 1
         if self.decrypt_calls <= self._fail_first:
             raise KmsError("down")
-        self.entered.set()
-        assert self.release.wait(timeout=5)
+        if self.breaker is not None:
+            breaker, self.breaker = self.breaker, None  # re-enter once: the probe
+            try:
+                breaker.decrypt(key_id, ciphertext)
+            except CryptoError as e:
+                self.nested.append(e.category)
         return b"plain"
 
 
 def test_cooldown_admits_exactly_one_probe():
-    blocking = BlockingCipher(fail_first=2)
+    # The probe call re-enters the breaker: the nested call is the
+    # "second concurrent caller" and must be denied while probing.
+    cipher = ReentrantCipher(fail_first=2)
     clock = FakeClock()
-    breaker = make_breaker(blocking, 2, 30.0, clock)
+    breaker = make_breaker(cipher, 2, 30.0, clock)
+    cipher.breaker = breaker
     for _ in range(2):
         expect_error(KmsError, breaker.decrypt, "key-1", "ciphertext")
     clock.advance(31.0)
-    calls = blocking.decrypt_calls
-    errors: list = []
-
-    def run_probe():
-        try:
-            breaker.decrypt("key-1", "ciphertext")
-        except Exception as e:  # noqa: BLE001 - collected and asserted below
-            errors.append(e)
-
-    probe = threading.Thread(target=run_probe)
-    probe.start()
-    assert blocking.entered.wait(timeout=5)
-    try:
-        breaker.decrypt("key-1", "ciphertext")
-    except CryptoError as e:
-        assert e.category is CryptoCategory.KMS_UNAVAILABLE
-    else:
-        raise AssertionError("expected CryptoError")
-    finally:
-        blocking.release.set()
-    probe.join(timeout=5)
-    assert not probe.is_alive()
-    assert errors == []
-    assert blocking.decrypt_calls == calls + 1
+    # Probe: outer call admitted, nested one denied, outer closes.
     assert breaker.decrypt("key-1", "ciphertext") == b"plain"
+    assert cipher.nested == [CryptoCategory.KMS_UNAVAILABLE]
+    # Closed again: the next call goes through the wrapped cipher.
+    assert breaker.decrypt("key-1", "ciphertext") == b"plain"
+    assert cipher.decrypt_calls == 4
 
 
 def test_rejects_bad_config():

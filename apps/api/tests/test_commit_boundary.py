@@ -6,15 +6,7 @@ from api.db import DbSession
 from api.main import app
 from api.models import User
 from api.security import verify_password
-from sqlalchemy import delete, select
-
-
-@pytest.fixture(autouse=True)
-def _wipe_users(engine):
-    """Red runs can leak rows via direct-session writes; keep tests isolated."""
-    yield
-    with engine.begin() as conn:
-        conn.execute(delete(User))
+from sqlalchemy import select
 
 
 def test_register_does_not_commit(session_factory):

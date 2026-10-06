@@ -8,11 +8,9 @@ import logging
 import threading
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from kms import KmsError
-from kms.ports import Cipher
 
-from crypto.errors import CryptoCategory, CryptoError
-from crypto.ports import DekCache, DekStore
+from crypto.errors import CipherError, CryptoCategory, CryptoError
+from crypto.ports import Cipher, DekCache, DekStore
 
 _log = logging.getLogger(__name__)
 
@@ -88,7 +86,7 @@ class DekManager:
             if dek is None:
                 try:
                     dek = self._cipher.decrypt(key_id, wrapped)
-                except KmsError:
+                except CipherError:
                     # The Cipher message may carry backend detail; keep it out.
                     raise CryptoError(
                         CryptoCategory.DECRYPT_FAILURE,
@@ -101,7 +99,7 @@ class DekManager:
     def _wrap(self, key_id: str, dek: bytes) -> str:
         try:
             return self._cipher.encrypt(key_id, dek)
-        except KmsError:  # a wrap failure is not a decrypt failure
+        except CipherError:  # a wrap failure is not a decrypt failure
             raise CryptoError(
                 CryptoCategory.WRAP_FAILURE, "the data key could not be wrapped"
             ) from None

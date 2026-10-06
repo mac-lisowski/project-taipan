@@ -23,6 +23,18 @@ class DekCache(Protocol):
     def put(self, tenant_id: str, dek: bytes) -> None: ...
 
 
+class Cipher(Protocol):
+    """Key wrapping/unwrapping over a provider.
+
+    Implementations raise ``CipherError`` on provider failure; the
+    breaker counts exactly that type.
+    """
+
+    def encrypt(self, key_id: str, data: bytes) -> str: ...
+
+    def decrypt(self, key_id: str, ciphertext: str) -> bytes: ...
+
+
 class KeyResolver(Protocol):
     """Tenant to KMS key id. Per-tenant keys later change only this."""
 

@@ -283,14 +283,10 @@ version = "0.1.0"
 source = { editable = "packages/crypto" }
 dependencies = [
     { name = "cryptography" },
-    { name = "kms" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "cryptography", specifier = ">=44" },
-    { name = "kms", editable = "packages/kms" },
-]
+requires-dist = [{ name = "cryptography", specifier = ">=44" }]
 
 [[package]]
 name = "cryptography"
@@ -492,11 +488,15 @@ name = "kms"
 version = "0.1.0"
 source = { editable = "packages/kms" }
 dependencies = [
+    { name = "crypto" },
     { name = "httpx2" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "httpx2", specifier = ">=2.13.1" }]
+requires-dist = [
+    { name = "crypto", editable = "packages/crypto" },
+    { name = "httpx2", specifier = ">=2.13.1" },
+]
 
 [[package]]
 name = "mako"

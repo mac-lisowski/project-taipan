@@ -4,15 +4,6 @@ import pytest
 from api import users
 from api.models import User
 from api.security import verify_password
-from sqlalchemy import delete
-
-
-@pytest.fixture(autouse=True)
-def _wipe_users(engine):
-    """Failed tests roll back on session close; the wipe guards red runs too."""
-    yield
-    with engine.begin() as conn:
-        conn.execute(delete(User))
 
 
 def test_register_hashes_password(session_factory):

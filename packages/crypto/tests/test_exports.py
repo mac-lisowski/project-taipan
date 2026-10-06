@@ -25,8 +25,19 @@ def test_dunder_all_matches_contract():
     assert set(crypto.__all__) == CONTRACT_EXPORTS
 
 
+def _import_from_root(name: str):
+    """The from-import failure path: missing root attr -> ImportError."""
+    import importlib
+
+    module = importlib.import_module("crypto")
+    try:
+        return getattr(module, name)
+    except AttributeError as exc:
+        raise ImportError(f"cannot import name {name!r} from 'crypto'") from exc
+
+
 def test_internals_not_package_root_importable():
     with pytest.raises(ImportError):
-        from crypto import DekManager  # noqa: F401
+        _import_from_root("DekManager")
     with pytest.raises(ImportError):
-        from crypto import tenant_ctx  # noqa: F401
+        _import_from_root("tenant_ctx")

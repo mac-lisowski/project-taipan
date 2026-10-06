@@ -5,19 +5,17 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from kms import KmsError
-from kms.ports import Cipher
-
-from crypto.errors import CryptoCategory, CryptoError
+from crypto.errors import CipherError, CryptoCategory, CryptoError
+from crypto.ports import Cipher
 
 
 class BreakerCipher:
     """A Cipher that opens after N consecutive KMS failures.
 
-    Closed calls pass through and count consecutive `KmsError`s.
+    Closed calls pass through and count consecutive ``CipherError``s.
     Open calls raise `kms_unavailable` without touching the wrapped
     cipher. After the cooldown one probe call goes through: success
-    closes, `KmsError` re-opens. Other exceptions propagate and
+    closes, ``CipherError`` re-opens. Other exceptions propagate and
     never move the state machine.
     """
 
@@ -67,7 +65,7 @@ class BreakerCipher:
             probe = self._open
         try:
             result = method(*args)
-        except KmsError:
+        except CipherError:
             with self._lock:
                 self._on_kms_failure_locked(probe)
             raise

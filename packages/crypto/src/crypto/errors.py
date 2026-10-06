@@ -14,6 +14,7 @@ class CryptoCategory(str, Enum):
     WRAP_FAILURE = "wrap_failure"
     MISSING_TENANT_SCOPE = "missing_tenant_scope"
     UNKNOWN_DEK = "unknown_dek"
+    KMS_FAILURE = "kms_failure"
     KMS_UNAVAILABLE = "kms_unavailable"
 
 
@@ -24,3 +25,10 @@ class CryptoError(Exception):
         super().__init__(message)
         self.category = category
         self.message = message
+
+
+class CipherError(CryptoError):
+    """A Cipher port failure. Adapters raise it; the breaker counts it."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(CryptoCategory.KMS_FAILURE, message)
