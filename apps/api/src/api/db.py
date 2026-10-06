@@ -23,9 +23,14 @@ class Base(DeclarativeBase):
 
 
 def get_db() -> Iterator[Session]:
+    """The request owns the transaction: commit on success, roll back on any error."""
     db = SessionLocal()
     try:
         yield db
+        db.commit()
+    except BaseException:
+        db.rollback()
+        raise
     finally:
         db.close()
 
