@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { proxyUpstream } from "@/lib/upstream-proxy";
-import { apiInternalUrl, publicOrigin } from "@/app/api/upstream";
+import { apiInternalUrl, publicOrigin } from "../env";
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

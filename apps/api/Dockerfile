@@ -29,8 +29,12 @@ COPY packages/kms packages/kms
 COPY packages/crypto packages/crypto
 COPY apps/api apps/api
 RUN uv sync --frozen --no-dev --package api \
+    && chmod +x apps/api/entrypoint.sh \
     && useradd --system --uid 10001 app && chown -R app:app /app
+
+ENV API_AUTO_MIGRATE=1
 
 USER app
 EXPOSE 8000
+ENTRYPOINT ["/app/apps/api/entrypoint.sh"]
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

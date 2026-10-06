@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from core import greet
@@ -20,6 +21,10 @@ def _encrypted_columns_exist() -> bool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if os.environ.get("API_AUTO_MIGRATE", "").lower() in ("1", "true", "yes"):
+        from api import db_cli
+
+        db_cli.upgrade()
     # Registers the crypto module when Infisical config exists; off otherwise.
     build_and_register_field_crypto()
     if _encrypted_columns_exist() and get_field_crypto() is None:
