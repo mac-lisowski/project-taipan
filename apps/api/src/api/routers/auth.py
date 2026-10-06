@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Request, Response
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from api import authz, sessions, users
 from api.db import DbSession
@@ -25,11 +27,10 @@ def logout(request: Request, response: Response) -> None:
 
 
 @router.get("/me", response_model=MeOut)
-def me(request: Request, db: DbSession) -> MeOut:
-    sess = authz.resolve_session(request)
-    if sess is None:
-        raise HTTPException(status_code=401, detail="not authenticated")
-    user = authz.current_user(request, db)
+def me(principal: Annotated[authz.Principal, Depends(authz.current_principal)]) -> MeOut:
     return MeOut(
-        id=user.id, email=user.email, tenant_id=sess.tenant_id, roles=authz.roles_for(db, user.id)
+        id=principal.user_id,
+        email=principal.email,
+        tenant_id=principal.tenant_id,
+        roles=list(principal.roles),
     )

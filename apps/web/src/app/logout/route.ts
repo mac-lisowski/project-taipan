@@ -1,13 +1,13 @@
-import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicOrigin, revokeSession } from "@/app/api/upstream";
+import { clearSessionCookie, getSessionToken } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Logout is a navigation, not a background request.
 export async function GET(req: NextRequest): Promise<Response> {
-  const session = (await cookies()).get("session")?.value;
+  const session = await getSessionToken();
   if (session !== undefined) await revokeSession(session);
   const forwardedHost = req.headers.get("x-forwarded-host");
   const host = forwardedHost ?? req.headers.get("host");
@@ -15,6 +15,6 @@ export async function GET(req: NextRequest): Promise<Response> {
   // Self redirect only, never an upstream address.
   const origin = publicOrigin() ?? (host !== null ? `${proto}://${host}` : new URL(req.url).origin);
   const res = NextResponse.redirect(new URL("/", origin));
-  res.cookies.set("session", "", { maxAge: 0, path: "/" });
+  clearSessionCookie(res);
   return res;
 }
