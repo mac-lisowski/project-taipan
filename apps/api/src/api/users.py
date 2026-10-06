@@ -53,13 +53,6 @@ def authenticate(session: Session, email: str, password: str) -> User | None:
     return user
 
 
-def with_tenant(session: Session, user_id: int) -> User | None:
-    user = session.get(User, user_id)
-    if user is None or user.tenant_link is None:
-        return None
-    return user
-
-
 def get(session: Session, user_id: int) -> User:
     user = session.get(User, user_id)
     if user is None:

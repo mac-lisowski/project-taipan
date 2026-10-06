@@ -1,3 +1,4 @@
+from crypto import current_tenant
 from fastapi import APIRouter, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
@@ -8,16 +9,14 @@ from api.schemas import MeOut, UserCreate, UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-SESSION_COOKIE = "session"
-
 
 def _set_session_cookie(response: Response, token: str) -> None:
     # Secure stays out until the app serves https only.
-    response.set_cookie(SESSION_COOKIE, token, httponly=True, samesite="lax", path="/")
+    response.set_cookie(sessions.COOKIE_NAME, token, httponly=True, samesite="lax", path="/")
 
 
 def _resolve_session(request: Request, db: Session) -> AuthSession | None:
-    token = request.cookies.get(SESSION_COOKIE)
+    token = request.cookies.get(sessions.COOKIE_NAME)
     return sessions.resolve(db, token) if token else None
 
 
@@ -44,14 +43,15 @@ def logout(request: Request, response: Response, db: DbSession) -> None:
     row = _resolve_session(request, db)
     if row is not None:
         sessions.revoke(db, row)
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(sessions.COOKIE_NAME, path="/")
 
 
 @router.get("/me", response_model=MeOut)
 def me(request: Request, db: DbSession) -> MeOut:
     row = _resolve_session(request, db)
-    user = users.with_tenant(db, row.user_id) if row else None
-    if user is None or user.tenant_link is None:
-        # A missing session or link row scopes nothing.
+    user = db.get(User, row.user_id) if row else None
+    tenant_id = current_tenant()
+    if user is None or tenant_id is None:
+        # A missing session or an unscoped request proves no link row.
         raise HTTPException(status_code=401, detail="not authenticated")
-    return MeOut(id=user.id, email=user.email, tenant_id=user.tenant_link.tenant_id)
+    return MeOut(id=user.id, email=user.email, tenant_id=tenant_id)

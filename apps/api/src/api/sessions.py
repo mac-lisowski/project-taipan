@@ -6,13 +6,15 @@ import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from api.models import AuthSession
+from api.models import AuthSession, UserTenant
 
-__all__ = ["mint", "resolve", "revoke"]
+__all__ = ["COOKIE_NAME", "mint", "resolve", "revoke", "tenant_id_for_token"]
 
 SESSION_DAYS = 7
+COOKIE_NAME = "session"
 
 
 def _digest(token: str) -> str:
@@ -42,3 +44,14 @@ def resolve(session: Session, token: str) -> AuthSession | None:
     if row is None or row.expires_at <= datetime.now(UTC):
         return None
     return row
+
+
+def tenant_id_for_token(session: Session, token: str) -> str | None:
+    return session.scalar(
+        select(UserTenant.tenant_id)
+        .join(AuthSession, AuthSession.user_id == UserTenant.user_id)
+        .where(
+            AuthSession.token_sha256 == _digest(token),
+            AuthSession.expires_at > datetime.now(UTC),
+        )
+    )
