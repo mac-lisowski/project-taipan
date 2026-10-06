@@ -149,6 +149,20 @@ test("maps an upstream fetch failure to a 502", async () => {
   await expect(res.json()).resolves.toEqual({ detail: "upstream unavailable" });
 });
 
+// A bad config is a proxy bug, not an upstream failure: it must throw,
+// not hide behind a 502 body.
+test("a construction error propagates instead of surfacing as 502", async () => {
+  const { fetchImpl, calls } = recordingFetch();
+  await expect(
+    proxyUpstream(request("/api/things"), {
+      upstreamUrl: UPSTREAM,
+      publicOrigin: "http://[bad",
+      fetchImpl,
+    }),
+  ).rejects.toThrow(TypeError);
+  expect(calls).toHaveLength(0);
+});
+
 test("forwards method and streaming body with manual redirects", async () => {
   const { fetchImpl, calls } = recordingFetch();
   const source = request("/api/things", { method: "POST", body: "payload" });
