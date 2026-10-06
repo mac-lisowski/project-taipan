@@ -1,4 +1,6 @@
 import os
+import uuid
+from pathlib import Path
 
 import pytest
 from api import db as db_module
@@ -9,6 +11,7 @@ from api_testsupport import KEY_ID, MapStore, StubCipher
 from crypto import FieldCrypto
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
@@ -20,6 +23,32 @@ TEST_URL = os.environ.get(
     "API_TEST_URL",
     "postgresql+psycopg://postgres:postgres@localhost:5432/app_test",
 )
+ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
+
+
+@pytest.fixture
+def scratch_url(monkeypatch):
+    """Unique scratch database per run; env rewired so env.py uses it."""
+    try:
+        admin = create_engine(ADMIN_URL, isolation_level="AUTOCOMMIT")
+        with admin.connect():
+            pass
+    except OperationalError:
+        pytest.skip("postgres not running (docker compose up -d)")
+
+    dbname = f"app_test_alembic_{uuid.uuid4().hex[:10]}"
+    with admin.connect() as conn:
+        conn.execute(text(f'CREATE DATABASE "{dbname}"'))
+
+    url = make_url(TEST_URL).set(database=dbname).render_as_string(hide_password=False)
+    # env.py imports DATABASE_URL from api.db at run time, so both must
+    # point at the scratch DB before any alembic command executes.
+    monkeypatch.setattr("api.db.DATABASE_URL", url)
+    monkeypatch.setenv("API_DATABASE_URL", url)
+    yield url
+    with admin.connect() as conn:
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{dbname}" WITH (FORCE)'))
+    admin.dispose()
 
 
 @pytest.fixture(scope="session")

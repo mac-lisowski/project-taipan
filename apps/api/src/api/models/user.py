@@ -21,7 +21,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
-    # Pattern A: identity stays here; profile data belongs to the
+    # Core identity stays here; profile data belongs to the
     # user_profiles extension table. ORM cascade mirrors the DB cascade.
     profile: Mapped["UserProfile | None"] = relationship(
         "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"

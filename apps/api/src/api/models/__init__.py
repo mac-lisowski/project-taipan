@@ -6,14 +6,17 @@ from api.models.encrypted_string import EncryptedString
 from api.models.profile import UserProfile
 from api.models.tenant import Tenant
 from api.models.user import User
+from api.models.user_role import Role, UserRole
 from api.models.user_tenant import UserTenant
 
 __all__ = [
     "AuthSession",
     "EncryptedString",
+    "Role",
     "Tenant",
     "TenantDek",
     "User",
     "UserProfile",
+    "UserRole",
     "UserTenant",
 ]

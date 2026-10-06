@@ -8,7 +8,7 @@ from crypto import tenant_scope
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from api.models import Tenant, User, UserTenant
+from api.models import Role, Tenant, User, UserRole, UserTenant
 from api.security import hash_password, verify_password
 
 __all__ = [
@@ -41,6 +41,7 @@ def register(session: Session, email: str, password: str) -> User:
         session.add(user)
         session.flush()
         session.add(UserTenant(user_id=user.id, tenant_id=tenant.id))
+        session.add(UserRole(user_id=user.id, role=Role.MEMBER))
         session.flush()
         session.refresh(user)
     return user

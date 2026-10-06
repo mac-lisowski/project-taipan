@@ -4,12 +4,12 @@ from api.models import User, UserProfile
 from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 
-# Pattern A: identity and credential columns only; a feature column here
-# means someone skipped the extension table.
+# Core models carry identity and credential columns only; a feature
+# column here means someone skipped the extension table.
 USER_COLUMNS = {"id", "email", "hashed_password", "is_active", "created_at", "updated_at"}
 
 
-def test_users_table_columns_are_locked_to_pattern_a(engine):
+def test_users_table_columns_are_locked_to_core_identity(engine):
     column_names = {col["name"] for col in inspect(engine).get_columns("users")}
     assert column_names == USER_COLUMNS
 

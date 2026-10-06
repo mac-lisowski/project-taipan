@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class UserProfile(Base):
-    """Pattern A extension table: profile data lives here, never on users."""
+    """Extension table: profile data lives here, never on users."""
 
     __tablename__ = "user_profiles"
     __table_args__ = (
