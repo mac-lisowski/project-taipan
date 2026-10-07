@@ -119,7 +119,7 @@ describe("reduceSwitchView", () => {
     expect(view).toEqual({ state: "saved", enabled: false });
   });
 
-  it("carries the API message in the save error state", () => {
+  it("reverts to the pre-flip value when the save fails", () => {
     const view = reduceSwitchView(
       { state: "saving", enabled: false },
       {
@@ -130,7 +130,7 @@ describe("reduceSwitchView", () => {
     expect(view).toEqual({
       state: "error",
       message: "system owner role required",
-      enabled: false,
+      enabled: true,
     });
   });
 });

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useReducer } from "react";
-import type { FormEvent, ReactNode } from "react";
-import { Button } from "@/ui";
+import type { ReactNode } from "react";
+import { Switch } from "@/ui";
 import {
   loadRegistrationSwitch,
   reduceSwitchView,
@@ -10,9 +10,7 @@ import {
   switchValue,
 } from "@/lib/system-settings";
 
-// Owner control for the sign up switch. Load paints the stored value,
-// save paints the outcome; the endpoint result is the only source, so
-// the checkbox itself never carries state.
+// Flip saves at once; the endpoint result is the only source of switch state.
 export function RegistrationSwitch(): ReactNode {
   const [view, dispatch] = useReducer(reduceSwitchView, { state: "loading" });
 
@@ -29,41 +27,39 @@ export function RegistrationSwitch(): ReactNode {
   const enabled = switchValue(view);
   const busy = view.state === "loading" || view.state === "saving";
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  function onToggle(next: boolean) {
     if (enabled === null || busy) return;
-    const next = !enabled;
     dispatch({ type: "save_started", enabled: next });
-    const result = await setRegistrationSwitch(next);
-    dispatch({ type: "save_finished", result });
+    void setRegistrationSwitch(next).then((result) => {
+      dispatch({ type: "save_finished", result });
+    });
   }
 
-  const actionLabel =
-    enabled === null ? "loading…" : enabled ? "close sign up" : "open sign up";
+  const stateWord = enabled ? "open" : "closed";
+  const stateLabel =
+    view.state === "loading"
+      ? "loading…"
+      : view.state === "saving"
+        ? "saving…"
+        : stateWord;
 
   return (
-    <form onSubmit={onSubmit} className="flex w-full flex-col gap-3">
-      <label className="flex items-center gap-3 font-mono text-xs">
-        <input
-          type="checkbox"
+    <div className="flex w-full flex-col gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+          registration
+        </p>
+        <Switch
           checked={enabled === true}
-          readOnly
-          disabled={busy}
+          onCheckedChange={onToggle}
+          disabled={busy || enabled === null}
           aria-label="registration enabled"
-          className="size-4 accent-emerald-400"
         />
-        registration {enabled === null ? "…" : enabled ? "open" : "closed"}
-      </label>
-      <Button
-        type="submit"
-        disabled={busy || enabled === null}
-        className="font-mono text-[11px] uppercase tracking-[0.25em]"
-      >
-        {view.state === "saving" ? "saving…" : actionLabel}
-      </Button>
+      </div>
+      <p className="font-mono text-xs">sign up is {stateLabel}</p>
       {view.state === "saved" && (
         <p role="status" className="font-mono text-[10px] tracking-[0.15em] text-emerald-400">
-          saved. sign up is {view.enabled ? "open" : "closed"}.
+          saved. sign up is {stateWord}.
         </p>
       )}
       {view.state === "error" && (
@@ -71,6 +67,6 @@ export function RegistrationSwitch(): ReactNode {
           err: {view.message}
         </p>
       )}
-    </form>
+    </div>
   );
 }

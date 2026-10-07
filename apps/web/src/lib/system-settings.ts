@@ -77,7 +77,8 @@ export function reduceSwitchView(
         : {
             state: "error",
             message: action.result.error,
-            enabled: view.enabled,
+            // A failed save reverts to the pre-flip value; the server kept it.
+            enabled: !view.enabled,
           };
   }
 }

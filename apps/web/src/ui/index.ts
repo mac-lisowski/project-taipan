@@ -11,3 +11,4 @@ export { NewsCard } from "./components/news-card";
 export { Panel, PanelHeader } from "./components/panel";
 export { Sparkline } from "./components/sparkline";
 export { Stat } from "./components/stat";
+export { Switch } from "./components/switch";
