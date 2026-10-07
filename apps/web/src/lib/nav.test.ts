@@ -32,7 +32,10 @@ describe("privateNav", () => {
       },
       {
         heading: "system",
-        items: [{ href: "/settings", label: "settings", icon: "gear" }],
+        items: [
+          { href: "/users", label: "users", icon: "users" },
+          { href: "/settings", label: "settings", icon: "gear" },
+        ],
       },
     ]);
   });

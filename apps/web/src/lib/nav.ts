@@ -4,7 +4,7 @@ export const SYSTEM_OWNER_ROLE = "system_owner";
 export type NavItem = {
   href: string;
   label: string;
-  icon?: "gear";
+  icon?: "gear" | "users";
 };
 
 export type NavSection = {
@@ -28,7 +28,10 @@ export function privateNav(systemRoles: string[]): NavSection[] {
   if (systemRoles.includes(SYSTEM_OWNER_ROLE)) {
     sections.push({
       heading: "system",
-      items: [{ href: "/settings", label: "settings", icon: "gear" }],
+      items: [
+        { href: "/users", label: "users", icon: "users" },
+        { href: "/settings", label: "settings", icon: "gear" },
+      ],
     });
   }
   return sections;

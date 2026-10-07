@@ -2,6 +2,7 @@
 // Components must accept className and merge it via cn().
 
 export { cn } from "./lib/utils";
+export { Badge } from "./components/badge";
 export { Button } from "./components/button";
 export { CodeTabs, type CodeTab } from "./components/code-tabs";
 export { Field } from "./components/field";
@@ -12,3 +13,13 @@ export { Panel, PanelHeader } from "./components/panel";
 export { Sparkline } from "./components/sparkline";
 export { Stat } from "./components/stat";
 export { Switch } from "./components/switch";
+export {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./components/table";
