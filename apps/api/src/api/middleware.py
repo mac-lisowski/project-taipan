@@ -17,7 +17,10 @@ class TenantScopeMiddleware(BaseHTTPMiddleware):
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         token = request.cookies.get(sessions.COOKIE_NAME)
-        tenant_id = sessions.tenant_id_for_token(token) if token else None
+        sess = sessions.resolve(token) if token else None
+        if token:
+            sessions.remember_resolved_session(request, token, sess)
+        tenant_id = sess.tenant_id if sess is not None else None
         if tenant_id is None:
             # Unresolvable sessions run unscoped; encrypted writes fail loud.
             return await call_next(request)

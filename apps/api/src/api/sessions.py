@@ -13,6 +13,7 @@ from api.kvstore import KVStore, get_session_store
 
 if TYPE_CHECKING:
     from fastapi import Response
+    from starlette.requests import Request
 
 __all__ = [
     "COOKIE_NAME",
@@ -129,3 +130,22 @@ def tenant_id_for_token(token: str, store: KVStore | None = None) -> str | None:
     """Return tenant_id for session token without opening database session."""
     sess = resolve(token, store)
     return sess.tenant_id if sess is not None else None
+
+
+# One resolve per request: middleware stashes its read here, authz reuses
+# it when the cookie still matches. A changed cookie misses and resolves
+# fresh, so a stale value can never authorize a different token.
+_REQUEST_CACHE_ATTR = "_resolved_session"
+
+
+def remember_resolved_session(request: Request, token: str, data: SessionData | None) -> None:
+    """Stash this request's resolve, bound to the token that produced it."""
+    request.state.__dict__[_REQUEST_CACHE_ATTR] = (token, data)
+
+
+def cached_session(request: Request, token: str) -> tuple[bool, SessionData | None]:
+    """Return (found, data) when this request already resolved this token."""
+    hit = request.state.__dict__.get(_REQUEST_CACHE_ATTR)
+    if hit is None or hit[0] != token:
+        return False, None
+    return True, hit[1]

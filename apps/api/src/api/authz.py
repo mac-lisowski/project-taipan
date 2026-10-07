@@ -38,7 +38,14 @@ def roles_for(db: Session, user_id: int) -> list[str]:
 
 def resolve_session(request: Request) -> sessions.SessionData | None:
     token = request.cookies.get(sessions.COOKIE_NAME)
-    return sessions.resolve(token) if token else None
+    if not token:
+        return None
+    found, data = sessions.cached_session(request, token)
+    if found:
+        return data
+    data = sessions.resolve(token)
+    sessions.remember_resolved_session(request, token, data)
+    return data
 
 
 def current_principal(request: Request, db: DbSession) -> Principal:

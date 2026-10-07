@@ -153,6 +153,7 @@ def get_session_store() -> KVStore:
 
 
 def set_session_store(store: KVStore | None) -> None:
+    # Kept for the autouse conftest fixture: it swaps the store per test.
     """Set active session store for testing or lifecycle wiring."""
     global _session_store
     _session_store = store
