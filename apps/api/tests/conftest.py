@@ -3,12 +3,18 @@ from pathlib import Path
 
 import pytest
 from api import db as db_module
-from api.config import get_config
 from api.db import Base
 from api.kvstore import SESSION_KEYS, MemoryKVStore, set_session_store
 from api.main import app
 from api.models.encrypted_string import set_field_crypto
-from api_testsupport import KEY_ID, FakeClock, MapStore, StubCipher
+from api_testsupport import (
+    KEY_ID,
+    TEST_ADMIN_URL,
+    TEST_URL,
+    FakeClock,
+    MapStore,
+    StubCipher,
+)
 from crypto import FieldCrypto
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
@@ -16,8 +22,6 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
-ADMIN_URL = get_config().test_admin_url
-TEST_URL = get_config().test_database_url
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
 
@@ -25,7 +29,7 @@ ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 def scratch_url(monkeypatch):
     """Unique scratch database per run; env rewired so env.py uses it."""
     try:
-        admin = create_engine(ADMIN_URL, isolation_level="AUTOCOMMIT")
+        admin = create_engine(TEST_ADMIN_URL, isolation_level="AUTOCOMMIT")
         with admin.connect():
             pass
     except OperationalError:
@@ -50,7 +54,7 @@ def scratch_url(monkeypatch):
 def engine():
     """One `app_test` database per test run, recreated clean."""
     try:
-        admin = create_engine(ADMIN_URL, isolation_level="AUTOCOMMIT")
+        admin = create_engine(TEST_ADMIN_URL, isolation_level="AUTOCOMMIT")
         with admin.connect() as conn:
             exists = conn.execute(
                 text("SELECT 1 FROM pg_database WHERE datname = 'app_test'")

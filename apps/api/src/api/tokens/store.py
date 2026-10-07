@@ -16,7 +16,7 @@ _token_store: KVStore | None = None
 
 def build_token_store() -> RedisKVStore:
     """Build production Redis token store from configuration."""
-    client = Redis.from_url(get_config().redis_url)
+    client = Redis.from_url(get_config().store.redis_url)
     # Own namespace keeps token digests out of the session keyspace.
     return RedisKVStore(client, namespace=TOKEN_KEYS)
 

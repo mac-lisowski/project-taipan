@@ -1,9 +1,21 @@
 """Shared fakes and constants for the api tests. No network, no real KMS."""
 
 import base64
+import os
 import uuid
 
 KEY_ID = "5f0c9a1e-2222-4333-8444-555566667777"
+
+# Test databases are the suite's business, not production Config's.
+# Read at import so docker/devcontainer env overrides keep working.
+TEST_ADMIN_URL = os.environ.get(
+    "API_TEST_ADMIN_URL",
+    "postgresql+psycopg://postgres:postgres@localhost:5432/postgres",
+)
+TEST_URL = os.environ.get(
+    "API_TEST_URL",
+    "postgresql+psycopg://postgres:postgres@localhost:5432/app_test",
+)
 
 
 def unique_tenant() -> str:

@@ -161,5 +161,5 @@ def set_session_store(store: KVStore | None) -> None:
 def build_session_store(config: Config | None = None) -> KVStore:
     """Build production Redis session store from configuration."""
     cfg = config or get_config()
-    client = Redis.from_url(cfg.redis_url)
+    client = Redis.from_url(cfg.store.redis_url)
     return RedisKVStore(client, namespace=SESSION_KEYS)

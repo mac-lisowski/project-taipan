@@ -15,6 +15,7 @@ from collections.abc import Iterator
 from typing import NamedTuple
 
 import pytest
+from api.config import DEFAULT_DEK_CACHE_L1_TTL, DEFAULT_DEK_CACHE_TTL
 from api.dek_cache import (
     KEY_PREFIX,
     LocalTtlDekCache,
@@ -22,7 +23,6 @@ from api.dek_cache import (
     TwoTierDekCache,
 )
 from api.dek_store import PostgresDekStore
-from api.field_crypto import DEFAULT_DEK_CACHE_TTL_SECONDS, DEFAULT_DEK_L1_TTL_SECONDS
 from api_testsupport import KEY_ID, unique_tenant
 from crypto import NONCE_BYTES, CryptoCategory, CryptoError, FieldCrypto, parse
 from kms import KmsError
@@ -77,8 +77,8 @@ def make_module(key_id: str, engine) -> FieldCrypto:
     """A fresh FieldCrypto wired like production; no shared warm state."""
     store = PostgresDekStore(sessionmaker(bind=engine, expire_on_commit=False), key_id)
     cache = TwoTierDekCache(
-        local=LocalTtlDekCache(DEFAULT_DEK_L1_TTL_SECONDS),
-        remote=RedisDekCache(Redis.from_url(REDIS_URL), ttl_seconds=DEFAULT_DEK_CACHE_TTL_SECONDS),
+        local=LocalTtlDekCache(DEFAULT_DEK_CACHE_L1_TTL),
+        remote=RedisDekCache(Redis.from_url(REDIS_URL), ttl_seconds=DEFAULT_DEK_CACHE_TTL),
     )
     cipher = InfisicalCipher(INFISICAL_URL, TOKEN)
     return FieldCrypto(cipher=cipher, store=store, default_key_id=key_id, cache=cache)

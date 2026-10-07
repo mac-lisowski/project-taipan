@@ -8,7 +8,7 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from api import tenant_guard
 from api.config import get_config
 
-DATABASE_URL = get_config().database_url
+DATABASE_URL = get_config().db.database_url
 
 engine = create_engine(
     DATABASE_URL,

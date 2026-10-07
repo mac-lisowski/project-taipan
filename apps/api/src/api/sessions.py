@@ -75,7 +75,7 @@ def mint(
 ) -> str:
     """Mint new session token and store user_id and tenant_id with TTL."""
     s = _store(store)
-    ttl = ttl_seconds if ttl_seconds is not None else get_config().session_ttl_seconds
+    ttl = ttl_seconds if ttl_seconds is not None else get_config().store.session_ttl_seconds
     token = secrets.token_urlsafe(32)
     digest = _digest(token)
     epoch = _current_epoch(s, user_id)

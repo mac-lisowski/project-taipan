@@ -20,8 +20,8 @@ class StubTransport:
 def test_mail_config_defaults_to_fake() -> None:
     cfg = Config.from_env({})
 
-    assert cfg.resend_api_key == ""
-    assert cfg.mail_from_address == DEFAULT_MAIL_FROM
+    assert cfg.mail.resend_api_key == ""
+    assert cfg.mail.mail_from_address == DEFAULT_MAIL_FROM
 
 
 def test_blank_from_with_key_fails_loud() -> None:
@@ -103,5 +103,6 @@ def test_key_never_reaches_web_client(monkeypatch: pytest.MonkeyPatch) -> None:
         schema = client.get("/openapi.json")
 
     assert root.status_code == 200
+    assert schema.status_code == 200
     assert key not in root.text
     assert key not in schema.text
