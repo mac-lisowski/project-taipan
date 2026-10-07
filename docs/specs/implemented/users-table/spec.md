@@ -1,6 +1,6 @@
 # Spec: Users Table
 
-Status: planned.
+Status: implemented (PR #40).
 
 Seam: this is a web only feature. The page reads the existing users
 endpoint through the BFF. Pure choice functions own search, filter,
