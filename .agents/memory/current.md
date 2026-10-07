@@ -1,27 +1,14 @@
 # Current state
 
-- Branch feat/registration-settings-gate (worktree
-  /home/mac/projects/moje/project-taipan-registration): registration
-  spec IMPLEMENTED plus two deepening refactors, everything in one
-  uncommitted commit-in-waiting, user approved commit + push + PR to
-  dev. 4 tickets done, reports in .scratch/registration/issues/.
-- Feature: global system_settings KV table, registration_enabled
-  default false; POST /auth/register 404 when off, neutral 204 when on;
-  POST /auth/activate via auth_flow.set_password_with_token (strength
-  before atomic verify, is_active gate, optional revoke); web /register
-  gated per render, URL token beats the switch; owner-only PUT via
-  require_system_owner; public switch-only read; nullable
-  users.hashed_password with clean login fail.
-- Refactors: tokens.mint_single owns the one-live-link rule (digest
-  private again); auth_flow.set_password_with_token shared by
-  activation and reset. Review loops: 2 rounds, 5 reviewer agents, 1
-  high test pin regression + 5 minors found and fixed; verdict SHIP.
-- Gates at ship: pytest 438 passed 9 skips (live Infisical), vitest
-  125, next build clean, ruff clean, falsegreen clean, size/bff pass.
-- Deferred: resend check-then-act race (bounded by single use), APP_NAME
-  x3 (architecture candidate 3), BFF result parser unification
-  (candidate 5), vitest .next exclude, users.NotFound 500 if user
-  deleted between mint and activate (pre-existing shape).
-- Open ops: API_APP_BASE_URL in prod API env. Test DB container on
-  15432 serves this branch; remove after merge. Spec flips to
-  implemented + git mv on merge (PR body notes it).
+- PR #39 open to dev (branch feat/registration-settings-gate,
+  worktree /home/mac/projects/moje/project-taipan-registration):
+  registration implemented (f44b27a) + docs commit (spec moved to
+  implemented with Status implemented (PR #39); three new planned
+  specs from the 2026-10-08 architecture review: magic-link-mailer,
+  typed-system-settings, bff-result-module).
+- On PR merge: squash lands spec move; planned specs stay queued.
+- Deferred: resend race (bounded by single use), users.NotFound 500 on
+  deleted user between mint and activate, vitest .next exclude,
+  arch candidates 3-5 now spec'd (do them as their own passes).
+- Open ops: API_APP_BASE_URL in prod API env; test DB container on
+  15432 removable after merge; project-taipan-db-1 zombie, user call.
