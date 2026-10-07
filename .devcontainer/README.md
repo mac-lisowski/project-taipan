@@ -1,14 +1,15 @@
 # Devcontainer
 
 Python 3.12 + uv dev container with sibling Postgres 17 + pgvector,
-Redis, and Infisical services. Node 24 + pnpm come from the node
-feature for `apps/web`. Full guide: `docs/devcontainer.md`.
+Redis, Infisical, and LiteLLM services. Node 24 + pnpm come from the
+node feature for `apps/web`. Full guide: `docs/devcontainer.md`.
 
 ```mermaid
 graph LR
   A[app container<br>uv run ..., pnpm -C apps/web ...] -->|host db:5432| B[db container<br>pgvector pg17]
   A -->|host redis:6379| R[redis container<br>redis:8]
   A -->|host infisical:8080| I[infisical<br>+ own infisical-db]
+  A -.->|litellm:4000, wired later| L[litellm<br>+ own litellm-db<br>+ devcontainer-litellm-pgdata]
   A -->|DOCKER_HOST tcp://dind:2375| C[dind<br>testcontainers daemon]
 ```
 

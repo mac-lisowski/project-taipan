@@ -10,7 +10,7 @@ Infisical KMS.
 ## Prerequisites
 
 - Python 3.12 and `uv` for the workspace.
-- Docker Compose for Postgres, Redis, and Infisical.
+- Docker Compose for Postgres, Redis, Infisical, and LiteLLM.
 - Node.js 24 and pnpm 11.17 for `apps/web`.
 
 ## What it does today
@@ -118,15 +118,15 @@ Each app registers a command in its `pyproject.toml` under `[project.scripts]`.
 
 ```bash
 uv run cli                 # CLI app -> prints "Hello, world!"
-docker compose up -d       # Postgres + pgvector :5432, redis :6379, Infisical :8080
+docker compose up -d       # Postgres + pgvector :5432, redis :6379, Infisical :8080, LiteLLM :4000
 uv run db-upgrade          # apply migrations
 uv run api                 # API app -> FastAPI server on http://127.0.0.1:8000 (docs at /docs)
 pnpm -C apps/web dev       # Next.js on http://localhost:3000
 ```
 
 A VS Code / devcontainer setup exists too: `.devcontainer/` contains a
-self-contained compose stack (app, db, redis, infisical, dind for
-testcontainers). Full guide: `docs/devcontainer.md`.
+self-contained compose stack (app, db, redis, infisical, litellm,
+dind for testcontainers). Full guide: `docs/devcontainer.md`.
 
 ## Database (api)
 
