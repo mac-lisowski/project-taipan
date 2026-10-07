@@ -5,9 +5,9 @@ import pytest
 from api import db as db_module
 from api.config import get_config
 from api.db import Base
+from api.kvstore import SESSION_KEYS, MemoryKVStore, set_session_store
 from api.main import app
 from api.models.encrypted_string import set_field_crypto
-from api.session_store import MemorySessionStore, set_session_store
 from api_testsupport import KEY_ID, FakeClock, MapStore, StubCipher
 from crypto import FieldCrypto
 from fastapi.testclient import TestClient
@@ -90,9 +90,9 @@ def wipe_tables(engine):
 
 @pytest.fixture(autouse=True)
 def memory_session_store():
-    """Isolated in-memory session store for every test."""
+    """Isolated in-memory KV adapter on the session keyspace for every test."""
     clock = FakeClock()
-    store = MemorySessionStore(clock=clock)
+    store = MemoryKVStore(SESSION_KEYS, clock=clock)
     store.clock = clock  # type: ignore[attr-defined]
     set_session_store(store)
     yield store

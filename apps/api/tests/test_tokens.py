@@ -4,10 +4,10 @@ import hashlib
 import json
 
 import pytest
+from api.kvstore import TOKEN_KEYS, MemoryKVStore
 from api.tokens import (
     PURPOSE_ACTIVATION,
     PURPOSE_RESET,
-    MemoryTokenStore,
     TokenAlreadyUsed,
     TokenNotFound,
     TokenPurposeMismatch,
@@ -95,7 +95,7 @@ def test_tampered_token_fails():
 
 
 def test_corrupt_record_raises_token_not_found():
-    store = MemoryTokenStore()
+    store = MemoryKVStore(TOKEN_KEYS)
     token = "record-corrupted-in-store"
     key = digest(token)
 
@@ -112,7 +112,7 @@ def test_corrupt_record_raises_token_not_found():
 
 def test_expired_token_fails():
     clock = FakeClock()
-    store = MemoryTokenStore(clock=clock)
+    store = MemoryKVStore(TOKEN_KEYS, clock=clock)
     token = mint(user_id=7, purpose=PURPOSE_RESET, ttl_seconds=30, store=store)
     clock.advance(31)
     with pytest.raises(TokenNotFound):
@@ -149,7 +149,7 @@ def test_purpose_stays_open_to_new_values():
 
 def test_consumed_token_is_reclaimed_after_grace_ttl():
     clock = FakeClock()
-    store = MemoryTokenStore(clock=clock)
+    store = MemoryKVStore(TOKEN_KEYS, clock=clock)
     token = mint(user_id=7, purpose=PURPOSE_RESET, ttl_seconds=600, store=store)
     verify(token, PURPOSE_RESET, store=store)
     # Past the grace window but well inside the original ttl the record

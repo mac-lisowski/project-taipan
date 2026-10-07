@@ -5,20 +5,20 @@ import json
 import pytest
 from api import sessions
 from api.config import DEFAULT_SESSION_TTL_SECONDS
-from api.session_store import MemorySessionStore, RedisSessionStore, SessionStore
+from api.kvstore import SESSION_KEYS, KVStore, MemoryKVStore, RedisKVStore
 from api_testsupport import FakeClock, FakeRedis
 
 
-def _memory_store(clock: FakeClock) -> SessionStore:
-    return MemorySessionStore(clock=clock)
+def _memory_store(clock: FakeClock) -> KVStore:
+    return MemoryKVStore(SESSION_KEYS, clock=clock)
 
 
-def _redis_store(clock: FakeClock) -> SessionStore:
-    return RedisSessionStore(FakeRedis(clock), prefix="sess:")
+def _redis_store(clock: FakeClock) -> KVStore:
+    return RedisKVStore(FakeRedis(clock), namespace="sess:")
 
 
 def test_mint_and_resolve() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     token = sessions.mint(user_id=42, tenant_id="tenant-abc", store=store, ttl_seconds=300)
     assert isinstance(token, str)
 
@@ -29,12 +29,12 @@ def test_mint_and_resolve() -> None:
 
 
 def test_resolve_missing_returns_none() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     assert sessions.resolve("nonexistent-token", store=store) is None
 
 
 def test_resolve_corrupt_payload_returns_none() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     token = sessions.mint(user_id=1, tenant_id="t1", store=store)
     digest = sessions._digest(token)
 
@@ -56,7 +56,7 @@ def test_resolve_corrupt_payload_returns_none() -> None:
 
 
 def test_revoke_removes_session() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     token = sessions.mint(user_id=99, tenant_id="t-99", store=store)
     assert sessions.resolve(token, store=store) is not None
 
@@ -65,7 +65,7 @@ def test_revoke_removes_session() -> None:
 
 
 def test_revoke_all_kills_user_sessions_and_new_mint_works() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     first = sessions.mint(user_id=1, tenant_id="t-1", store=store)
     second = sessions.mint(user_id=1, tenant_id="t-1", store=store)
     other = sessions.mint(user_id=2, tenant_id="t-2", store=store)
@@ -85,7 +85,7 @@ def test_revoke_all_kills_user_sessions_and_new_mint_works() -> None:
 
 
 def test_revoke_all_after_single_revoke_kills_remaining_sessions() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     revoked = sessions.mint(user_id=3, tenant_id="t-3", store=store)
     remaining = sessions.mint(user_id=3, tenant_id="t-3", store=store)
 
@@ -97,7 +97,7 @@ def test_revoke_all_after_single_revoke_kills_remaining_sessions() -> None:
 
 
 def test_revoke_all_for_unknown_user_spares_other_sessions() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     token = sessions.mint(user_id=5, tenant_id="t-5", store=store)
 
     sessions.revoke_all(user_id=6, store=store)
@@ -108,7 +108,7 @@ def test_revoke_all_for_unknown_user_spares_other_sessions() -> None:
 
 
 def test_revoke_all_kills_sessions_minted_before_epoch_tracking() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     token = sessions.mint(user_id=8, tenant_id="t-8", store=store)
 
     # Simulate a pre-deploy record by stripping its epoch field.
@@ -123,7 +123,7 @@ def test_revoke_all_kills_sessions_minted_before_epoch_tracking() -> None:
 
 
 def test_mint_missing_epoch_after_revoke_fails_closed() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     user_id = 9
 
     # A mint that read no epoch before revoke_all wrote it would embed
@@ -136,7 +136,7 @@ def test_mint_missing_epoch_after_revoke_fails_closed() -> None:
 
 
 def test_mint_stale_epoch_after_revoke_fails_closed() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     user_id = 12
 
     sessions.revoke_all(user_id, store=store)
@@ -153,7 +153,7 @@ def test_mint_stale_epoch_after_revoke_fails_closed() -> None:
 
 def test_short_mint_ttl_does_not_shorten_epoch_ttl() -> None:
     clock = FakeClock()
-    store = MemorySessionStore(clock=clock)
+    store = MemoryKVStore(SESSION_KEYS, clock=clock)
     user_id = 13
 
     sessions.revoke_all(user_id, store=store)
@@ -192,7 +192,7 @@ def test_revoke_all_reaches_long_session_after_short_mint_expires(make_store) ->
 
 
 def test_tenant_id_for_token() -> None:
-    store = MemorySessionStore()
+    store = MemoryKVStore(SESSION_KEYS)
     token = sessions.mint(user_id=7, tenant_id="tenant-777", store=store)
 
     assert sessions.tenant_id_for_token(token, store=store) == "tenant-777"
@@ -201,7 +201,7 @@ def test_tenant_id_for_token() -> None:
 
 def test_mint_uses_default_ttl() -> None:
     clock = FakeClock()
-    store = MemorySessionStore(clock=clock)
+    store = MemoryKVStore(SESSION_KEYS, clock=clock)
     token = sessions.mint(user_id=10, tenant_id="t-10", store=store)
 
     # Entry exists now
