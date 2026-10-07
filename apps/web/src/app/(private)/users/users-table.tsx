@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Badge,
+  Button,
   Input,
   Select,
   SelectContent,
@@ -21,13 +22,19 @@ import {
   applyUsersQuery,
   formatDate,
   loadUsers,
+  pageCount,
+  PAGE_SIZES,
+  pageSlice,
   reduceUsersView,
+  type PageSize,
   type StatusFilter,
 } from "@/lib/users-list";
 
 // The endpoint result is the only source of list state.
 export function UsersTable(): ReactNode {
   const [view, dispatch] = useReducer(reduceUsersView, { state: "loading" });
+  // Retry bumps the attempt so the load effect runs again.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -37,20 +44,35 @@ export function UsersTable(): ReactNode {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [attempt]);
 
   if (view.state === "loading") {
     return <p className="font-mono text-xs">loading…</p>;
   }
   if (view.state === "error") {
     return (
-      <p role="alert" className="font-mono text-xs text-red-400">
-        err: {view.message}
-      </p>
+      <div className="flex items-center gap-3">
+        <p role="alert" className="font-mono text-xs text-red-400">
+          err: {view.message}
+        </p>
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() => {
+            dispatch({ type: "retry" });
+            setAttempt((a) => a + 1);
+          }}
+          className="font-mono text-[11px] uppercase tracking-[0.25em]"
+        >
+          retry
+        </Button>
+      </div>
     );
   }
 
   const filtered = applyUsersQuery(view.users, view.query, view.status);
+  const pages = pageCount(filtered.length, view.pageSize);
+  const rows = pageSlice(filtered, view.page, view.pageSize);
 
   return (
     <div className="flex w-full flex-col gap-3">
@@ -82,6 +104,29 @@ export function UsersTable(): ReactNode {
             <SelectItem value="inactive">inactive</SelectItem>
           </SelectContent>
         </Select>
+        <Select
+          value={String(view.pageSize)}
+          onValueChange={(value) =>
+            dispatch({
+              type: "page_size_changed",
+              pageSize: Number(value) as PageSize,
+            })
+          }
+        >
+          <SelectTrigger
+            aria-label="users per page"
+            className="font-mono text-xs"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZES.map((size) => (
+              <SelectItem key={size} value={String(size)}>
+                {size} / page
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <p className="ml-auto font-mono text-[10px] tracking-[0.15em] text-muted-foreground">
           {filtered.length} of {view.users.length} users
         </p>
@@ -89,30 +134,83 @@ export function UsersTable(): ReactNode {
       {filtered.length === 0 ? (
         <p className="font-mono text-xs text-muted-foreground">no users match</p>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>email</TableHead>
-              <TableHead>status</TableHead>
-              <TableHead>registered</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-mono text-xs">{user.email}</TableCell>
-                <TableCell>
-                  <Badge variant={user.is_active ? "default" : "secondary"}>
-                    {user.is_active ? "active" : "inactive"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {formatDate(user.created_at)}
-                </TableCell>
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>email</TableHead>
+                <TableHead>status</TableHead>
+                <TableHead>registered</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rows.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-mono text-xs">
+                    {user.email}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={user.is_active ? "default" : "secondary"}>
+                      {user.is_active ? "active" : "inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {formatDate(user.created_at)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={view.page === 1}
+              onClick={() => dispatch({ type: "page_changed", page: 1 })}
+              aria-label="first page"
+              className="font-mono text-[11px]"
+            >
+              first
+            </Button>
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={view.page === 1}
+              onClick={() =>
+                dispatch({ type: "page_changed", page: view.page - 1 })
+              }
+              aria-label="previous page"
+              className="font-mono text-[11px]"
+            >
+              prev
+            </Button>
+            <p className="font-mono text-[10px] tracking-[0.15em] text-muted-foreground">
+              page {view.page} of {pages}
+            </p>
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={view.page === pages}
+              onClick={() =>
+                dispatch({ type: "page_changed", page: view.page + 1 })
+              }
+              aria-label="next page"
+              className="font-mono text-[11px]"
+            >
+              next
+            </Button>
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={view.page === pages}
+              onClick={() => dispatch({ type: "page_changed", page: pages })}
+              aria-label="last page"
+              className="font-mono text-[11px]"
+            >
+              last
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );

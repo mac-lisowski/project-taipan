@@ -29,6 +29,20 @@ export async function loadUsers(): Promise<UsersLoadResult> {
   }
 }
 
+export type StatusFilter = "all" | "active" | "inactive";
+
+export type PageSize = 10 | 25 | 50;
+
+export const PAGE_SIZES: PageSize[] = [10, 25, 50];
+
+export type UsersAction =
+  | { type: "loaded"; result: UsersLoadResult }
+  | { type: "query_changed"; query: string }
+  | { type: "status_changed"; status: StatusFilter }
+  | { type: "page_changed"; page: number }
+  | { type: "page_size_changed"; pageSize: PageSize }
+  | { type: "retry" };
+
 export type UsersView =
   | { state: "loading" }
   | {
@@ -37,15 +51,9 @@ export type UsersView =
       query: string;
       status: StatusFilter;
       page: number;
+      pageSize: PageSize;
     }
   | { state: "error"; message: string };
-
-export type StatusFilter = "all" | "active" | "inactive";
-
-export type UsersAction =
-  | { type: "loaded"; result: UsersLoadResult }
-  | { type: "query_changed"; query: string }
-  | { type: "status_changed"; status: StatusFilter };
 
 export function reduceUsersView(
   view: UsersView,
@@ -60,6 +68,7 @@ export function reduceUsersView(
             query: "",
             status: "all",
             page: 1,
+            pageSize: 10,
           }
         : { state: "error", message: action.result.error };
     case "query_changed":
@@ -71,7 +80,41 @@ export function reduceUsersView(
       return view.state === "ready"
         ? { ...view, status: action.status, page: 1 }
         : view;
+    case "page_changed":
+      return view.state === "ready"
+        ? {
+            ...view,
+            page: clampPage(action.page, view.users.length, view.pageSize),
+          }
+        : view;
+    case "page_size_changed":
+      return view.state === "ready"
+        ? { ...view, pageSize: action.pageSize, page: 1 }
+        : view;
+    case "retry":
+      return { state: "loading" };
   }
+}
+
+export function pageCount(itemCount: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(itemCount / pageSize));
+}
+
+export function clampPage(
+  page: number,
+  itemCount: number,
+  pageSize: number,
+): number {
+  return Math.min(Math.max(1, page), pageCount(itemCount, pageSize));
+}
+
+export function pageSlice(
+  users: UserRow[],
+  page: number,
+  pageSize: number,
+): UserRow[] {
+  const start = (clampPage(page, users.length, pageSize) - 1) * pageSize;
+  return users.slice(start, start + pageSize);
 }
 
 export function searchUsers(users: UserRow[], query: string): UserRow[] {

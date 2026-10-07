@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applyUsersQuery,
+  clampPage,
   filterUsersByStatus,
   formatDate,
   loadUsers,
+  pageCount,
+  pageSlice,
   reduceUsersView,
   searchUsers,
   USERS_PATH,
@@ -78,6 +81,7 @@ describe("reduceUsersView", () => {
       query: "",
       status: "all",
       page: 1,
+      pageSize: 10,
     });
   });
 
@@ -112,11 +116,46 @@ describe("reduceUsersView", () => {
     });
     expect(view).toEqual({ state: "loading" });
   });
+
+  it("stores a page size and resets the page", () => {
+    // Thirty rows on page 3 of size 10 still fit page 2 of size 25, so a
+    // clamp-only implementation would fail this; reset must land on one.
+    const users = Array.from({ length: 30 }, (_, i) => ({
+      ...ROW,
+      id: i + 1,
+    }));
+    const view = reduceUsersView(ready(users, { pageSize: 10, page: 3 }), {
+      type: "page_size_changed",
+      pageSize: 25,
+    });
+    expect(view).toEqual({ ...ready(users), pageSize: 25 });
+  });
+
+  it("clamps a page change into the list bounds", () => {
+    const view = reduceUsersView(ready(ROWS, { pageSize: 10, page: 1 }), {
+      type: "page_changed",
+      page: 99,
+    });
+    expect(view).toEqual({ ...ready(ROWS), page: 1 });
+  });
+
+  it("sends the view back to loading on retry", () => {
+    const view = reduceUsersView(
+      { state: "error", message: "network error" },
+      { type: "retry" },
+    );
+    expect(view).toEqual({ state: "loading" });
+  });
 });
 
 function ready(
   users: typeof ROWS,
-  over: Partial<{ query: string; status: "all" | "active" | "inactive"; page: number }> = {},
+  over: Partial<{
+    query: string;
+    status: "all" | "active" | "inactive";
+    page: number;
+    pageSize: 10 | 25 | 50;
+  }> = {},
 ) {
   return {
     state: "ready" as const,
@@ -124,9 +163,38 @@ function ready(
     query: "",
     status: "all" as const,
     page: 1,
+    pageSize: 10 as const,
     ...over,
   };
 }
+
+describe("paging helpers", () => {
+  it("counts pages with an exact division edge", () => {
+    expect(pageCount(0, 10)).toBe(1);
+    expect(pageCount(20, 10)).toBe(2);
+    expect(pageCount(21, 10)).toBe(3);
+  });
+
+  it("clamps a page index into bounds", () => {
+    expect(clampPage(0, 25, 10)).toBe(1);
+    expect(clampPage(99, 25, 10)).toBe(3);
+    expect(clampPage(2, 0, 10)).toBe(1);
+  });
+
+  it("slices the middle page", () => {
+    const users = Array.from({ length: 25 }, (_, i) => ({
+      ...ROW,
+      id: i + 1,
+    }));
+    expect(pageSlice(users, 2, 10).map((u) => u.id)).toEqual([
+      11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    ]);
+  });
+
+  it("clamps the slice for a past-end page", () => {
+    expect(pageSlice(ROWS, 99, 10)).toEqual(ROWS);
+  });
+});
 
 describe("searchUsers", () => {
   it("matches substrings ignoring letter case", () => {
