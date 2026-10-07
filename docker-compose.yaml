@@ -62,6 +62,25 @@ services:
       timeout: 3s
       retries: 10
 
+  # Broker ports split by role: client 4222, monitor 8222, MQTT 1883.
+  # The API code default is nats://localhost:4222, so the host client
+  # publish must keep 4222.
+  nats:
+    image: nats:2.15-alpine
+    command: ["-c", "/etc/nats/nats.conf"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+      - "1883:1883"
+    volumes:
+      - natsdata:/data
+      - ./docker/nats/nats.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   infisical:
     build:
       context: .
@@ -125,3 +144,4 @@ volumes:
   minio-data:
   infisical-pgdata:
   litellm-pgdata:
+  natsdata:

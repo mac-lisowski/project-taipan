@@ -30,6 +30,8 @@ services:
       API_INFISICAL_URL: http://infisical:8080
       # Object store, reachable on this network.
       API_S3_ENDPOINT: http://minio:9000
+      # Broker on this network; host "nats", like db above.
+      API_BROKER_URL: nats://nats:4222
       # testcontainers spawns into the sibling dind daemon.
       DOCKER_HOST: tcp://dind:2375
     depends_on:
@@ -41,6 +43,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+      nats:
+        condition: service_healthy
 
   # Docker-in-Docker daemon for testcontainers. Privileged by design.
   # TLS off: only reachable on this private compose network.
@@ -111,6 +115,20 @@ services:
       timeout: 3s
       retries: 10
 
+  # Broker on the compose network only, like db above: no host ports.
+  # The app reaches it as host "nats" via API_BROKER_URL.
+  nats:
+    image: nats:2.15-alpine
+    command: ["-c", "/etc/nats/nats.conf"]
+    volumes:
+      - devcontainer-natsdata:/data
+      - ../docker/nats/nats.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   # No host port publish: keeps parity with db above (the root stack
   # owns 8080 for the same reason db owns 5432 there).
   infisical:
@@ -167,3 +185,4 @@ volumes:
   devcontainer-dind:
   devcontainer-infisical-pgdata:
   devcontainer-litellm-pgdata:
+  devcontainer-natsdata:
