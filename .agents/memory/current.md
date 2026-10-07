@@ -1,31 +1,36 @@
 # Current state
 
-- Branch feat/litellm-gateway-docker PUSHED, PR #36 open to dev
-  (https://github.com/mac-lisowski/project-taipan/pull/36). Commit
-  c377f71 feat: litellm gateway docker stack; docs commit marks spec
-  implemented (PR #36). Tickets 01-04 done with HTML reports in
-  .scratch/litellm-gateway-docker/issues/.
-- litellm-gateway-docker IMPLEMENTED: docker/litellm/Dockerfile
-  (pull-through v1.104.0), litellm + litellm-db in both compose stacks
-  (host publishes 4000, devcontainer none, volumes litellm-pgdata /
-  devcontainer-litellm-pgdata), README + docs/devcontainer.md +
-  .devcontainer/README.md updated, CI deploy job gated
-  `deploy litellm` step, ALL deploy inputs as GitHub env secrets
-  (project-taipan / dev: 7 secrets, 0 vars).
-- Dev keys deviation (decisions/litellm-dev-keys.md): committed dev
-  defaults sk-taipan-dev-4f8a2c91e6b3d705 (master) /
-  sk-taipan-salt-9b1c64e2a8d3f704 (salt), because v1.104.0 refuses
-  publicly-known keys like spec's sk-1234.
-- User did the Railway side 2026-10-08: litellm service
-  (1c887eb8-19b9-4e80-99e7-c56d132a0d48), Postgres + DATABASE_URL,
-  master/salt keys, STORE_MODEL_IN_DB. RAILWAY_SERVICE_LITELLM secret
-  set by me. Gateway deploys on the first dev push carrying this
-  branch (merge).
-- Verification on record: compose configs + check-docker pass, image
-  builds, live host stack liveliness/401/master-key//ui, model
-  persists across --force-recreate, pytest 379 passed 9 skipped,
-  code-review two-axis CLEAN (01+02), focused passes clean (03+04).
-- Next after merge: on dev, git mv docs/specs/planned/litellm-gateway-docker
-  docs/specs/implemented/ (password-change precedent, separate docs
-  commit); verify CI deploy job runs litellm; then worktree
-  ../project-taipan-litellm and branch deletable.
+- Branch feat/password-reset (rebased on origin/dev cbd5b68: litellm #36 +
+  ci commits merged in). Password-reset spec IMPLEMENTED; this commit carries
+  the whole feature. PR to dev in flight; spec moves to docs/specs/implemented/
+  in the follow-up docs commit with the PR number.
+- API: password_reset module (request/reset acts; strength check BEFORE
+  tokens.verify because verify burns atomically; revoke_all BEFORE
+  auth_flow.issue; best-effort neutral mail), routers /auth/forgot (always 204)
+  + /auth/reset (400 "invalid or expired reset link" / 422 "weak password";
+  exact strings are the client's only signal), config API_RESET_TOKEN_TTL_SECONDS
+  (3600) + API_APP_BASE_URL (http://localhost:3000, empty falls back),
+  users.get_by_email, set_token_store + autouse memory_token_store fixture
+  (reset is the first HTTP caller of tokens). Schemas ForgotIn/ResetIn.
+- Web: /reset page (Next 16 awaited searchParams, no useSearchParams),
+  ResetForm (verbatim upstream errors, token fixed for retry),
+  lib/reset-password.ts (RESET_LANDING = /dashboard), forgot-form mock
+  comment replaced with why-comment.
+- Gates at stamp: root pytest 396 passed 9 skipped (live KMS), web vitest 168,
+  web build clean, ruff clean, falsegreen + falsegreen-js clean, file-size +
+  bff pass. code-review two-axis CLEAN after 4 fixes (empty app_base_url
+  fallback, comment trim, HTTP used-token 400 pin, store docstring). Stamp on
+  this tree: 225958677d1c0715 lineage. test-smell-review: 1 LOW accepted
+  (broad TokenError assert in inactive-rejection module test).
+- test_url_ownership.py repaired in passing: pre-existing assert-after-restore
+  bug; failed whenever API_TEST_* env vars were set.
+- Deferred review notes (not defects): APP_NAME duplicated from
+  password_change/notice.py; register/authenticate keep inline email selects;
+  memory_token_store mirrors memory_session_store shape; reset-form hand-rolls
+  pending/error (same useAuthSubmit follow-up as password-change); expired-token
+  400 pinned at module seam, unknown+used pinned at HTTP.
+- Tickets 01+02 done with HTML reports in .scratch/password-reset/issues/
+  (gitignored). Disposable test DB container taipan-password-reset-test-db on
+  host 15432: REMOVE after merge. project-taipan-db-1 is a zombie (no network,
+  host 5432 held by python-playground-db-1, rootless docker): untouched, user
+  decision.

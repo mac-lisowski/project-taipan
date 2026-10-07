@@ -4,9 +4,10 @@ from pathlib import Path
 import pytest
 from api import db as db_module
 from api.db import Base
-from api.kvstore import SESSION_KEYS, MemoryKVStore, set_session_store
+from api.kvstore import SESSION_KEYS, TOKEN_KEYS, MemoryKVStore, set_session_store
 from api.main import app
 from api.models.encrypted_string import set_field_crypto
+from api.tokens.store import set_token_store
 from api_testsupport import (
     KEY_ID,
     TEST_ADMIN_URL,
@@ -101,6 +102,17 @@ def memory_session_store():
     set_session_store(store)
     yield store
     set_session_store(None)
+
+
+@pytest.fixture(autouse=True)
+def memory_token_store():
+    """Isolated in-memory KV adapter on the token keyspace for every test."""
+    clock = FakeClock()
+    store = MemoryKVStore(TOKEN_KEYS, clock=clock)
+    store.clock = clock  # type: ignore[attr-defined]
+    set_token_store(store)
+    yield store
+    set_token_store(None)
 
 
 def create_user(client, email: str, password: str = "s3cret123") -> int:
