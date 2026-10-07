@@ -22,3 +22,4 @@ Why things are the way they are. One decision per file in
 - [Conventional commit gate](decisions/commit-convention.md)
 - [Resolve session once per request](decisions/session-resolve-once.md)
 - [LiteLLM dev keys are repo-private defaults](decisions/litellm-dev-keys.md)
+- [System settings are global and owner guarded](decisions/system-settings-owner-guarded.md)
