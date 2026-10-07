@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from api import authz, sessions, users
+from api import auth_flow, authz, sessions
 from api.db import DbSession
 from api.schemas import MeOut, UserCreate
 from api.verifiers import CredentialVerifier, get_credential_verifier
@@ -17,11 +17,11 @@ def login(
     db: DbSession,
     verifier: Annotated[CredentialVerifier, Depends(get_credential_verifier)],
 ) -> None:
-    user = verifier.verify(db, payload.email, payload.password)
-    if user is None:
-        raise HTTPException(status_code=401, detail="invalid email or password")
-    tenant_id = users.tenant_id_for_user(db, user.id)
-    sessions.set_session_cookie(response, sessions.mint(user.id, tenant_id))
+    try:
+        token = auth_flow.login(db, verifier, payload.email, payload.password)
+    except auth_flow.InvalidCredentials as exc:
+        raise HTTPException(status_code=401, detail="invalid email or password") from exc
+    sessions.set_session_cookie(response, token)
 
 
 @router.post("/logout", status_code=204)
