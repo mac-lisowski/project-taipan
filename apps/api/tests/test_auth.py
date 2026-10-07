@@ -37,7 +37,7 @@ def test_setup_creates_tenant_user_link_and_session(client, session_factory):
 
 
 def test_create_user_endpoint_also_creates_tenant_and_link(admin_client, session_factory):
-    resp = admin_client.post("/api/users", json={"email": "b@example.com", "password": "p"})
+    resp = admin_client.post("/api/users", json={"email": "b@example.com", "password": "s3cret123"})
     assert resp.status_code == 201
     with session_factory() as db:
         assert _counts(db) == (2, 2, 2)
@@ -63,20 +63,33 @@ def test_login_returns_204_and_cookie_and_me_returns_tenant(client, session_fact
 
 
 def test_login_unknown_email_returns_401(client):
-    resp = client.post("/api/auth/login", json={"email": "ghost@example.com", "password": "p"})
+    resp = client.post(
+        "/api/auth/login", json={"email": "ghost@example.com", "password": "s3cret123"}
+    )
     assert resp.status_code == 401
     assert resp.json()["detail"] == "invalid email or password"
 
 
 def test_login_wrong_password_returns_401(client):
-    client.post("/api/setup", json={"email": "w@example.com", "password": "right"})
+    client.post("/api/setup", json={"email": "w@example.com", "password": "right-password"})
     resp = client.post("/api/auth/login", json={"email": "w@example.com", "password": "wrong"})
     assert resp.status_code == 401
     assert "session" not in resp.headers.get("set-cookie", "")
 
 
+def test_login_inactive_user_returns_401(client, session_factory):
+    client.post("/api/setup", json={"email": "in@example.com", "password": "s3cret123"})
+    with session_factory() as db:
+        user = db.scalar(select(User).where(User.email == "in@example.com"))
+        user.is_active = False
+        db.commit()
+    resp = client.post("/api/auth/login", json={"email": "in@example.com", "password": "s3cret123"})
+    assert resp.status_code == 401
+    assert "session" not in resp.headers.get("set-cookie", "")
+
+
 def test_logout_deletes_session_and_clears_cookie(client):
-    client.post("/api/setup", json={"email": "lo@example.com", "password": "p"})
+    client.post("/api/setup", json={"email": "lo@example.com", "password": "s3cret123"})
     token = client.cookies.get("session")
     assert token is not None
     assert client.get("/api/auth/me").status_code == 200
@@ -97,7 +110,7 @@ def test_me_without_session_returns_401(client):
 
 
 def test_me_deleted_user_returns_401(client, session_factory):
-    client.post("/api/setup", json={"email": "nl@example.com", "password": "p"})
+    client.post("/api/setup", json={"email": "nl@example.com", "password": "s3cret123"})
     with session_factory() as db:
         db.execute(User.__table__.delete())
         db.commit()
@@ -105,7 +118,7 @@ def test_me_deleted_user_returns_401(client, session_factory):
 
 
 def test_expired_session_behaves_like_no_session(client, memory_session_store):
-    client.post("/api/setup", json={"email": "ex@example.com", "password": "p"})
+    client.post("/api/setup", json={"email": "ex@example.com", "password": "s3cret123"})
     assert client.get("/api/auth/me").status_code == 200
     memory_session_store.clock.advance(86400 * 30)
     assert client.get("/api/auth/me").status_code == 401

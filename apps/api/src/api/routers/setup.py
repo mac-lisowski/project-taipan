@@ -19,6 +19,10 @@ def setup(payload: UserCreate, response: Response, db: DbSession) -> User:
         user = users.bootstrap(db, payload.email, payload.password)
     except users.AlreadySetup as exc:
         raise HTTPException(status_code=409, detail="setup already completed") from exc
+    except users.WeakPassword as exc:
+        raise HTTPException(
+            status_code=422, detail="password does not meet the strength rule"
+        ) from exc
     tenant_id = users.tenant_id_for_user(db, user.id)
     sessions.set_session_cookie(response, sessions.mint(user.id, tenant_id))
     return user

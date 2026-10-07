@@ -20,6 +20,10 @@ def create_user(payload: UserCreate, db: DbSession) -> User:
         return users.register(db, payload.email, payload.password)
     except users.EmailTaken as exc:
         raise HTTPException(status_code=409, detail="email already registered") from exc
+    except users.WeakPassword as exc:
+        raise HTTPException(
+            status_code=422, detail="password does not meet the strength rule"
+        ) from exc
 
 
 @router.get("/{user_id}", response_model=UserOut)

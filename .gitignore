@@ -10,6 +10,7 @@ dist/
 .pytest_cache/
 .ruff_cache/
 .uv-cache/
+.coverage
 
 # Editors / OS
 .idea/
@@ -28,6 +29,7 @@ dist/
 .devin/config.local.json
 .devin/mcp_config.local.json
 .zcode/config.local.json
+.agents/memory/.muse-memory.lock
 # Agent working files (spec tickets, scratch state)
 .scratch/
 .worktrees/

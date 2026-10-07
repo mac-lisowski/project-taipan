@@ -8,7 +8,7 @@ from api.db import Base
 from api.main import app
 from api.models.encrypted_string import set_field_crypto
 from api.session_store import MemorySessionStore, set_session_store
-from api_testsupport import KEY_ID, MapStore, StubCipher
+from api_testsupport import KEY_ID, FakeClock, MapStore, StubCipher
 from crypto import FieldCrypto
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
@@ -76,28 +76,22 @@ def session_factory(engine):
 
 
 @pytest.fixture(autouse=True)
-def wipe_users(engine):
-    """User-row hygiene for every test; guards red runs that leave rows."""
+def wipe_tables(engine):
+    """Row hygiene for every test; guards red runs that leave rows.
+
+    Module tests bypass the client fixture, so wiping only users would
+    leak tenants, links, and roles across files.
+    """
     yield
     with engine.begin() as conn:
-        conn.execute(text("DELETE FROM users"))
-
-
-class ControllableClock:
-    def __init__(self, start: float = 1000.0) -> None:
-        self.now = start
-
-    def __call__(self) -> float:
-        return self.now
-
-    def advance(self, seconds: float) -> None:
-        self.now += seconds
+        for table in reversed(Base.metadata.sorted_tables):
+            conn.execute(table.delete())
 
 
 @pytest.fixture(autouse=True)
 def memory_session_store():
     """Isolated in-memory session store for every test."""
-    clock = ControllableClock()
+    clock = FakeClock()
     store = MemorySessionStore(clock=clock)
     store.clock = clock  # type: ignore[attr-defined]
     set_session_store(store)

@@ -1,4 +1,4 @@
-"""User rules: registration, lookup, removal. Usable without FastAPI."""
+"""User identity rules: registration, lookup, removal. Usable without FastAPI."""
 
 from __future__ import annotations
 
@@ -8,14 +8,21 @@ from crypto import tenant_scope
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
+from api.credentials import (
+    WeakPassword,
+    ensure_acceptable,
+    ensure_active,
+    hash_password,
+    verify_password,
+)
 from api.models import Role, Tenant, User, UserRole, UserTenant
-from api.security import hash_password, verify_password
 
 __all__ = [
     "SETUP_LOCK_KEY",
     "AlreadySetup",
     "EmailTaken",
     "NotFound",
+    "WeakPassword",
     "authenticate",
     "bootstrap",
     "get",
@@ -45,6 +52,7 @@ class NotFound(Exception):
 def register(session: Session, email: str, password: str) -> User:
     if session.scalar(select(User).where(User.email == email)) is not None:
         raise EmailTaken(email)
+    ensure_acceptable(password)
     tenant = Tenant(id=uuid4().hex)
     # Tenant-carrying writes must run inside the scope they point at.
     with tenant_scope(tenant.id):
@@ -61,7 +69,11 @@ def register(session: Session, email: str, password: str) -> User:
 
 def authenticate(session: Session, email: str, password: str) -> User | None:
     user = session.scalar(select(User).where(User.email == email))
-    if user is None or not verify_password(password, user.hashed_password):
+    if user is None:
+        return None
+    # Gate before verify: an inactive user never reaches hash checking.
+    ensure_active(user.is_active)
+    if not verify_password(password, user.hashed_password):
         return None
     return user
 
