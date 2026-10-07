@@ -9,6 +9,7 @@ from api.models.email_suppression import (
 )
 from api.models.encrypted_string import EncryptedString
 from api.models.profile import UserProfile
+from api.models.system_setting import SystemSetting
 from api.models.tenant import Tenant
 from api.models.user import User
 from api.models.user_role import Role
@@ -24,6 +25,7 @@ __all__ = [
     "EncryptedString",
     "Role",
     "SystemRole",
+    "SystemSetting",
     "Tenant",
     "TenantDek",
     "User",

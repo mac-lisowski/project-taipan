@@ -28,5 +28,14 @@ class ResetIn(BaseModel):
     new_password: str
 
 
+class RegisterIn(BaseModel):
+    email: EmailStr
+
+
+class ActivateIn(BaseModel):
+    token: str
+    password: str
+
+
 class PasswordChangeOut(BaseModel):
     other_devices_signed_out: bool

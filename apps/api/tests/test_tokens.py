@@ -1,6 +1,5 @@
-"""Tokens service seam: mint, verify, burn through injected fakes."""
+"""Tokens service seam: mint, mint_single, verify, burn through injected fakes."""
 
-import hashlib
 import json
 
 import pytest
@@ -13,6 +12,7 @@ from api.tokens import (
     TokenPurposeMismatch,
     burn,
     mint,
+    mint_single,
     verify,
 )
 from api_testsupport import FakeClock
@@ -36,6 +36,9 @@ class RecordingStore:
         self.entries[key] = value
         return True
 
+    def delete(self, key: str) -> None:
+        self.entries.pop(key, None)
+
 
 class ContendedStore(RecordingStore):
     """Fake that always loses the atomic swap, as under a racing verify."""
@@ -47,10 +50,6 @@ class ContendedStore(RecordingStore):
     def set_if_unchanged(self, key: str, expected: str, value: str, ttl_seconds: int) -> bool:
         self.swap_attempted = True
         return False
-
-
-def digest(token: str) -> str:
-    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def test_mint_then_verify_returns_user_and_purpose():
@@ -72,12 +71,13 @@ def test_verify_is_single_use():
 def test_verify_marks_used_through_atomic_swap_only():
     store = ContendedStore()
     token = mint(user_id=7, purpose=PURPOSE_RESET, ttl_seconds=600, store=store)
+    before = dict(store.entries)
     # Losing the swap means a concurrent verify consumed the token first.
     with pytest.raises(TokenAlreadyUsed):
         verify(token, PURPOSE_RESET, store=store)
     assert store.swap_attempted is True
-    # The loser must not write; the record still reads as unused.
-    assert '"used": false' in store.entries[digest(token)]
+    # The loser must not write; the at-rest record stays untouched.
+    assert store.entries == before
 
 
 def test_reset_token_never_verifies_as_activation():
@@ -95,19 +95,15 @@ def test_tampered_token_fails():
 
 
 def test_corrupt_record_raises_token_not_found():
-    store = MemoryKVStore(TOKEN_KEYS)
-    token = "record-corrupted-in-store"
-    key = digest(token)
-
-    # Not JSON at all
-    store.set(key, "not-json", ttl_seconds=600)
-    with pytest.raises(TokenNotFound, match="corrupt"):
-        verify(token, PURPOSE_RESET, store=store)
-
-    # Valid JSON, but not our record shape
-    store.set(key, json.dumps([7, "reset", False]), ttl_seconds=600)
-    with pytest.raises(TokenNotFound, match="corrupt"):
-        verify(token, PURPOSE_RESET, store=store)
+    store = RecordingStore()
+    token = mint(user_id=7, purpose=PURPOSE_RESET, ttl_seconds=600, store=store)
+    # The store port has no scan, so the mint's single entry is the only
+    # place a corrupt record can be planted at the real key.
+    [key] = store.entries
+    for bad in ("not-json", json.dumps([7, "reset", False])):
+        store.entries[key] = bad
+        with pytest.raises(TokenNotFound, match="corrupt"):
+            verify(token, PURPOSE_RESET, store=store)
 
 
 def test_expired_token_fails():
@@ -133,11 +129,13 @@ def test_burn_unknown_token_changes_nothing():
     assert store.entries == {}
 
 
-def test_store_holds_hash_never_raw_token():
+def test_raw_token_is_never_stored_at_rest():
+    # The at-rest key format is tokens' private detail; the pin is only
+    # that the raw token appears in no stored key or value.
     store = RecordingStore()
     token = mint(user_id=7, purpose=PURPOSE_RESET, ttl_seconds=600, store=store)
-    assert list(store.entries) == [digest(token)]
-    assert token not in store.entries[digest(token)]
+    assert len(store.entries) == 1
+    assert all(token not in k and token not in v for k, v in store.entries.items())
 
 
 def test_purpose_stays_open_to_new_values():
@@ -145,6 +143,25 @@ def test_purpose_stays_open_to_new_values():
     token = mint(user_id=7, purpose="magic-link", ttl_seconds=600, store=store)
     data = verify(token, "magic-link", store=store)
     assert data.purpose == "magic-link"
+
+
+def test_mint_single_kills_the_old_link():
+    store = RecordingStore()
+    old = mint_single(user_id=7, purpose=PURPOSE_ACTIVATION, ttl_seconds=600, store=store)
+    new = mint_single(user_id=7, purpose=PURPOSE_ACTIVATION, ttl_seconds=600, store=store)
+    with pytest.raises(TokenNotFound):
+        verify(old, PURPOSE_ACTIVATION, store=store)
+    data = verify(new, PURPOSE_ACTIVATION, store=store)
+    assert data.user_id == 7
+    assert data.purpose == PURPOSE_ACTIVATION
+
+
+def test_mint_single_leaves_other_users_and_purposes_live():
+    store = RecordingStore()
+    keep = mint_single(user_id=7, purpose=PURPOSE_ACTIVATION, ttl_seconds=600, store=store)
+    mint_single(user_id=8, purpose=PURPOSE_ACTIVATION, ttl_seconds=600, store=store)
+    mint_single(user_id=7, purpose=PURPOSE_RESET, ttl_seconds=600, store=store)
+    assert verify(keep, PURPOSE_ACTIVATION, store=store).user_id == 7
 
 
 def test_consumed_token_is_reclaimed_after_grace_ttl():

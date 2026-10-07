@@ -38,6 +38,7 @@ __all__ = [
     "list",
     "needs_setup",
     "register",
+    "register_passwordless",
     "remove",
     "tenant_id_for_user",
 ]
@@ -59,14 +60,29 @@ class NotFound(Exception):
 
 
 def register(session: Session, email: str, password: str) -> User:
+    _ensure_email_free(session, email)
+    ensure_acceptable(password)
+    return _admit_with_personal_tenant(session, email, hash_password(password))
+
+
+def register_passwordless(session: Session, email: str) -> User:
+    """Create the half account: no hash yet, so no login can succeed."""
+    _ensure_email_free(session, email)
+    return _admit_with_personal_tenant(session, email, None)
+
+
+def _ensure_email_free(session: Session, email: str) -> None:
+    # One home for the taken rule so register paths cannot drift apart.
     if session.scalar(select(User).where(User.email == email)) is not None:
         raise EmailTaken(email)
-    ensure_acceptable(password)
+
+
+def _admit_with_personal_tenant(session: Session, email: str, hashed: str | None) -> User:
     tenant = Tenant(id=uuid4().hex)
     # Tenant-carrying writes must run inside the scope they point at.
     with tenant_scope(tenant.id):
         session.add(tenant)
-        user = User(email=email, hashed_password=hash_password(password))
+        user = User(email=email, hashed_password=hashed)
         session.add(user)
         session.flush()
         session.add(UserTenant(user_id=user.id, tenant_id=tenant.id))
@@ -82,6 +98,9 @@ def authenticate(session: Session, email: str, password: str) -> User | None:
         return None
     # Gate before verify: an inactive user never reaches hash checking.
     ensure_active(user.is_active)
+    if user.hashed_password is None:
+        # A half account must fail like a wrong password, never hash None.
+        return None
     if not verify_password(password, user.hashed_password):
         return None
     return user

@@ -1,8 +1,8 @@
 """Password reset rules: request a link, consume it, rotate the password.
 
-Usable without FastAPI. Unlike password_change, the reset act composes
-revoke_all plus session issue itself: the spec pins the whole reset
-contract (burn, rotate, revoke, log in) inside one service call.
+Usable without FastAPI. The reset act delegates the token-to-password
+core to auth_flow and keeps the whole reset contract (burn, rotate,
+revoke, log in) inside one service call.
 """
 
 from __future__ import annotations
@@ -13,9 +13,9 @@ from email_delivery import EmailSender
 from email_delivery.templates import RESET, rendered_send
 from sqlalchemy.orm import Session
 
-from api import auth_flow, sessions, tokens, users
+from api import auth_flow, tokens, users
 from api.config import get_config
-from api.credentials import WeakPassword, ensure_acceptable, hash_password
+from api.credentials import WeakPassword
 
 __all__ = ["APP_NAME", "WeakPassword", "request", "reset"]
 
@@ -42,18 +42,12 @@ def request(session: Session, *, email: str, sender: EmailSender, app_base_url: 
 
 
 def reset(session: Session, *, token: str, new_password: str) -> str:
-    """Burn the token, swap the hash, kill every session, log the user in.
-
-    Strength runs before verify: verify burns atomically, and a weak
-    password must leave the token live for a corrected retry.
-    """
-    ensure_acceptable(new_password)
-    data = tokens.verify(token, tokens.PURPOSE_RESET)
-    user = users.get(session, data.user_id)
-    if not user.is_active:
-        # Neutral rejection: same error family, no hash write, no login.
-        raise tokens.TokenError("user is not active")
-    user.hashed_password = hash_password(new_password)
-    session.flush()
-    sessions.revoke_all(user.id)
+    """Burn the token, swap the hash, kill every session, log the user in."""
+    user = auth_flow.set_password_with_token(
+        session,
+        token=token,
+        purpose=tokens.PURPOSE_RESET,
+        password=new_password,
+        revoke_sessions=True,
+    )
     return auth_flow.issue(session, user.id)

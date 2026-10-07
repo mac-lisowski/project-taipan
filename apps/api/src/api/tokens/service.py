@@ -1,8 +1,10 @@
 """Tokens service: mint, verify, burn over an open purpose value.
 
 Purposes are plain strings, not a closed enum, so tomorrow's magic
-links need no change here. Raw tokens exist only in mint's return
-value and in links; the store sees sha256 digests only.
+links need no change here. Raw tokens exist only in the mint acts'
+return values and in links; the store sees sha256 digests only. The
+one-live-link rule lives here too: the pending pointer is a private
+implementation detail no caller may touch.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ __all__ = [
     "TokenPurposeMismatch",
     "burn",
     "mint",
+    "mint_single",
     "verify",
 ]
 
@@ -35,6 +38,10 @@ PURPOSE_RESET = "reset"
 # Consumed records only need to answer "already used"; a short ttl lets
 # the store reclaim them instead of lingering for the full original ttl.
 CONSUMED_TTL_GRACE_SECONDS = 60
+
+# The KV port has no scan, so the one-live-link rule keeps an explicit
+# pointer per (purpose, user) in this keyspace; its value is a digest.
+_PENDING_PREFIX = "pending:"
 
 
 class TokenError(Exception):
@@ -60,6 +67,7 @@ class TokenData:
 
 
 def _digest(token: str) -> str:
+    # Hashed at rest so a store leak shows digests, never usable links.
     return hashlib.sha256(token.encode()).hexdigest()
 
 
@@ -107,6 +115,28 @@ def mint(
     )
     s.set(_digest(token), record, ttl_seconds=ttl_seconds)
     return token
+
+
+def mint_single(
+    user_id: int,
+    purpose: str,
+    *,
+    ttl_seconds: int,
+    store: KVStore | None = None,
+) -> str:
+    """Keep at most one live token per (user, purpose); return the live one.
+
+    Older links for the same (user, purpose) never verify again once
+    this returns, whatever the internal mint and kill order.
+    """
+    s = _resolve_store(store)
+    raw = mint(user_id, purpose, ttl_seconds=ttl_seconds, store=s)
+    pending_key = _PENDING_PREFIX + f"{purpose}:{user_id}"
+    old_digest = s.get(pending_key)
+    if old_digest is not None:
+        s.delete(old_digest)
+    s.set(pending_key, _digest(raw), ttl_seconds=ttl_seconds)
+    return raw
 
 
 def verify(

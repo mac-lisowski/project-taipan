@@ -16,7 +16,9 @@ from api.routers import (
     password_change_router,
     password_reset_router,
     profiles_router,
+    registration_router,
     setup_router,
+    system_router,
     users_router,
 )
 
@@ -53,8 +55,10 @@ app.include_router(users_router, prefix="/api")
 app.include_router(profiles_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(setup_router, prefix="/api")
+app.include_router(system_router, prefix="/api")
 app.include_router(password_change_router, prefix="/api")
 app.include_router(password_reset_router, prefix="/api")
+app.include_router(registration_router, prefix="/api")
 app.include_router(email_webhooks_router, prefix="/api")
 
 

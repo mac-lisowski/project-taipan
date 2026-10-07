@@ -24,6 +24,7 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
 DEFAULT_RESET_TOKEN_TTL_SECONDS = 3600
+DEFAULT_ACTIVATION_TOKEN_TTL_SECONDS = 3600
 DEFAULT_MAIL_FROM = "noreply@localhost"
 # Non-empty so a built reset link always passes render validation.
 DEFAULT_APP_BASE_URL = "http://localhost:3000"
@@ -39,6 +40,7 @@ class StoreConfig:
     redis_url: str = DEFAULT_REDIS_URL
     session_ttl_seconds: int = DEFAULT_SESSION_TTL_SECONDS
     reset_token_ttl_seconds: int = DEFAULT_RESET_TOKEN_TTL_SECONDS
+    activation_token_ttl_seconds: int = DEFAULT_ACTIVATION_TOKEN_TTL_SECONDS
 
 
 @dataclass(frozen=True)
@@ -131,6 +133,13 @@ class Config:
             lo=1,
             range_msg="API_RESET_TOKEN_TTL_SECONDS must be at least 1 second",
         )
+        activation_token_ttl = _parse_int(
+            e,
+            "API_ACTIVATION_TOKEN_TTL_SECONDS",
+            DEFAULT_ACTIVATION_TOKEN_TTL_SECONDS,
+            lo=1,
+            range_msg="API_ACTIVATION_TOKEN_TTL_SECONDS must be at least 1 second",
+        )
 
         resend_api_key = e.get("API_RESEND_API_KEY", "")
         mail_from = e.get("API_MAIL_FROM", DEFAULT_MAIL_FROM)
@@ -144,6 +153,7 @@ class Config:
                 redis_url=e.get("API_REDIS_URL", DEFAULT_REDIS_URL),
                 session_ttl_seconds=session_ttl,
                 reset_token_ttl_seconds=reset_token_ttl,
+                activation_token_ttl_seconds=activation_token_ttl,
             ),
             crypto=CryptoConfig(
                 infisical_url=infisical_url,
