@@ -1,6 +1,6 @@
 # Current state
 
-- Branch: `dev` at `cab0a9d` (email-delivery spec moved to implemented).
+- Branch: `dev` at `cfb928f` (PR #33 merged).
 - Candidate 5 reversed by user: double resolve is FIXED, not accepted.
   ADR-0002 deleted. `sessions` stashes the middleware resolve on
   `request.state` (token-bound); `authz.resolve_session` reuses it.
