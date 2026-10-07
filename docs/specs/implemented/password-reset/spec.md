@@ -1,6 +1,6 @@
 # Spec: Password reset
 
-Status: planned.
+Status: implemented (PR #37).
 
 Seam: a password-reset module owns token rules over an injected
 session. An email-delivery module owns all mail sending with a

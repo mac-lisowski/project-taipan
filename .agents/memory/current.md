@@ -2,8 +2,8 @@
 
 - Branch feat/password-reset (rebased on origin/dev cbd5b68: litellm #36 +
   ci commits merged in). Password-reset spec IMPLEMENTED; this commit carries
-  the whole feature. PR to dev in flight; spec moves to docs/specs/implemented/
-  in the follow-up docs commit with the PR number.
+  the whole feature. PR #37 open to dev (f587d03); this docs commit flips the spec
+  to implemented. Merge = squash via GitHub.
 - API: password_reset module (request/reset acts; strength check BEFORE
   tokens.verify because verify burns atomically; revoke_all BEFORE
   auth_flow.issue; best-effort neutral mail), routers /auth/forgot (always 204)
@@ -29,7 +29,7 @@
   memory_token_store mirrors memory_session_store shape; reset-form hand-rolls
   pending/error (same useAuthSubmit follow-up as password-change); expired-token
   400 pinned at module seam, unknown+used pinned at HTTP.
-- Tickets 01+02 done with HTML reports in .scratch/password-reset/issues/
+- Spec: docs/specs/implemented/password-reset/. Tickets 01+02 done with HTML reports in .scratch/password-reset/issues/
   (gitignored). Disposable test DB container taipan-password-reset-test-db on
   host 15432: REMOVE after merge. project-taipan-db-1 is a zombie (no network,
   host 5432 held by python-playground-db-1, rootless docker): untouched, user
