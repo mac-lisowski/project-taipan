@@ -1,6 +1,6 @@
 # Spec: API modularization
 
-Status: planned.
+Status: implemented.
 
 Seam: feature folders with router plus service plus schemas. Shared
 authorities own cross-flow truth. Routers stay thin. Models stay
