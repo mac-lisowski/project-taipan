@@ -5,6 +5,10 @@ from alembic.config import Config
 from conftest import ALEMBIC_INI
 from sqlalchemy import create_engine, text
 
+# The revision at which this file's user_roles DDL froze; two later
+# revisions still ship the table before the head drops it.
+LAST_USER_ROLES_REVISION = "c5dab48db2ae"
+
 
 def _assert_roles_ddl(url):
     """Assert the DDL the migration must ship for user_roles."""
@@ -78,7 +82,7 @@ def test_roles_backfill_grants_admin_to_earliest_user(scratch_url):
                 "('earlier@x.com', 'h', true, now() - interval '1 hour')"
             )
         )
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, LAST_USER_ROLES_REVISION)
     with eng.connect() as conn:
         rows = conn.execute(
             text(
@@ -99,7 +103,7 @@ def test_roles_backfill_grants_admin_to_earliest_user(scratch_url):
 def test_roles_allow_member_and_multiple_roles_per_user(scratch_url):
     """The widened CHECK stores member; one user can hold two roles."""
     cfg = Config(str(ALEMBIC_INI))
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, LAST_USER_ROLES_REVISION)
     eng = create_engine(scratch_url)
     with eng.begin() as conn:
         uid = conn.execute(

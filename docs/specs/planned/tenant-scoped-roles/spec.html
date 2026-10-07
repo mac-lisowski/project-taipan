@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant-Scoped Roles and the System Owner Role</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+<header class="max-w-4xl mx-auto px-6 pt-10">
+  <h1 class="text-3xl font-bold">Tenant-Scoped Roles and the System Owner Role</h1>
+  <p class="mt-2 text-slate-500">Status: planned. This page is the map. Read spec.md for the prose.</p>
+</header>
+
+<main class="max-w-4xl mx-auto px-6 py-8 space-y-12">
+
+  <section>
+    <h2 class="text-xl font-semibold mb-3">1. Target shape</h2>
+    <p class="mb-4 text-sm text-slate-600">One service owns grants. Two tables hold the two kinds.
+    The guard checks tenant roles. System roles stay tenant-less.</p>
+    <div class="bg-white rounded-lg border border-slate-200 p-4">
+<pre class="mermaid">
+flowchart LR
+  subgraph apps
+    W["Setup wizard"]
+    U["Users router"]
+    M["Auth /me"]
+  end
+  S["Users service"]
+  G["Tenant flush guard"]
+  subgraph db["Database"]
+    T["tenants"]
+    L["user_tenants (1:1)"]
+    TR["user_tenant_roles"]
+    TR2["role: admin, member"]
+    SR["user_system_roles"]
+    SR2["role: system_owner"]
+  end
+  A["Principal: roles + system_roles"]
+  W --> S
+  U --> S
+  S --> T
+  S --> L
+  S --> TR
+  S --> SR
+  TR -. checked .-> G
+  SR -. skipped .-> G
+  M --> A
+  A -. reads .-> TR
+  A -. reads .-> SR
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-xl font-semibold mb-3">2. Before and after</h2>
+    <p class="mb-4 text-sm text-slate-600">One global grant table becomes two scoped tables.
+    Scope is the depth that gets added.</p>
+    <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-6">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Before</p>
+        <div class="w-1/3 bg-slate-300 rounded h-9 flex items-center px-3 text-xs font-medium">user_roles: user_id + role, global</div>
+        <p class="text-xs text-slate-500 mt-1">One table. No tenant column. The guard skips it. Admin means admin everywhere.</p>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">After</p>
+        <div class="w-5/6 bg-indigo-500 text-white rounded h-9 flex items-center px-3 text-xs font-medium mb-2">user_tenant_roles: user_id + tenant_id + role, guard-checked</div>
+        <div class="w-2/3 bg-emerald-600 text-white rounded h-9 flex items-center px-3 text-xs font-medium">user_system_roles: user_id + role, tenant-less</div>
+        <p class="text-xs text-slate-500 mt-1">Tenant power and platform power get separate homes, checks, and unique rules.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-xl font-semibold mb-3">3. Test seam</h2>
+    <p class="mb-4 text-sm text-slate-600">Two seams, both existing. No new seam.</p>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-lg border border-slate-200 p-5">
+        <h3 class="font-semibold mb-2">HTTP seam</h3>
+        <p class="text-sm text-slate-600"><span class="font-medium">Crosses:</span> setup, login, /me, /users via the app test client.</p>
+        <p class="text-sm text-slate-600 mt-2"><span class="font-medium">Asserts:</span> setup grants admin + member in the created tenant plus system_owner. /me returns roles and system_roles. Members get 403 on /users, admins get 200.</p>
+      </div>
+      <div class="bg-white rounded-lg border border-slate-200 p-5">
+        <h3 class="font-semibold mb-2">Migration seam</h3>
+        <p class="text-sm text-slate-600"><span class="font-medium">Crosses:</span> real alembic upgrades on a scratch database.</p>
+        <p class="text-sm text-slate-600 mt-2"><span class="font-medium">Asserts:</span> exact DDL of both tables, every old grant backfilled into the linked tenant, earliest user gets system_owner, final revision drops the old table.</p>
+      </div>
+    </div>
+    <p class="text-sm text-slate-600 mt-4">Plus one guard test: a tenant-role write outside scope fails, inside scope passes.</p>
+  </section>
+
+  <section>
+    <h2 class="text-xl font-semibold mb-3">4. Out of scope</h2>
+    <p class="text-sm text-slate-600">Shared tenants, tenant switching, more system users, role
+    admin UI, new role values, session changes. The one-to-one user-tenant link stays.</p>
+  </section>
+
+</main>
+<footer class="max-w-4xl mx-auto px-6 pb-10 text-xs text-slate-400">
+  Companion to docs/specs/planned/tenant-scoped-roles/spec.md
+</footer>
+</body>
+</html>

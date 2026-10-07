@@ -191,14 +191,6 @@ def test_revoke_all_reaches_long_session_after_short_mint_expires(make_store) ->
     assert sessions.resolve(other, store=store) is not None
 
 
-def test_tenant_id_for_token() -> None:
-    store = MemoryKVStore(SESSION_KEYS)
-    token = sessions.mint(user_id=7, tenant_id="tenant-777", store=store)
-
-    assert sessions.tenant_id_for_token(token, store=store) == "tenant-777"
-    assert sessions.tenant_id_for_token("unknown", store=store) is None
-
-
 def test_mint_uses_default_ttl() -> None:
     clock = FakeClock()
     store = MemoryKVStore(SESSION_KEYS, clock=clock)

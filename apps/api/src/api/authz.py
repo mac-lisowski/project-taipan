@@ -5,18 +5,18 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from api import sessions
 from api.db import DbSession
-from api.models import Role, User, UserRole
+from api.models import Role, SystemRole, User, UserSystemRole, UserTenantRole
 
 __all__ = [
     "Principal",
+    "can",
     "current_principal",
     "require_admin",
+    "require_system_owner",
     "resolve_session",
-    "roles_for",
 ]
 
 
@@ -26,14 +26,10 @@ class Principal:
     email: str
     tenant_id: str
     roles: tuple[str, ...]
+    system_roles: tuple[str, ...] = ()
 
     def has_role(self, role: str) -> bool:
         return role in self.roles
-
-
-def roles_for(db: Session, user_id: int) -> list[str]:
-    query = select(UserRole.role).where(UserRole.user_id == user_id).order_by(UserRole.role)
-    return list(db.scalars(query).all())
 
 
 def resolve_session(request: Request) -> sessions.SessionData | None:
@@ -52,27 +48,72 @@ def current_principal(request: Request, db: DbSession) -> Principal:
     sess = resolve_session(request)
     if sess is None:
         raise HTTPException(status_code=401, detail="not authenticated")
-    query = (
-        select(User.id, User.email, UserRole.role)
-        .outerjoin(UserRole, UserRole.user_id == User.id)
-        .where(User.id == sess.user_id)
-        .order_by(UserRole.role)
-    )
-    rows = db.execute(query).all()
-    if not rows:
+    row = db.execute(select(User.id, User.email).where(User.id == sess.user_id)).first()
+    if row is None:
         raise HTTPException(status_code=401, detail="not authenticated")
-    roles = tuple(r[2] for r in rows if r[2] is not None)
+    # Roles bound to another tenant must not ride along, or admin leaks across tenants.
+    roles = tuple(
+        db.scalars(
+            select(UserTenantRole.role)
+            .where(
+                UserTenantRole.user_id == sess.user_id,
+                UserTenantRole.tenant_id == sess.tenant_id,
+            )
+            .order_by(UserTenantRole.role)
+        ).all()
+    )
+    system_roles = tuple(
+        db.scalars(
+            select(UserSystemRole.role)
+            .where(UserSystemRole.user_id == sess.user_id)
+            .order_by(UserSystemRole.role)
+        ).all()
+    )
     return Principal(
-        user_id=rows[0][0],
-        email=rows[0][1],
+        user_id=row[0],
+        email=row[1],
         tenant_id=sess.tenant_id,
         roles=roles,
+        system_roles=system_roles,
     )
 
 
 def require_admin(
     principal: Annotated[Principal, Depends(current_principal)],
 ) -> Principal:
+    # roles is already filtered to the session tenant, so admin here is that tenant's admin.
     if not principal.has_role(Role.ADMIN):
         raise HTTPException(status_code=403, detail="admin role required")
     return principal
+
+
+def require_system_owner(
+    principal: Annotated[Principal, Depends(current_principal)],
+) -> Principal:
+    if SystemRole.SYSTEM_OWNER.value not in principal.system_roles:
+        raise HTTPException(status_code=403, detail="system owner role required")
+    return principal
+
+
+def can(db: DbSession, user_id: int, role: str, tenant_id: str | None) -> bool:
+    """The one role question: user holds role in tenant; a None tenant asks the system tier."""
+    if tenant_id is None:
+        found = db.scalar(
+            select(UserSystemRole.user_id)
+            .where(
+                UserSystemRole.user_id == user_id,
+                UserSystemRole.role == role,
+            )
+            .limit(1)
+        )
+        return found is not None
+    found = db.scalar(
+        select(UserTenantRole.user_id)
+        .where(
+            UserTenantRole.user_id == user_id,
+            UserTenantRole.tenant_id == tenant_id,
+            UserTenantRole.role == role,
+        )
+        .limit(1)
+    )
+    return found is not None

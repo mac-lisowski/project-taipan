@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolveAccount, resolveLanding, revokeSession } from "./upstream";
+import { resolveAccount, resolveLanding, revokeSession, type Me } from "./upstream";
 
-const ME = { id: 1, email: "op@x.com", tenant_id: "t1", roles: ["admin", "member"] };
+// Exact /me payload for the setup admin: tenant roles plus system_owner.
+const ME: Me = {
+  id: 1,
+  email: "op@x.com",
+  tenant_id: "t1",
+  roles: ["admin", "member"],
+  system_roles: ["system_owner"],
+};
 
 describe("resolveAccount", () => {
   afterEach(() => {

@@ -24,7 +24,6 @@ __all__ = [
     "revoke",
     "revoke_all",
     "set_session_cookie",
-    "tenant_id_for_token",
 ]
 
 COOKIE_NAME = "session"
@@ -124,12 +123,6 @@ def revoke_all(user_id: int, store: KVStore | None = None) -> None:
         secrets.token_hex(8),
         ttl_seconds=EPOCH_TTL_SECONDS,
     )
-
-
-def tenant_id_for_token(token: str, store: KVStore | None = None) -> str | None:
-    """Return tenant_id for session token without opening database session."""
-    sess = resolve(token, store)
-    return sess.tenant_id if sess is not None else None
 
 
 # One resolve per request: middleware stashes its read here, authz reuses

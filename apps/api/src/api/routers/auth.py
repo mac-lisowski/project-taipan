@@ -39,4 +39,5 @@ def me(principal: Annotated[authz.Principal, Depends(authz.current_principal)]) 
         email=principal.email,
         tenant_id=principal.tenant_id,
         roles=list(principal.roles),
+        system_roles=list(principal.system_roles),
     )

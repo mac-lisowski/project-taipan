@@ -33,9 +33,13 @@ export default async function AccountPage(): Promise<ReactNode> {
           <dt className="text-muted-foreground">tenant</dt>
           <dd className="break-all">{me.tenant_id}</dd>
         </div>
-        <div className="flex justify-between py-2">
+        <div className="flex justify-between border-b border-border py-2">
           <dt className="text-muted-foreground">roles</dt>
           <dd>{me.roles.join(", ")}</dd>
+        </div>
+        <div className="flex justify-between py-2">
+          <dt className="text-muted-foreground">system roles</dt>
+          <dd>{me.system_roles.join(", ") || "-"}</dd>
         </div>
       </dl>
       <div className="mt-4 border-t border-border pt-4">
