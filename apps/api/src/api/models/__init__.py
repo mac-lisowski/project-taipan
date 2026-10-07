@@ -2,6 +2,11 @@
 # whose module was imported; create_all silently skips the rest.
 from api.models.auth_session import AuthSession
 from api.models.dek import TenantDek
+from api.models.email_suppression import (
+    EmailSendCounter,
+    EmailSuppression,
+    EmailWebhookEvent,
+)
 from api.models.encrypted_string import EncryptedString
 from api.models.profile import UserProfile
 from api.models.tenant import Tenant
@@ -11,6 +16,9 @@ from api.models.user_tenant import UserTenant
 
 __all__ = [
     "AuthSession",
+    "EmailSendCounter",
+    "EmailSuppression",
+    "EmailWebhookEvent",
     "EncryptedString",
     "Role",
     "Tenant",
