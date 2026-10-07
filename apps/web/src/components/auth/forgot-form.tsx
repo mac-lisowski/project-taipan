@@ -5,8 +5,8 @@ import { useState, type ReactNode } from "react";
 import { Field } from "@/ui";
 import { AuthForm } from "@/components/auth/auth-form";
 
-// Mock: posts to a BFF route that does not exist yet; shows a done state
-// on success.
+// Posts to the real /api/auth/forgot; the reply is neutral by design,
+// so the sent note never reveals whether the address is known.
 export function ForgotForm(): ReactNode {
   const [sent, setSent] = useState(false);
 

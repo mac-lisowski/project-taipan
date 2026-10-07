@@ -27,3 +27,9 @@ def get_token_store() -> KVStore:
     if _token_store is None:
         _token_store = build_token_store()
     return _token_store
+
+
+def set_token_store(store: KVStore | None) -> None:
+    """Set the active token store; tests swap in a memory double."""
+    global _token_store
+    _token_store = store

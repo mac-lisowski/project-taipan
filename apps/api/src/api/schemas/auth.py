@@ -19,5 +19,14 @@ class PasswordChangeIn(BaseModel):
     confirm_new_password: str
 
 
+class ForgotIn(BaseModel):
+    email: EmailStr
+
+
+class ResetIn(BaseModel):
+    token: str
+    new_password: str
+
+
 class PasswordChangeOut(BaseModel):
     other_devices_signed_out: bool

@@ -34,6 +34,7 @@ __all__ = [
     "authenticate",
     "bootstrap",
     "get",
+    "get_by_email",
     "list",
     "needs_setup",
     "register",
@@ -91,6 +92,11 @@ def get(session: Session, user_id: int) -> User:
     if user is None:
         raise NotFound(user_id)
     return user
+
+
+def get_by_email(session: Session, email: str) -> User | None:
+    """Return the user for email, or None; the forgot flow needs no raise."""
+    return session.scalar(select(User).where(User.email == email))
 
 
 def list(session: Session) -> list[User]:

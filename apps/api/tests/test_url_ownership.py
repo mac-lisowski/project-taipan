@@ -33,10 +33,13 @@ def test_testsupport_urls_default_to_localhost(monkeypatch: pytest.MonkeyPatch) 
     saved = (api_testsupport.TEST_ADMIN_URL, api_testsupport.TEST_URL)
     try:
         support = importlib.reload(api_testsupport)
+        # Read before the restore: the finally block puts import-time
+        # values back, and those are not what the reload observed.
+        reloaded = (support.TEST_ADMIN_URL, support.TEST_URL)
     finally:
         api_testsupport.TEST_ADMIN_URL, api_testsupport.TEST_URL = saved
-    admin = make_url(support.TEST_ADMIN_URL)
-    test = make_url(support.TEST_URL)
+    admin = make_url(reloaded[0])
+    test = make_url(reloaded[1])
     assert (admin.drivername, admin.host, admin.port, admin.database) == (
         "postgresql+psycopg",
         "localhost",
