@@ -1,6 +1,6 @@
 # Spec: Password change
 
-Status: implemented.
+Status: implemented (PR #34).
 
 Seam: a password-change module owns the change rules over an
 injected session. The shared email-delivery seam owns the change
