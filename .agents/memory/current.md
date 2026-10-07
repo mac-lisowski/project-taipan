@@ -1,6 +1,6 @@
 # Current state
 
-- Branch: `refactor/arch-deepening` at `6e588e9` (local only, not pushed).
+- Branch: `dev` at `3f8b444` (PR #32 merged; feature branch merged).
 - Candidate 5 reversed by user: double resolve is FIXED, not accepted.
   ADR-0002 deleted. `sessions` stashes the middleware resolve on
   `request.state` (token-bound); `authz.resolve_session` reuses it.
