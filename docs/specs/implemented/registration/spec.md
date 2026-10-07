@@ -1,6 +1,6 @@
 # Spec: Registration
 
-Status: planned.
+Status: implemented (PR #39).
 
 Seam: a registration module owns token rules over an injected
 session. The shared email-delivery seam owns all mail sending with

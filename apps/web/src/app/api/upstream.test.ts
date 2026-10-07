@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolveAccount, resolveLanding, revokeSession, type Me } from "./upstream";
+import {
+  resolveAccount,
+  resolveLanding,
+  resolveRegistrationSwitch,
+  revokeSession,
+  type Me,
+} from "./upstream";
 
 // Exact /me payload for the setup admin: tenant roles plus system_owner.
 const ME: Me = {
@@ -9,6 +15,72 @@ const ME: Me = {
   roles: ["admin", "member"],
   system_roles: ["system_owner"],
 };
+
+describe("resolveRegistrationSwitch", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("GETs the public switch per render with no-store", async () => {
+    vi.stubEnv("API_INTERNAL_URL", "http://api:8000");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ enabled: true }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await resolveRegistrationSwitch()).toEqual({ ok: true, enabled: true });
+    expect(fetchMock).toHaveBeenCalledWith("http://api:8000/api/system/registration", {
+      cache: "no-store",
+    });
+  });
+
+  it("maps an off switch", async () => {
+    vi.stubEnv("API_INTERNAL_URL", "http://api:8000");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ enabled: false }), { status: 200 }),
+      ),
+    );
+    expect(await resolveRegistrationSwitch()).toEqual({ ok: true, enabled: false });
+  });
+
+  it("reports an error instead of a guess when the read fails", async () => {
+    vi.stubEnv("API_INTERNAL_URL", "http://api:8000");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "down" }), { status: 502 })),
+    );
+    expect(await resolveRegistrationSwitch()).toEqual({
+      ok: false,
+      error: "registration switch read failed (502)",
+    });
+  });
+
+  it("reports an error on an unexpected answer", async () => {
+    vi.stubEnv("API_INTERNAL_URL", "http://api:8000");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ enabled: "yes" }), { status: 200 }),
+      ),
+    );
+    expect(await resolveRegistrationSwitch()).toEqual({
+      ok: false,
+      error: "registration switch gave an unexpected answer",
+    });
+  });
+
+  it("maps a thrown fetch to an error instead of rejecting", async () => {
+    vi.stubEnv("API_INTERNAL_URL", "http://api:8000");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("down")));
+    expect(await resolveRegistrationSwitch()).toEqual({
+      ok: false,
+      error: "registration switch read failed",
+    });
+  });
+});
 
 describe("resolveAccount", () => {
   afterEach(() => {

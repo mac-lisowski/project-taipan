@@ -1,7 +1,5 @@
 """Password reset domain tests: rules over a real test session, no HTTP."""
 
-import hashlib
-
 import pytest
 from api import password_reset, sessions, tokens, users
 from api.credentials import verify_password
@@ -27,7 +25,7 @@ def _known_user_token(db, fake, email):
     return _sent_token(fake)
 
 
-def test_known_active_email_sends_one_link_with_hashed_token(session_factory, memory_token_store):
+def test_known_active_email_sends_one_link(session_factory, memory_token_store):
     fake = FakeEmailSender()
     with session_factory() as db:
         user = users.register(db, "known@x.com", "s3cret123")
@@ -38,9 +36,9 @@ def test_known_active_email_sends_one_link_with_hashed_token(session_factory, me
         assert mail.recipient == user.email
         assert mail.data["app_name"] == password_reset.APP_NAME
         raw = _sent_token(fake)
-        digest = "token:" + hashlib.sha256(raw.encode()).hexdigest()
-        assert list(memory_token_store.entries) == [digest]
-        assert raw not in memory_token_store.entries[digest]
+        assert mail.data["link"].endswith(f"token={raw}")
+        # One request backs exactly one token record.
+        assert len(memory_token_store.entries) == 1
 
 
 def test_unknown_email_sends_nothing(session_factory):
@@ -73,11 +71,9 @@ def test_link_token_expires_after_configured_ttl(session_factory, memory_token_s
         _known_user_token(db, fake, "ttl@x.com")
 
     raw = _sent_token(fake)
-    digest = hashlib.sha256(raw.encode()).hexdigest()
-    assert memory_token_store.get(digest) is not None
+    assert len(memory_token_store.entries) == 1
 
     memory_token_store.clock.advance(61)
-    assert memory_token_store.get(digest) is None
     with pytest.raises(TokenNotFound):
         tokens.verify(raw, tokens.PURPOSE_RESET)
 

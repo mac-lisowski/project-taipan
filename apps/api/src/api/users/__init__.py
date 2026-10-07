@@ -14,6 +14,7 @@ from api.users.service import (
     list,
     needs_setup,
     register,
+    register_passwordless,
     remove,
     tenant_id_for_user,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "needs_setup",
     "profiles",
     "register",
+    "register_passwordless",
     "remove",
     "tenant_id_for_user",
 ]

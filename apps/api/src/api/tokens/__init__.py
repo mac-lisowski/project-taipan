@@ -1,4 +1,8 @@
-"""Tokens module: single-use, purpose-scoped, hashed at rest."""
+"""Tokens module: single-use, purpose-scoped, hashed at rest.
+
+Activation keeps one live link per (user, purpose) via mint_single;
+other purposes, like password reset, mint independently.
+"""
 
 from api.tokens.service import (
     PURPOSE_ACTIVATION,
@@ -10,6 +14,7 @@ from api.tokens.service import (
     TokenPurposeMismatch,
     burn,
     mint,
+    mint_single,
     verify,
 )
 
@@ -23,5 +28,6 @@ __all__ = [
     "TokenPurposeMismatch",
     "burn",
     "mint",
+    "mint_single",
     "verify",
 ]

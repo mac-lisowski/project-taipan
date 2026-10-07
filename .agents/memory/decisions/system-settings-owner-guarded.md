@@ -11,4 +11,4 @@
   route 404, no sign up links render anywhere (login page included).
 - Public switch read through the BFF exposes the switch and nothing
   else; it feeds route gating and link rendering.
-- Spec: docs/specs/planned/registration/spec.md (2026-10-08).
+- Spec: docs/specs/implemented/registration/spec.md (2026-10-08).

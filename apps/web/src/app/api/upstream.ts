@@ -15,6 +15,10 @@ export type LandingDecision =
   | { view: "login" }
   | { view: "error"; error: string };
 
+export type RegistrationSwitchRead =
+  | { ok: true; enabled: boolean }
+  | { ok: false; error: string };
+
 // Probe mapping for server render: failure is an error, never a wrong form.
 export async function resolveLanding(): Promise<LandingDecision> {
   let res: Response;
@@ -33,6 +37,31 @@ export async function resolveLanding(): Promise<LandingDecision> {
     return { view: "error", error: "setup probe gave an unexpected answer" };
   }
   return { view: (data as { needs_setup: boolean }).needs_setup ? "setup" : "login" };
+}
+
+// Server-side read of the public registration switch: no-store so a
+// flip to off closes the sign up door on the very next render.
+export async function resolveRegistrationSwitch(): Promise<RegistrationSwitchRead> {
+  let res: Response;
+  try {
+    res = await fetch(`${apiInternalUrl()}/api/system/registration`, {
+      cache: "no-store",
+    });
+  } catch {
+    return { ok: false, error: "registration switch read failed" };
+  }
+  if (!res.ok) {
+    return { ok: false, error: `registration switch read failed (${res.status})` };
+  }
+  const data: unknown = await res.json().catch(() => null);
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    typeof (data as { enabled?: unknown }).enabled !== "boolean"
+  ) {
+    return { ok: false, error: "registration switch gave an unexpected answer" };
+  }
+  return { ok: true, enabled: (data as { enabled: boolean }).enabled };
 }
 
 // Best-effort revoke: never throws, so logout works with the API down.
