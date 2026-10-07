@@ -15,7 +15,15 @@ from api.credentials import (
     hash_password,
     verify_password,
 )
-from api.models import Role, Tenant, User, UserRole, UserTenant
+from api.models import (
+    Role,
+    SystemRole,
+    Tenant,
+    User,
+    UserSystemRole,
+    UserTenant,
+    UserTenantRole,
+)
 
 __all__ = [
     "SETUP_LOCK_KEY",
@@ -61,7 +69,7 @@ def register(session: Session, email: str, password: str) -> User:
         session.add(user)
         session.flush()
         session.add(UserTenant(user_id=user.id, tenant_id=tenant.id))
-        session.add(UserRole(user_id=user.id, role=Role.MEMBER))
+        session.add(UserTenantRole(user_id=user.id, tenant_id=tenant.id, role=Role.MEMBER))
         session.flush()
         session.refresh(user)
     return user
@@ -87,6 +95,7 @@ def get(session: Session, user_id: int) -> User:
 
 def list(session: Session) -> list[User]:
     # `.all()`, not `list(...)`: the name `list` is this module's function.
+    # Instance-wide on purpose: one owner today; scoping arrives with invites.
     return session.scalars(select(User).order_by(User.id)).all()
 
 
@@ -105,8 +114,12 @@ def bootstrap(session: Session, email: str, password: str) -> User:
     if not needs_setup(session):
         raise AlreadySetup()
     user = register(session, email, password)
-    session.add(UserRole(user_id=user.id, role=Role.ADMIN))
-    session.flush()
+    tenant_id = tenant_id_for_user(session, user.id)
+    # Teardown commits unscoped, so tenant-role rows must flush in here.
+    with tenant_scope(tenant_id):
+        session.add(UserTenantRole(user_id=user.id, tenant_id=tenant_id, role=Role.ADMIN))
+        session.add(UserSystemRole(user_id=user.id, role=SystemRole.SYSTEM_OWNER))
+        session.flush()
     return user
 
 

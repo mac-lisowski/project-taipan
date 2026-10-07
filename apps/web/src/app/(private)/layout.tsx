@@ -11,7 +11,7 @@ export default async function PrivateLayout({
 }): Promise<ReactNode> {
   const me = await requireAccount();
   return (
-    <PrivateShell email={me.email} tenant={me.tenant_id}>
+    <PrivateShell email={me.email} tenant={me.tenant_id} systemRoles={me.system_roles}>
       {children}
     </PrivateShell>
   );

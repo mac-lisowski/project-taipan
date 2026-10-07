@@ -5,6 +5,7 @@ export type Me = {
   email: string;
   tenant_id: string;
   roles: string[];
+  system_roles: string[];
 };
 
 export type AccountDecision = { redirect: "/" } | { me: Me };

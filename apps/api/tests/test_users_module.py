@@ -54,6 +54,18 @@ def test_remove_missing_raises_not_found(session_factory):
         users.remove(db, 424242)
 
 
+def test_list_is_instance_wide_across_personal_tenants(session_factory):
+    with session_factory() as db:
+        users.register(db, "wide-a@x.com", "s3cret123")
+        users.register(db, "wide-b@x.com", "s3cret123")
+
+        emails = {user.email for user in users.list(db)}
+
+    # Each user sits in a personal tenant, yet the list shows both: the
+    # instance owner administers the whole instance until invites land.
+    assert {"wide-a@x.com", "wide-b@x.com"} <= emails
+
+
 def test_tenant_id_for_user_without_tenant_raises_not_found(session_factory):
     with session_factory() as db:
         # A user row with no tenant link; register always attaches one.

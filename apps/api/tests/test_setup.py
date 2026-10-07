@@ -1,4 +1,4 @@
-from api.models import UserRole, UserTenant
+from api.models import UserTenant, UserTenantRole
 from sqlalchemy import select
 
 
@@ -23,7 +23,7 @@ def test_first_setup_creates_user_link_roles_and_cookie(client, session_factory)
         link = db.scalar(select(UserTenant))
         assert link is not None
         assert link.user_id == user_id
-        roles = sorted(db.scalars(select(UserRole.role)).all())
+        roles = sorted(db.scalars(select(UserTenantRole.role)).all())
         assert roles == ["admin", "member"]
 
 

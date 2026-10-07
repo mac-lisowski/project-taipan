@@ -11,8 +11,10 @@ from api.models.encrypted_string import EncryptedString
 from api.models.profile import UserProfile
 from api.models.tenant import Tenant
 from api.models.user import User
-from api.models.user_role import Role, UserRole
+from api.models.user_role import Role
+from api.models.user_system_role import SystemRole, UserSystemRole
 from api.models.user_tenant import UserTenant
+from api.models.user_tenant_role import UserTenantRole
 
 __all__ = [
     "AuthSession",
@@ -21,10 +23,12 @@ __all__ = [
     "EmailWebhookEvent",
     "EncryptedString",
     "Role",
+    "SystemRole",
     "Tenant",
     "TenantDek",
     "User",
     "UserProfile",
-    "UserRole",
+    "UserSystemRole",
     "UserTenant",
+    "UserTenantRole",
 ]

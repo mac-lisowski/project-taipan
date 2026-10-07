@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
+import type { Me } from "../app/api/upstream";
 import {
   clearSessionCookie,
   getSessionToken,
@@ -78,7 +79,13 @@ describe("session helpers", () => {
 
   it("requireAccount returns account identity when authenticated", async () => {
     mockGet.mockReturnValue({ name: "session", value: "tok-123" });
-    const me = { id: 1, email: "a@x.com", tenant_id: "t1", roles: ["admin"] };
+    const me: Me = {
+      id: 1,
+      email: "a@x.com",
+      tenant_id: "t1",
+      roles: ["admin"],
+      system_roles: ["system_owner"],
+    };
     mockResolveAccount.mockResolvedValue({ me });
 
     const result = await requireAccount();
