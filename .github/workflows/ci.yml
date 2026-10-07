@@ -261,17 +261,14 @@ jobs:
       - name: deploy infisical
         # Skipped until the Railway service exists and the GitHub
         # environment secret RAILWAY_SERVICE_INFISICAL is set.
-        if: ${{ secrets.RAILWAY_SERVICE_INFISICAL != '' }}
+        if: ${{ env.RAILWAY_SERVICE_INFISICAL != '' }}
         timeout-minutes: 10
         run: railway up --service "$RAILWAY_SERVICE_INFISICAL" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
       - name: deploy litellm
         # Skipped until the Railway service exists (with its Dockerfile
         # builder set to docker/litellm/Dockerfile) and the GitHub
         # environment secret RAILWAY_SERVICE_LITELLM is set.
-        if: ${{ secrets.RAILWAY_SERVICE_LITELLM != '' }}
+        if: ${{ env.RAILWAY_SERVICE_LITELLM != '' }}
         timeout-minutes: 10
         run: railway up --service "$RAILWAY_SERVICE_LITELLM" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
 
-# 2026-10-08: probe comment. Runs 15:06-16:25 UTC Oct 7 hit a GitHub
-# incident mid-push; three runs startup-failed with zero jobs and are
-# not retryable. This line forces a clean re-validation of the file.
