@@ -13,7 +13,7 @@ ALEMBIC_INI = Path(__file__).resolve().parents[2] / "alembic.ini"
 
 def wait_for_db(timeout_seconds: float = 10.0, interval: float = 1.0) -> None:
     deadline = time.monotonic() + timeout_seconds
-    url = get_config().database_url
+    url = get_config().db.database_url
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     eng = create_engine(url, connect_args=connect_args)
     try:

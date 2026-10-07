@@ -27,12 +27,12 @@ def build_email_sender(
     bounds run on every composed send.
     """
     cfg = config or get_config()
-    if not cfg.resend_api_key:
+    if not cfg.mail.resend_api_key:
         inner: EmailSender = FakeEmailSender()
     else:
         inner = ResendEmailSender(
-            api_key=cfg.resend_api_key,
-            from_address=cfg.mail_from_address,
+            api_key=cfg.mail.resend_api_key,
+            from_address=cfg.mail.mail_from_address,
             transport=transport,
         )
     return GuardedEmailSender(inner, MemorySuppressionStore())

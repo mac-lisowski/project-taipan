@@ -1,4 +1,4 @@
-"""Opaque login sessions: stored in SessionStore with TTL."""
+"""Opaque login sessions: stored in the KV store with TTL."""
 
 from __future__ import annotations
 
@@ -9,10 +9,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from api.config import get_config
-from api.session_store import SessionStore, get_session_store
+from api.kvstore import KVStore, get_session_store
 
 if TYPE_CHECKING:
     from fastapi import Response
+    from starlette.requests import Request
 
 __all__ = [
     "COOKIE_NAME",
@@ -38,7 +39,7 @@ class SessionData:
     tenant_id: str
 
 
-def _store(store: SessionStore | None) -> SessionStore:
+def _store(store: KVStore | None) -> KVStore:
     return store if store is not None else get_session_store()
 
 
@@ -51,7 +52,7 @@ def _epoch_key(user_id: int) -> str:
     return f"session-epoch:{user_id}"
 
 
-def _current_epoch(store: SessionStore, user_id: int) -> str | None:
+def _current_epoch(store: KVStore, user_id: int) -> str | None:
     # No refresh from mints: the fixed TTL outlives any session ttl, so a
     # short mint can never shorten it under a live long session.
     return store.get(_epoch_key(user_id))
@@ -70,12 +71,12 @@ def clear_session_cookie(response: Response) -> None:
 def mint(
     user_id: int,
     tenant_id: str,
-    store: SessionStore | None = None,
+    store: KVStore | None = None,
     ttl_seconds: int | None = None,
 ) -> str:
     """Mint new session token and store user_id and tenant_id with TTL."""
     s = _store(store)
-    ttl = ttl_seconds if ttl_seconds is not None else get_config().session_ttl_seconds
+    ttl = ttl_seconds if ttl_seconds is not None else get_config().store.session_ttl_seconds
     token = secrets.token_urlsafe(32)
     digest = _digest(token)
     epoch = _current_epoch(s, user_id)
@@ -84,7 +85,7 @@ def mint(
     return token
 
 
-def resolve(token: str, store: SessionStore | None = None) -> SessionData | None:
+def resolve(token: str, store: KVStore | None = None) -> SessionData | None:
     """Retrieve SessionData for token; return None if token is invalid or expired."""
     s = _store(store)
     raw = s.get(_digest(token))
@@ -106,12 +107,12 @@ def resolve(token: str, store: SessionStore | None = None) -> SessionData | None
     return SessionData(user_id=user_id, tenant_id=tenant_id)
 
 
-def revoke(token: str, store: SessionStore | None = None) -> None:
+def revoke(token: str, store: KVStore | None = None) -> None:
     """Revoke session token from store."""
     _store(store).delete(_digest(token))
 
 
-def revoke_all(user_id: int, store: SessionStore | None = None) -> None:
+def revoke_all(user_id: int, store: KVStore | None = None) -> None:
     """Revoke every live session for user_id, indexed or not.
 
     One blind epoch write: there is no read-modify-write to lose a mint
@@ -125,7 +126,26 @@ def revoke_all(user_id: int, store: SessionStore | None = None) -> None:
     )
 
 
-def tenant_id_for_token(token: str, store: SessionStore | None = None) -> str | None:
+def tenant_id_for_token(token: str, store: KVStore | None = None) -> str | None:
     """Return tenant_id for session token without opening database session."""
     sess = resolve(token, store)
     return sess.tenant_id if sess is not None else None
+
+
+# One resolve per request: middleware stashes its read here, authz reuses
+# it when the cookie still matches. A changed cookie misses and resolves
+# fresh, so a stale value can never authorize a different token.
+_REQUEST_CACHE_ATTR = "_resolved_session"
+
+
+def remember_resolved_session(request: Request, token: str, data: SessionData | None) -> None:
+    """Stash this request's resolve, bound to the token that produced it."""
+    request.state.__dict__[_REQUEST_CACHE_ATTR] = (token, data)
+
+
+def cached_session(request: Request, token: str) -> tuple[bool, SessionData | None]:
+    """Return (found, data) when this request already resolved this token."""
+    hit = request.state.__dict__.get(_REQUEST_CACHE_ATTR)
+    if hit is None or hit[0] != token:
+        return False, None
+    return True, hit[1]

@@ -13,7 +13,8 @@ import secrets
 from dataclasses import dataclass
 from typing import Any
 
-from api.tokens.store import TokenStore, get_token_store
+from api.kvstore import KVStore
+from api.tokens.store import get_token_store
 
 __all__ = [
     "PURPOSE_ACTIVATION",
@@ -62,13 +63,13 @@ def _digest(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def _resolve_store(store: TokenStore | None) -> TokenStore:
+def _resolve_store(store: KVStore | None) -> KVStore:
     if store is not None:
         return store
     return get_token_store()
 
 
-def _load(store: TokenStore, token: str) -> tuple[str, dict[str, Any]]:
+def _load(store: KVStore, token: str) -> tuple[str, dict[str, Any]]:
     raw = store.get(_digest(token))
     if raw is None:
         raise TokenNotFound("token is unknown or expired")
@@ -89,7 +90,7 @@ def mint(
     purpose: str,
     *,
     ttl_seconds: int,
-    store: TokenStore | None = None,
+    store: KVStore | None = None,
 ) -> str:
     """Create a single-use token for purpose; return the raw token once."""
     if ttl_seconds <= 0:
@@ -111,7 +112,7 @@ def mint(
 def verify(
     token: str,
     purpose: str,
-    store: TokenStore | None = None,
+    store: KVStore | None = None,
 ) -> TokenData:
     """Consume the token if hash, purpose, expiry, and unused state pass."""
     s = _resolve_store(store)
@@ -132,7 +133,7 @@ def verify(
     return TokenData(user_id=record["user_id"], purpose=record["purpose"])
 
 
-def burn(token: str, store: TokenStore | None = None) -> None:
+def burn(token: str, store: KVStore | None = None) -> None:
     """Mark the token used so later verify fails; unknown tokens are ignored."""
     s = _resolve_store(store)
     try:

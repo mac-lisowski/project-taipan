@@ -53,13 +53,10 @@ def root() -> dict[str, str]:
 
 
 def _serve(*, reload: bool) -> None:
-    import os
-
     import uvicorn
 
-    host = os.environ.get("HOST", "0.0.0.0")
-    port = int(os.environ.get("PORT", "8000"))
-    uvicorn.run("api.main:app", host=host, port=port, reload=reload)
+    cfg = get_config()
+    uvicorn.run("api.main:app", host=cfg.server.host, port=cfg.server.port, reload=reload)
 
 
 def main() -> None:

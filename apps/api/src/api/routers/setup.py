@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Response
 
-from api import sessions, users
+from api import auth_flow, sessions, users
 from api.db import DbSession
 from api.models import User
 from api.schemas import SetupStatus, UserCreate, UserOut
@@ -23,6 +23,5 @@ def setup(payload: UserCreate, response: Response, db: DbSession) -> User:
         raise HTTPException(
             status_code=422, detail="password does not meet the strength rule"
         ) from exc
-    tenant_id = users.tenant_id_for_user(db, user.id)
-    sessions.set_session_cookie(response, sessions.mint(user.id, tenant_id))
+    sessions.set_session_cookie(response, auth_flow.issue(db, user.id))
     return user

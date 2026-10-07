@@ -20,3 +20,4 @@ Why things are the way they are. One decision per file in
 - [Extensible entities via Pattern A](decisions/extensible-entities-pattern-a.md)
 - [Tenant link lives in user_tenants, not on users](decisions/tenant-link-extension-table.md)
 - [Conventional commit gate](decisions/commit-convention.md)
+- [Resolve session once per request](decisions/session-resolve-once.md)
