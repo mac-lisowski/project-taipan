@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { requireAccount } from "@/lib/session";
 
 // Profile page: the shell owns nav and logout, this shows identity.
@@ -37,6 +38,9 @@ export default async function AccountPage(): Promise<ReactNode> {
           <dd>{me.roles.join(", ")}</dd>
         </div>
       </dl>
+      <div className="mt-4 border-t border-border pt-4">
+        <ChangePasswordForm />
+      </div>
     </div>
   );
 }

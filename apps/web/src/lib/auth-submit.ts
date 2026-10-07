@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 
-export type AuthResult = { ok: true } | { ok: false; error: string };
+export type AuthResult =
+  | { ok: true; data: unknown }
+  | { ok: false; error: string };
 
 // One submit path for every auth form: FormData -> JSON POST to the BFF,
 // upstream `detail` surfaced verbatim, network errors folded into the same
-// error channel so no form leaks an unhandled rejection.
+// error channel so no form leaks an unhandled rejection. Success carries
+// the parsed JSON body (null when absent) for callers that need it.
 export async function submitAuth(
   endpoint: string,
   formData: FormData,
@@ -17,11 +20,14 @@ export async function submitAuth(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(Object.fromEntries(formData.entries())),
     });
-    if (res.ok) return { ok: true };
-    const data = (await res.json().catch(() => null)) as {
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      return { ok: true, data };
+    }
+    const detail = (await res.json().catch(() => null)) as {
       detail?: string;
     } | null;
-    return { ok: false, error: data?.detail ?? `request failed (${res.status})` };
+    return { ok: false, error: detail?.detail ?? `request failed (${res.status})` };
   } catch {
     return { ok: false, error: "network error" };
   }
