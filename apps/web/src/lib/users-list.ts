@@ -1,6 +1,4 @@
-// Web side of the users list: same-origin /api call through the BFF
-// plus pure helpers for search, filter, and paging. The endpoint
-// result is the only source of list state.
+// The endpoint result is the only source of users list state.
 
 import { errorDetailOf } from "./api-detail";
 
@@ -84,7 +82,12 @@ export function reduceUsersView(
       return view.state === "ready"
         ? {
             ...view,
-            page: clampPage(action.page, view.users.length, view.pageSize),
+            // The pager clamps to the last page of the filtered list.
+            page: clampPage(
+              action.page,
+              applyUsersQuery(view.users, view.query, view.status).length,
+              view.pageSize,
+            ),
           }
         : view;
     case "page_size_changed":
@@ -143,4 +146,15 @@ export function applyUsersQuery(
 
 export function formatDate(iso: string): string {
   return iso.slice(0, 10);
+}
+
+// Screen copy pinned by the spec; tests hold the exact strings.
+export const USERS_COPY = {
+  loading: "loading…",
+  empty: "no users match",
+  retry: "retry",
+} as const;
+
+export function countLine(filtered: number, total: number): string {
+  return `${filtered} of ${total} users`;
 }

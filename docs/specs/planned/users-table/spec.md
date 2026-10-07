@@ -82,10 +82,11 @@ flowchart LR
   clamps to the last page. Helpers stay pure so tests need no render.
 - Dates render as date only ISO, format YYYY-MM-DD. One format keeps
   tests and screens in agreement.
-- The state copy is pinned. Loading shows loading. Failure shows err
-  plus the message and a retry button. An empty result shows no users
-  match. The count line shows filtered of total users and renders
-  only when the list is ready.
+- The state copy is pinned. Loading shows the house ellipsis form.
+  Failure shows err plus the message and a retry button. An empty
+  result shows no users match. The count line shows filtered of total
+  users and renders only when the list is ready. The copy strings
+  live as exported constants so tests and screens stay in agreement.
 - The page stays under the line cap. A thin server page owns the
   guard. A client component owns the table and its controls, in the
   split the settings page uses. The lib keeps logic out of both.

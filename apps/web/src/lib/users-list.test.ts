@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applyUsersQuery,
   clampPage,
+  countLine,
   filterUsersByStatus,
   formatDate,
   loadUsers,
@@ -9,6 +10,7 @@ import {
   pageSlice,
   reduceUsersView,
   searchUsers,
+  USERS_COPY,
   USERS_PATH,
 } from "./users-list";
 
@@ -139,6 +141,20 @@ describe("reduceUsersView", () => {
     expect(view).toEqual({ ...ready(ROWS), page: 1 });
   });
 
+  it("clamps a page change against the filtered count", () => {
+    // Ten active rows of twenty five: the filtered list has one page of
+    // ten, so a clamp against the unfiltered total would answer three.
+    const users = [
+      ...Array.from({ length: 10 }, (_, i) => ({ ...ROW, id: i + 1 })),
+      ...Array.from({ length: 15 }, (_, i) => ({ ...INACTIVE_ROW, id: i + 11 })),
+    ];
+    const view = reduceUsersView(
+      ready(users, { status: "active", pageSize: 10, page: 1 }),
+      { type: "page_changed", page: 99 },
+    );
+    expect(view).toEqual({ ...ready(users, { status: "active" }), page: 1 });
+  });
+
   it("sends the view back to loading on retry", () => {
     const view = reduceUsersView(
       { state: "error", message: "network error" },
@@ -231,5 +247,17 @@ describe("applyUsersQuery", () => {
 describe("formatDate", () => {
   it("renders date only ISO", () => {
     expect(formatDate("2026-10-01T09:15:00Z")).toBe("2026-10-01");
+  });
+});
+
+describe("pinned copy", () => {
+  it("keeps the screen strings exact", () => {
+    expect(USERS_COPY.loading).toBe("loading…");
+    expect(USERS_COPY.empty).toBe("no users match");
+    expect(USERS_COPY.retry).toBe("retry");
+  });
+
+  it("formats the count line", () => {
+    expect(countLine(42, 60)).toBe("42 of 60 users");
   });
 });

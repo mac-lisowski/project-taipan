@@ -20,12 +20,14 @@ import {
 } from "@/ui";
 import {
   applyUsersQuery,
+  countLine,
   formatDate,
   loadUsers,
   pageCount,
   PAGE_SIZES,
   pageSlice,
   reduceUsersView,
+  USERS_COPY,
   type PageSize,
   type StatusFilter,
 } from "@/lib/users-list";
@@ -47,7 +49,7 @@ export function UsersTable(): ReactNode {
   }, [attempt]);
 
   if (view.state === "loading") {
-    return <p className="font-mono text-xs">loading…</p>;
+    return <p className="font-mono text-xs">{USERS_COPY.loading}</p>;
   }
   if (view.state === "error") {
     return (
@@ -64,7 +66,7 @@ export function UsersTable(): ReactNode {
           }}
           className="font-mono text-[11px] uppercase tracking-[0.25em]"
         >
-          retry
+          {USERS_COPY.retry}
         </Button>
       </div>
     );
@@ -128,11 +130,11 @@ export function UsersTable(): ReactNode {
           </SelectContent>
         </Select>
         <p className="ml-auto font-mono text-[10px] tracking-[0.15em] text-muted-foreground">
-          {filtered.length} of {view.users.length} users
+          {countLine(filtered.length, view.users.length)}
         </p>
       </div>
       {filtered.length === 0 ? (
-        <p className="font-mono text-xs text-muted-foreground">no users match</p>
+        <p className="font-mono text-xs text-muted-foreground">{USERS_COPY.empty}</p>
       ) : (
         <>
           <Table>
