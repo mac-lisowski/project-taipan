@@ -5,12 +5,18 @@ from core import greet
 from fastapi import FastAPI
 
 from api.config import get_config
-from api.db import Base
+from api.db import Base, SessionLocal
 from api.field_crypto import build_and_register_field_crypto
 from api.mail import build_email_sender
 from api.middleware import TenantScopeMiddleware
 from api.models.encrypted_string import EncryptedString, get_field_crypto, set_field_crypto
-from api.routers import auth_router, profiles_router, setup_router, users_router
+from api.routers import (
+    auth_router,
+    email_webhooks_router,
+    profiles_router,
+    setup_router,
+    users_router,
+)
 
 
 def _encrypted_columns_exist() -> bool:
@@ -31,7 +37,7 @@ async def lifespan(app: FastAPI):
     build_and_register_field_crypto()
     # Picks the mail adapter once from server config. Routes use it
     # through get_email_sender and never see the key.
-    app.state.email_sender = build_email_sender(get_config())
+    app.state.email_sender = build_email_sender(get_config(), session_factory=SessionLocal)
     if _encrypted_columns_exist() and get_field_crypto() is None:
         raise RuntimeError("EncryptedString columns exist but no crypto module is registered")
     yield
@@ -45,6 +51,7 @@ app.include_router(users_router, prefix="/api")
 app.include_router(profiles_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(setup_router, prefix="/api")
+app.include_router(email_webhooks_router, prefix="/api")
 
 
 @app.get("/")

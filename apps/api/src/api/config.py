@@ -52,6 +52,7 @@ class CryptoConfig:
 class MailConfig:
     resend_api_key: str = ""
     mail_from_address: str = DEFAULT_MAIL_FROM
+    resend_webhook_secret: str = ""
 
 
 @dataclass(frozen=True)
@@ -121,6 +122,7 @@ class Config:
 
         resend_api_key = e.get("API_RESEND_API_KEY", "")
         mail_from = e.get("API_MAIL_FROM", DEFAULT_MAIL_FROM)
+        resend_webhook_secret = e.get("API_RESEND_WEBHOOK_SECRET", "")
         if resend_api_key and not mail_from.strip():
             raise ValueError("API_MAIL_FROM must be non-empty when API_RESEND_API_KEY is set")
 
@@ -139,7 +141,11 @@ class Config:
                 dek_cache_ttl=dek_ttl,
                 dek_cache_l1_ttl=dek_l1_ttl,
             ),
-            mail=MailConfig(resend_api_key=resend_api_key, mail_from_address=mail_from),
+            mail=MailConfig(
+                resend_api_key=resend_api_key,
+                mail_from_address=mail_from,
+                resend_webhook_secret=resend_webhook_secret,
+            ),
             server=ServerConfig(host=host, port=port),
         )
 

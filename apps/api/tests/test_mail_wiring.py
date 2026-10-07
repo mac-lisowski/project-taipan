@@ -3,7 +3,13 @@
 import pytest
 from api.config import DEFAULT_MAIL_FROM, Config
 from api.mail import build_email_sender
-from email_delivery import FakeEmailSender, GuardedEmailSender, ResendEmailSender
+from email_delivery import (
+    FakeEmailSender,
+    GuardedEmailSender,
+    MemorySuppressionStore,
+    PostgresSuppressionStore,
+    ResendEmailSender,
+)
 from email_delivery.sender import SendStatus
 
 
@@ -89,6 +95,22 @@ def test_from_address_reaches_payload() -> None:
     [payload] = transport.calls
     assert payload["from"] == "noreply@example.com"
     assert payload["to"] == ["ada@example.com"]
+
+
+def test_no_factory_holds_memory_store() -> None:
+    sender = build_email_sender(Config.from_env({}))
+
+    assert isinstance(sender, GuardedEmailSender)
+    assert isinstance(sender.store, MemorySuppressionStore)
+
+
+def test_factory_selects_postgres_store() -> None:
+    from sqlalchemy.orm import sessionmaker
+
+    sender = build_email_sender(Config.from_env({}), session_factory=sessionmaker())
+
+    assert isinstance(sender, GuardedEmailSender)
+    assert isinstance(sender.store, PostgresSuppressionStore)
 
 
 def test_key_never_reaches_web_client(monkeypatch: pytest.MonkeyPatch) -> None:

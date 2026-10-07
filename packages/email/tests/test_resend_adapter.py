@@ -19,21 +19,31 @@ class StubTransport:
             raise ResendError(self.outcome)
 
 
-def test_auth_header_uses_configured_key(monkeypatch) -> None:
-    seen: dict = {}
+def test_sdk_send_uses_configured_key_and_params(monkeypatch) -> None:
+    import resend
 
-    class RecordingClient:
-        def __init__(self, **kwargs) -> None:
-            seen.update(kwargs)
+    calls: list[dict] = []
 
-        def request(self, *args, **kwargs):  # pragma: no cover
-            raise AssertionError("no network in tests")
+    def fake_send(params: dict):
+        calls.append(params)
+        return {"id": "email-id-1"}
 
-    monkeypatch.setattr("email_delivery.resend.httpx2.Client", RecordingClient)
-    ResendEmailSender(api_key="re_live_key", from_address="noreply@example.com")
+    monkeypatch.setattr("resend.Emails.send", fake_send)
+    monkeypatch.setattr("resend.api_key", None)
+    sender = ResendEmailSender(api_key="re_live_key", from_address="noreply@example.com")
 
-    assert seen["headers"] == {"Authorization": "Bearer re_live_key"}
-    assert seen["base_url"] == "https://api.resend.com"
+    result = sender.send(
+        "activation",
+        "ada@example.com",
+        {"app_name": "Taipan", "link": "https://x/y"},
+    )
+
+    assert result.status is SendStatus.SENT
+    assert resend.api_key == "re_live_key"
+    [params] = calls
+    assert params["from"] == "noreply@example.com"
+    assert params["to"] == ["ada@example.com"]
+    assert "Activate your Taipan account" in params["subject"]
 
 
 def test_no_key_fails_closed_without_network() -> None:
@@ -77,6 +87,25 @@ def test_transport_failure_maps_to_failed() -> None:
     assert result.status is SendStatus.FAILED
     assert result.reason == "resend-500"
     assert "re_test_key" not in result.reason
+
+
+def test_sdk_failure_maps_to_stable_reason(monkeypatch) -> None:
+    def boom(params: dict):
+        raise RuntimeError("vendor says no")
+
+    monkeypatch.setattr("resend.Emails.send", boom)
+    monkeypatch.setattr("resend.api_key", None)
+    sender = ResendEmailSender(api_key="re_test_key", from_address="noreply@example.com")
+
+    result = sender.send(
+        "activation",
+        "ada@example.com",
+        {"app_name": "Taipan", "link": "https://x/y"},
+    )
+
+    assert result.status is SendStatus.FAILED
+    assert result.reason == "resend-send-failed"
+    assert "vendor says no" not in result.reason
 
 
 def test_no_secrets_reach_logs(caplog) -> None:
