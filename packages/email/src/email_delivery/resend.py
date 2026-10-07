@@ -4,14 +4,12 @@ import logging
 from collections.abc import Mapping
 from typing import Any, Protocol
 
-import httpx2
+import resend
 
 from email_delivery.sender import EmailSender, SendResult, SendStatus
 from email_delivery.templates import TemplateValidationError, render
 
 logger = logging.getLogger(__name__)
-
-RESEND_API_URL = "https://api.resend.com"
 
 
 class ResendError(Exception):
@@ -25,22 +23,27 @@ class EmailTransport(Protocol):
 
 
 class ResendTransport:
-    """Live HTTP transport. Carries auth header, timeout, error mapping."""
+    """Live transport over the official SDK. Key set once per process."""
 
     def __init__(self, api_key: str) -> None:
-        self._client = httpx2.Client(
-            base_url=RESEND_API_URL,
-            headers={"Authorization": f"Bearer {api_key}"},
-            timeout=10.0,
-        )
+        # Single process-global key: composition builds one sender.
+        resend.api_key = api_key
 
     def post_email(self, payload: dict) -> None:
+        # Any SDK failure maps to one stable reason. Vendor text stays
+        # out of reasons and logs; only the error type is logged.
         try:
-            response = self._client.request("POST", "/emails", json=payload)
-        except httpx2.HTTPError as exc:
-            raise ResendError("POST /emails failed: transport-error") from exc
-        if not response.is_success:
-            raise ResendError(f"POST /emails failed: resend-{response.status_code}")
+            resend.Emails.send(
+                {
+                    "from": payload["from"],
+                    "to": payload["to"],
+                    "subject": payload["subject"],
+                    "text": payload["text"],
+                }
+            )
+        except Exception as exc:
+            logger.warning("resend send failed: error=%s", type(exc).__name__)
+            raise ResendError("resend-send-failed") from exc
 
 
 class ResendEmailSender(EmailSender):

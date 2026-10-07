@@ -65,13 +65,21 @@ preserving current code semantics.
 - One new table `email_webhook_events` dedupes intake:
 `event_id TEXT PRIMARY KEY`,
 `received_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
-The route inserts the provider event id first
-and skips replays.
-- One new `SuppressionStore` port declares the seam:
-`suppress`, `is_suppressed`, `note_soft_bounce`,
-plus `note_sent(recipient, template)`,
-`sent_count(recipient)`, `sent_template_count(recipient, template)`.
-The memory store implements all six with dicts.
+The route calls `record_bounce` with the provider event id;
+repeats are no-ops returning the same outcome.
+Unit tests use an in-memory seen-set double.
+One replay test runs against Postgres on the `app_test` database.
+- One new `SuppressionStore` port declares the seam,
+five methods total; all persistence crosses the port:
+`is_suppressed(address)`, `suppress(address)`,
+`record_bounce(address, kind, event_id=None)` returning
+suppressed-now (HARD and COMPLAINT suppress, SOFT counts
+toward `MAX_SOFT_BOUNCES`, repeat event id is a no-op),
+`send_allowed(template, recipient)` returning None
+or a reject reason, `note_sent(template, recipient)`
+called only on `SENT` with a bounds re-check inside.
+Callers learn outcomes, never counters.
+The memory store implements all five with dicts.
 The guard constructor re-hints from the concrete class
 to the port.
 Rate dicts leave the guard; all state crosses the port.
@@ -109,6 +117,8 @@ Never edit an applied migration.
 - This table is keyed by address, not by user id,
 so the extensible-entities rule does not apply.
 No core model changes.
+- Send transport and webhook verify use the official `resend` SDK.
+Vendor failure text never reaches reasons or logs.
 
 ## Testing Decisions
 
