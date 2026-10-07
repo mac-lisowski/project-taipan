@@ -52,7 +52,7 @@ def test_dek_store_put_scopes_its_own_write(session_factory):
 
 
 def test_register_link_write_passes_the_guard(client, session_factory):
-    resp = client.post("/api/setup", json={"email": "g@x.com", "password": "p"})
+    resp = client.post("/api/setup", json={"email": "g@x.com", "password": "s3cret123"})
     assert resp.status_code == 201
 
 
@@ -74,7 +74,7 @@ def test_lifespan_refuses_encrypted_columns_without_module(monkeypatch):
 
 
 def test_me_reads_tenant_from_ambient_scope(client, session_factory):
-    client.post("/api/setup", json={"email": "amb@x.com", "password": "p"})
+    client.post("/api/setup", json={"email": "amb@x.com", "password": "s3cret123"})
     me = client.get("/api/auth/me")
     assert me.status_code == 200
     with session_factory() as db:
@@ -83,10 +83,10 @@ def test_me_reads_tenant_from_ambient_scope(client, session_factory):
 
 
 def test_me_never_reports_another_users_tenant(client, session_factory):
-    client.post("/api/setup", json={"email": "one@x.com", "password": "p"})
+    client.post("/api/setup", json={"email": "one@x.com", "password": "s3cret123"})
     first = client.get("/api/auth/me").json()["tenant_id"]
-    create_user(client, "two@x.com", "p")
-    login = client.post("/api/auth/login", json={"email": "two@x.com", "password": "p"})
+    create_user(client, "two@x.com", "s3cret123")
+    login = client.post("/api/auth/login", json={"email": "two@x.com", "password": "s3cret123"})
     assert login.status_code == 204
     second = client.get("/api/auth/me").json()["tenant_id"]
     assert first != second

@@ -10,44 +10,7 @@ from api.session_store import (
     get_session_store,
     set_session_store,
 )
-
-
-class FakeClock:
-    def __init__(self) -> None:
-        self.now = 1000.0
-
-    def advance(self, seconds: float) -> None:
-        self.now += seconds
-
-    def __call__(self) -> float:
-        return self.now
-
-
-class FakeRedis:
-    def __init__(self, clock: FakeClock) -> None:
-        self.clock = clock
-        self.data: dict[str, tuple[str | bytes, float | None]] = {}
-
-    def get(self, key: str) -> str | bytes | None:
-        if key not in self.data:
-            return None
-        val, expires_at = self.data[key]
-        if expires_at is not None and self.clock.now >= expires_at:
-            del self.data[key]
-            return None
-        return val
-
-    def set(self, key: str, value: str | bytes, ex: int | None = None) -> None:
-        expires_at = self.clock.now + ex if ex is not None else None
-        self.data[key] = (value, expires_at)
-
-    def delete(self, key: str) -> int:
-        return 1 if self.data.pop(key, None) is not None else 0
-
-
-def test_memory_session_store_implements_protocol() -> None:
-    store = MemorySessionStore()
-    assert isinstance(store, SessionStore)
+from api_testsupport import FakeClock, FakeRedis
 
 
 def test_memory_session_store_crud() -> None:
@@ -92,6 +55,30 @@ def test_memory_session_store_clear() -> None:
     store.clear()
     assert store.get("k1") is None
     assert store.get("k2") is None
+
+
+def test_memory_set_if_unchanged_writes_when_current_matches() -> None:
+    store = MemorySessionStore()
+    store.set("t1", "old", ttl_seconds=60)
+
+    assert store.set_if_unchanged("t1", "old", "new", ttl_seconds=60) is True
+    assert store.get("t1") == "new"
+
+
+def test_memory_set_if_unchanged_loses_when_current_differs() -> None:
+    store = MemorySessionStore()
+    store.set("t1", "current", ttl_seconds=60)
+
+    assert store.set_if_unchanged("t1", "stale", "new", ttl_seconds=60) is False
+    # The loser must not write; the current value survives untouched.
+    assert store.get("t1") == "current"
+
+
+def test_memory_set_if_unchanged_rejects_non_positive_ttl() -> None:
+    store = MemorySessionStore()
+
+    with pytest.raises(ValueError, match="ttl_seconds must be positive"):
+        store.set_if_unchanged("t1", "old", "new", ttl_seconds=0)
 
 
 def test_redis_session_store_crud() -> None:
@@ -142,6 +129,39 @@ def test_redis_session_store_rejects_non_positive_ttl() -> None:
 
     with pytest.raises(ValueError, match="ttl_seconds must be positive"):
         store.set("token", "val", ttl_seconds=0)
+
+
+def test_redis_set_if_unchanged_writes_when_current_matches() -> None:
+    clock = FakeClock()
+    fake_redis = FakeRedis(clock)
+    store = RedisSessionStore(fake_redis, prefix="sess:")
+    store.set("t1", "old", ttl_seconds=60)
+
+    assert store.set_if_unchanged("t1", "old", "new", ttl_seconds=30) is True
+    assert store.get("t1") == "new"
+
+    # The win must carry the new ttl, like the script's EX argument.
+    clock.advance(30)
+    assert store.get("t1") is None
+
+
+def test_redis_set_if_unchanged_loses_when_current_differs() -> None:
+    clock = FakeClock()
+    fake_redis = FakeRedis(clock)
+    store = RedisSessionStore(fake_redis, prefix="sess:")
+    fake_redis.set("sess:t1", "current", ex=60)
+
+    assert store.set_if_unchanged("t1", "stale", "new", ttl_seconds=30) is False
+    # The loser must not write; the current value survives untouched.
+    assert store.get("t1") == "current"
+
+
+def test_redis_set_if_unchanged_rejects_non_positive_ttl() -> None:
+    fake_redis = FakeRedis(FakeClock())
+    store = RedisSessionStore(fake_redis)
+
+    with pytest.raises(ValueError, match="ttl_seconds must be positive"):
+        store.set_if_unchanged("t1", "old", "new", ttl_seconds=0)
 
 
 def test_build_session_store_wires_redis_adapter(monkeypatch: pytest.MonkeyPatch) -> None:

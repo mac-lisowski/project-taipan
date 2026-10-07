@@ -13,9 +13,9 @@ def _assert_tz_aware(body, key):
 
 def _create_user(client, email: str) -> int:
     if client.get("/api/setup").json()["needs_setup"]:
-        setup = client.post("/api/setup", json={"email": "admin@x.com", "password": "p"})
+        setup = client.post("/api/setup", json={"email": "admin@x.com", "password": "s3cret123"})
         assert setup.status_code == 201
-    return create_user(client, email, "p")
+    return create_user(client, email, "s3cret123")
 
 
 def test_get_profile_of_user_without_profile(client):
@@ -89,9 +89,9 @@ def test_get_unknown_user_404(client):
 
 
 def test_user_routes_work_for_admin(client):
-    setup = client.post("/api/setup", json={"email": "admin@x.com", "password": "p"})
+    setup = client.post("/api/setup", json={"email": "admin@x.com", "password": "s3cret123"})
     assert setup.status_code == 201
-    resp = client.post("/api/users", json={"email": "guard@x.com", "password": "p"})
+    resp = client.post("/api/users", json={"email": "guard@x.com", "password": "s3cret123"})
     assert resp.status_code == 201
     user_id = resp.json()["id"]
     assert client.get(f"/api/users/{user_id}").status_code == 200

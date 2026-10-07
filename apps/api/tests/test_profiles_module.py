@@ -4,12 +4,13 @@ The router mapping is pinned in test_profiles.py.
 """
 
 import pytest
-from api import profiles, users
+from api import users
 from api.models import UserProfile
+from api.users import profiles
 
 
 def _create_user(session, email: str = "u@example.com"):
-    user = users.register(session, email, "s3cret")
+    user = users.register(session, email, "s3cret123")
     session.commit()
     return user
 

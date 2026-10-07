@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API modularization</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12/dist/mermaid.min.js"></script>
+<style>
+body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:0 auto;padding:24px;color:#eee;background:#1e1e1e}
+h1{font-size:20px}.card{border:1px solid #444;padding:12px;margin:12px 0}
+.bar{display:flex;gap:4px;margin:6px 0}.bar i{display:block;height:14px;background:#666}
+.bar i.hot{background:#5cc87a}
+small{color:#aaa}
+</style>
+</head>
+<body>
+<h1>API modularization</h1>
+<div class="card">
+<div class="mermaid">
+graph LR
+  R[routers thin] --> F1[registration/]
+  R --> F2[password-reset/]
+  R --> F3[password-change/]
+  F1 --> T[tokens/ purpose column]
+  F2 --> T
+  F1 --> S[sessions/ sole authority]
+  F2 --> S
+  F1 --> C[credentials/ hash policy gate]
+  F3 --> C
+  F1 --> U[users/ + profiles/]
+  R --> G[setup guard]
+</div>
+</div>
+<div class="card"><small>Before: flat layers, floating services</small>
+<div class="bar"><i style="width:90%"></i></div>
+<small>After: thin orchestrators over deep authorities</small>
+<div class="bar"><i style="width:30%"></i><i class="hot" style="width:60%"></i></div>
+</div>
+<div class="card"><small>Test seams</small>
+<ul>
+<li>Tokens: fake store, assert mint, verify, burn per purpose.</li>
+<li>Sessions: fake store, assert which call each flow made.</li>
+<li>Credentials: shared hash and policy cases by reference.</li>
+<li>Full suite green after every move slice.</li>
+</ul></div>
+<script>mermaid.initialize({startOnLoad:true})</script>
+</body>
+</html>

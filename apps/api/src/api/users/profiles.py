@@ -1,12 +1,12 @@
-"""Profile rules: lookup and upsert. Usable without FastAPI."""
+"""Profile rules: lookup and upsert. Nests under users; usable without FastAPI."""
 
 from __future__ import annotations
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from api import users
 from api.models import UserProfile
+from api.users import service
 
 __all__ = ["NotFound", "get", "upsert"]
 
@@ -20,8 +20,8 @@ def _find(session: Session, user_id: int) -> UserProfile | None:
 
 
 def get(session: Session, user_id: int) -> UserProfile:
-    """Return UserProfile for user_id; raises NotFound or users.NotFound."""
-    users.get(session, user_id)
+    """Return UserProfile for user_id; raises NotFound or service.NotFound."""
+    service.get(session, user_id)
     profile = _find(session, user_id)
     if profile is None:
         raise NotFound(user_id)
@@ -39,7 +39,7 @@ def upsert(
 
     Follows PUT replace semantics: omitted or None fields overwrite existing values.
     """
-    user = users.get(session, user_id)
+    user = service.get(session, user_id)
     profile = _find(session, user_id)
     if profile is None:
         profile = UserProfile(user_id=user_id)
