@@ -1,6 +1,7 @@
 # Current state
 
-- Branch: `feat/tenant-scoped-roles` (based on dev 3fd6054; spec files
+- Branch: dev at 31d7fca (PR #35 squash). Spec implemented:
+  docs/specs/implemented/tenant-scoped-roles/. Was: feat branch 34fa426 with staged spec files
   restored into the tree from `docs/tenant-scoped-roles` 5189bb3, staged).
 - Tenant-scoped roles IMPLEMENTED, ALL UNCOMMITTED. Tickets 01-05 done by
   subagents, no commits per user gate. Working tree = the whole feature:
@@ -31,5 +32,6 @@
   sessions.tenant_id_for_token, pinned /users instance-wide semantics (test + why-comment).
   DEFERRED by design (hypothetical seams, invite spec territory): membership-switch
   operation, register/provisioning split, real /users tenant scoping.
-- Next: user reviews diff and commits (then stamp + HTML reports +
-  status flips per rule 11/12); spec moves to implemented on merge.
+- Tickets flipped done with HTML reports; stamp 36fcef7982935e9c used at commit.
+- Next: registration/invite spec will reuse the authz.can() seam (deferred candidates:
+  tenant switch, provisioning split, /users scoping). feat branch deletable; docs/tenant-scoped-roles holds 5189bb3 lineage (content identical in dev).

@@ -1,6 +1,6 @@
 # Spec: Tenant-Scoped Roles and the System Owner Role
 
-Status: planned.
+Status: implemented (PR #35).
 
 Seam: two existing seams, no new ones. The HTTP seam drives setup, login,
 `/me`, and `/users` through the app test client. The migration seam runs
