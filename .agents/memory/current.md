@@ -1,37 +1,48 @@
 # Current state
 
-- Branch: dev at 31d7fca (PR #35 squash). Spec implemented:
-  docs/specs/implemented/tenant-scoped-roles/. Was: feat branch 34fa426 with staged spec files
-  restored into the tree from `docs/tenant-scoped-roles` 5189bb3, staged).
-- Tenant-scoped roles IMPLEMENTED, ALL UNCOMMITTED. Tickets 01-05 done by
-  subagents, no commits per user gate. Working tree = the whole feature:
-  2 new models (user_tenant_role, user_system_role + SystemRole enum,
-  shared allowed_roles_sql helper in user_role.py), migrations
-  f57a78ef14d6 (expand + backfill) and 12cb7ee20e8d (drop user_roles,
-  copy-back downgrade), service dual-write then old writes removed, authz
-  reads new tables only (roles_for deleted), /me adds system_roles, web
-  Me type + fixtures + account page renders system roles apart; owner-only sidebar system section + mock /settings page.
-- Verification: root pytest 375 passed 9 skipped; web vitest 135; tsc
-  clean; ruff clean. code-review two-axis CLEAN (fixed: shared CHECK
-  helper, stale comment). test-smell-review PASS 0 findings. Subagent
-  audit (3 agents): no defects, claims verified.
-- LIVE DB `app` on project-taipan-db-1 (localhost:5432) UPGRADED
-  e60b90cbea93 -> 12cb7ee20e8d. Real user 3 (mac@mivia.app) backfilled:
-  admin+member in tenant cc137ea2..., system_owner. Read-path smoke on
-  live data: principal roles/system_roles + require_admin OK. user_roles
-  gone, tenant_deks intact.
-- Ticket statuses in .scratch/tenant-scoped-roles/issues/ left
-  ready-for-agent: done-flip needs HTML reports + stamp at commit time.
-- Gotchas hit: litellm session moved dev + checked it out mid-flow (feat
-  branch got cut from dev, spec restored via git restore --source); agent
-  05 manually dropped stale user_roles on shared app_test DB once
-  (create_all leftover blocked drop_all).
-- Architecture pass DONE (code-review CLEAN + fixed shared SYSTEM_OWNER_ROLE const;
-  explorer found 5 strong deepening candidates, report /tmp/architecture-review-*.html):
-  implemented authz.can() point-query seam + require_system_owner (tested), deleted dead
-  sessions.tenant_id_for_token, pinned /users instance-wide semantics (test + why-comment).
-  DEFERRED by design (hypothetical seams, invite spec territory): membership-switch
-  operation, register/provisioning split, real /users tenant scoping.
-- Tickets flipped done with HTML reports; stamp 36fcef7982935e9c used at commit.
-- Next: registration/invite spec will reuse the authz.can() seam (deferred candidates:
-  tenant switch, provisioning split, /users scoping). feat branch deletable; docs/tenant-scoped-roles holds 5189bb3 lineage (content identical in dev).
+- Worktree ../project-taipan-litellm, branch feat/litellm-gateway-docker
+  (cut from dev 8f42ac4). ALL WORK UNCOMMITTED, gated on user approval.
+- litellm-gateway-docker spec IMPLEMENTED: docker/litellm/Dockerfile
+  (pull-through v1.104.0), litellm + litellm-db in both compose stacks
+  (host publishes 4000, devcontainer none, volumes litellm-pgdata /
+  devcontainer-litellm-pgdata), README + docs/devcontainer.md +
+  .devcontainer/README.md updated. Tickets 01+02 done with HTML
+  reports in .scratch/litellm-gateway-docker/issues/.
+- Ticket 03 (user-directed): CI deploy job gains gated
+  `deploy litellm` step mirroring deploy infisical. Focused review
+  pass clean; YAML parses; 271/300 lines.
+- Ticket 04 (user-directed): deploy inputs moved to environment
+  secrets. GitHub env project-taipan / dev now holds 6 secrets
+  (RAILWAY_TOKEN, RAILWAY_PROJECT_ID, RAILWAY_ENVIRONMENT,
+  RAILWAY_SERVICE_WEB/API/INFISICAL), 0 vars; old vars deleted.
+  ci.yml deploy job reads secrets.* everywhere; gates too.
+  RAILWAY_SERVICE_LITELLM deliberately NOT set at ticket time;
+  set 2026-10-08 (user created the Railway service, id
+  1c887eb8-19b9-4e80-99e7-c56d132a0d48). Env now holds 7 secrets,
+  0 vars; litellm deploy gate opens on first dev push carrying this
+  branch. Still manual on Railway: Dockerfile builder setting +
+  DATABASE_URL (Railway Postgres) + LITELLM_MASTER_KEY /
+  LITELLM_SALT_KEY / STORE_MODEL_IN_DB on the service.
+  gh --env flag 404s on
+  this env name (space/space encoding bug); used raw API +
+  pynacl sealed box (learnings/gh-env-name-encoding.md).
+- Verification: both compose configs pass, check-docker.sh passes,
+  image builds, live bring-up on project-taipan-litellm compose
+  project (still running, port 4000 only): liveliness "I'm alive!",
+  keyless 401, master-key 400 model-problem, /ui 307, model survives
+  --force-recreate. pytest 379 passed 9 skipped (pre-existing skips).
+- Deviation from spec text (documented, decision
+  decisions/litellm-dev-keys.md): master key dev default is
+  sk-taipan-dev-4f8a2c91e6b3d705, NOT spec's sk-1234, because
+  v1.104.0 refuses to boot on publicly-known keys. Salt default
+  sk-taipan-salt-9b1c64e2a8d3f704. No dangerous-permit flag.
+- code-review two-axis CLEAN on 01+02 (Standards: 4 judgement calls,
+  none blocking; Spec: all criteria met). 03 hunk-reviewed clean.
+- Next: user approves -> review-stamp.sh -> conventional commits
+  (feat: litellm gateway docker stack #<spec num>) -> spec to
+  docs/specs/implemented/ per implement-spec step 8. Railway side
+  stays manual: create service (Dockerfile builder =
+  docker/litellm/Dockerfile) + Postgres + vars, then add env secret
+  RAILWAY_SERVICE_LITELLM (GitHub web UI - gh --env is broken for
+  this env name). Stack down: docker compose down in the worktree
+  (keeps volume).

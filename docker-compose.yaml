@@ -64,6 +64,44 @@ services:
       redis:
         condition: service_healthy
 
+  # Dedicated Postgres for LiteLLM - the gateway keeps its models and
+  # keys in a separate instance, same shape as Infisical. No host
+  # port: only the litellm service talks to it.
+  litellm-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+      POSTGRES_DB: litellm
+    volumes:
+      - litellm-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  litellm:
+    build:
+      context: .
+      dockerfile: docker/litellm/Dockerfile
+    environment:
+      # Dev-only defaults, committed like POSTGRES_PASSWORD. Prod
+      # values are Railway variables. Repo-private defaults because
+      # v1.104.0 refuses to boot on LiteLLM's documented example key.
+      # Losing the salt key makes stored provider credentials
+      # unreadable, so the default stays stable.
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-taipan-dev-4f8a2c91e6b3d705}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:-sk-taipan-salt-9b1c64e2a8d3f704}
+      DATABASE_URL: postgresql://litellm:litellm@litellm-db:5432/litellm
+      STORE_MODEL_IN_DB: "True"
+    ports:
+      - "4000:4000"
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+
 volumes:
   pgdata:
   infisical-pgdata:
+  litellm-pgdata:
