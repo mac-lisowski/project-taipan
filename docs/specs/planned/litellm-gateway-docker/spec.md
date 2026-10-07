@@ -1,6 +1,6 @@
 # Spec: LiteLLM gateway docker stack
 
-Status: planned.
+Status: implemented (PR #36).
 
 Seam: this spec adds infrastructure only. No Python or TypeScript
 code changes, so no code seam moves. The test seam is the running
