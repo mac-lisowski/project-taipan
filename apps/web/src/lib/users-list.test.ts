@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatDate, loadUsers, reduceUsersView, USERS_PATH } from "./users-list";
+import {
+  applyUsersQuery,
+  filterUsersByStatus,
+  formatDate,
+  loadUsers,
+  reduceUsersView,
+  searchUsers,
+  USERS_PATH,
+} from "./users-list";
 
 const OWNER_DENIED = JSON.stringify({ detail: "system owner role required" });
 const ROW = {
@@ -8,6 +16,13 @@ const ROW = {
   is_active: true,
   created_at: "2026-10-01T09:15:00Z",
 };
+const INACTIVE_ROW = {
+  id: 2,
+  email: "grace@example.org",
+  is_active: false,
+  created_at: "2026-10-02T10:00:00Z",
+};
+const ROWS = [ROW, INACTIVE_ROW];
 
 describe("loadUsers", () => {
   afterEach(() => {
@@ -52,12 +67,18 @@ describe("loadUsers", () => {
 });
 
 describe("reduceUsersView", () => {
-  it("lands a good load as ready", () => {
+  it("lands a good load as ready with default controls", () => {
     const view = reduceUsersView(
       { state: "loading" },
-      { type: "loaded", result: { ok: true, users: [ROW] } },
+      { type: "loaded", result: { ok: true, users: ROWS } },
     );
-    expect(view).toEqual({ state: "ready", users: [ROW] });
+    expect(view).toEqual({
+      state: "ready",
+      users: ROWS,
+      query: "",
+      status: "all",
+      page: 1,
+    });
   });
 
   it("carries a load failure into the error state", () => {
@@ -66,6 +87,76 @@ describe("reduceUsersView", () => {
       { type: "loaded", result: { ok: false, error: "network error" } },
     );
     expect(view).toEqual({ state: "error", message: "network error" });
+  });
+
+  it("stores a query and resets the page", () => {
+    const view = reduceUsersView(ready(ROWS, { query: "ada", page: 3 }), {
+      type: "query_changed",
+      query: "grace",
+    });
+    expect(view).toEqual({ ...ready(ROWS), query: "grace" });
+  });
+
+  it("stores a status and resets the page", () => {
+    const view = reduceUsersView(ready(ROWS, { status: "active", page: 2 }), {
+      type: "status_changed",
+      status: "inactive",
+    });
+    expect(view).toEqual({ ...ready(ROWS), status: "inactive" });
+  });
+
+  it("ignores control changes before the list is ready", () => {
+    const view = reduceUsersView({ state: "loading" }, {
+      type: "query_changed",
+      query: "ada",
+    });
+    expect(view).toEqual({ state: "loading" });
+  });
+});
+
+function ready(
+  users: typeof ROWS,
+  over: Partial<{ query: string; status: "all" | "active" | "inactive"; page: number }> = {},
+) {
+  return {
+    state: "ready" as const,
+    users,
+    query: "",
+    status: "all" as const,
+    page: 1,
+    ...over,
+  };
+}
+
+describe("searchUsers", () => {
+  it("matches substrings ignoring letter case", () => {
+    expect(searchUsers(ROWS, "GRACE")).toEqual([INACTIVE_ROW]);
+    expect(searchUsers(ROWS, "example.org")).toEqual([INACTIVE_ROW]);
+  });
+
+  it("returns everything for a blank query", () => {
+    expect(searchUsers(ROWS, "   ")).toEqual(ROWS);
+  });
+});
+
+describe("filterUsersByStatus", () => {
+  it("keeps only active users", () => {
+    expect(filterUsersByStatus(ROWS, "active")).toEqual([ROW]);
+  });
+
+  it("keeps only inactive users", () => {
+    expect(filterUsersByStatus(ROWS, "inactive")).toEqual([INACTIVE_ROW]);
+  });
+
+  it("passes everything through for all", () => {
+    expect(filterUsersByStatus(ROWS, "all")).toEqual(ROWS);
+  });
+});
+
+describe("applyUsersQuery", () => {
+  it("chains search and status", () => {
+    expect(applyUsersQuery(ROWS, "ada", "inactive")).toEqual([]);
+    expect(applyUsersQuery(ROWS, "", "active")).toEqual([ROW]);
   });
 });
 
