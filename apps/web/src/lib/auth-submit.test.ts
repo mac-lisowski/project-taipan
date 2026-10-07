@@ -21,9 +21,25 @@ describe("submitAuth", () => {
     });
   });
 
-  it("returns ok on 2xx", async () => {
+  it("returns ok with a null body when the response is empty", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
-    expect(await submitAuth("/api/auth/login", new FormData())).toEqual({ ok: true });
+    expect(await submitAuth("/api/auth/login", new FormData())).toEqual({
+      ok: true,
+      data: null,
+    });
+  });
+
+  it("carries the parsed JSON body on success", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ other_devices_signed_out: true }), { status: 200 }),
+      ),
+    );
+    expect(await submitAuth("/api/auth/login", new FormData())).toEqual({
+      ok: true,
+      data: { other_devices_signed_out: true },
+    });
   });
 
   it("surfaces upstream detail on failure", async () => {

@@ -89,3 +89,31 @@ def test_rendered_output_carries_no_secret_material() -> None:
 
     assert "re_test_secret" not in rendered.subject
     assert "re_test_secret" not in rendered.body
+
+
+def test_password_change_renders_subject_and_body_without_link() -> None:
+    rendered = render("password_change", {"app_name": "Taipan"})
+
+    assert rendered.subject == "Your Taipan password was changed"
+    assert "Taipan" in rendered.body
+
+
+def test_password_change_missing_app_name_rejects_before_send() -> None:
+    sender = FakeEmailSender()
+
+    with pytest.raises(TemplateValidationError, match="app_name"):
+        rendered_send(sender, "password_change", "ada@example.com", {})
+
+    assert sender.list_sent() == []
+
+
+def test_password_change_sender_path_captures_rendered_mail() -> None:
+    sender = FakeEmailSender()
+
+    result = rendered_send(sender, "password_change", "ada@example.com", {"app_name": "Taipan"})
+
+    assert result.status is SendStatus.SENT
+    [mail] = sender.list_sent()
+    assert mail.template == "password_change"
+    assert mail.recipient == "ada@example.com"
+    assert mail.data["subject"] == "Your Taipan password was changed"

@@ -10,3 +10,13 @@ class MeOut(BaseModel):
 
 class SetupStatus(BaseModel):
     needs_setup: bool
+
+
+class PasswordChangeIn(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_new_password: str
+
+
+class PasswordChangeOut(BaseModel):
+    other_devices_signed_out: bool
