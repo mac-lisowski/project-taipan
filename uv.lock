@@ -14,6 +14,7 @@ members = [
     "crypto",
     "email",
     "kms",
+    "messaging",
     "project-taipan",
     "storage",
 ]
@@ -77,6 +78,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx2" },
     { name = "kms" },
+    { name = "messaging" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pwdlib", extra = ["argon2"] },
     { name = "pypdf" },
@@ -89,6 +91,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "pyyaml" },
     { name = "watchfiles" },
 ]
 
@@ -103,6 +106,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.142.2" },
     { name = "httpx2", specifier = ">=2.13.1" },
     { name = "kms", editable = "packages/kms" },
+    { name = "messaging", editable = "packages/messaging" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3.1" },
     { name = "pypdf", specifier = ">=5.0" },
@@ -114,7 +118,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "watchfiles", specifier = ">=1.1.0" }]
+dev = [
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "watchfiles", specifier = ">=1.1.0" },
+]
 
 [[package]]
 name = "argon2-cffi"
@@ -815,6 +822,25 @@ wheels = [
 ]
 
 [[package]]
+name = "messaging"
+version = "0.1.0"
+source = { editable = "packages/messaging" }
+dependencies = [
+    { name = "nats-py" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "paho-mqtt" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nats-py", specifier = ">=2.9.0" }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "paho-mqtt", specifier = ">=2.1" }]
+
+[[package]]
 name = "minio"
 version = "7.2.20"
 source = { registry = "https://pypi.org/simple" }
@@ -828,6 +854,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/40/df/6dfc6540f96a74125a11653cce717603fd5b7d0001a8e847b3e54e72d238/minio-7.2.20.tar.gz", hash = "sha256:95898b7a023fbbfde375985aa77e2cd6a0762268db79cf886f002a9ea8e68598", size = 136113, upload-time = "2025-11-27T00:37:15.569Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3e/9a/b697530a882588a84db616580f2ba5d1d515c815e11c30d219145afeec87/minio-7.2.20-py3-none-any.whl", hash = "sha256:eb33dd2fb80e04c3726a76b13241c6be3c4c46f8d81e1d58e757786f6501897e", size = 93751, upload-time = "2025-11-27T00:37:13.993Z" },
+]
+
+[[package]]
+name = "nats-py"
+version = "2.16.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2c/c8/739b72c9201081e48000884d476231873ac82f7247c43b33823eaf3c0bfb/nats_py-2.16.0.tar.gz", hash = "sha256:1d137ed7afc9b59033b3199324c6237df2016a5091935871344a787eba6b72fc", size = 79731, upload-time = "2026-09-16T07:47:21.843Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/48/a3/16cec37172144d3362d7551bb823a098b2b2903281fc095dfe4480b8c2fd/nats_py-2.16.0-py3-none-any.whl", hash = "sha256:aeb1ff123966c05833d26c7df7e1d54c1c6d32b612428b21677a2e921f1fecae", size = 93578, upload-time = "2026-09-16T07:47:20.799Z" },
 ]
 
 [[package]]
@@ -858,6 +893,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-26.3.tar.gz", hash = "sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79", size = 313412, upload-time = "2026-08-04T18:15:28.737Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl", hash = "sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c", size = 129956, upload-time = "2026-08-04T18:15:27.159Z" },
+]
+
+[[package]]
+name = "paho-mqtt"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/15/0a6214e76d4d32e7f663b109cf71fb22561c2be0f701d67f93950cd40542/paho_mqtt-2.1.0.tar.gz", hash = "sha256:12d6e7511d4137555a3f6ea167ae846af2c7357b10bc6fa4f7c3968fc1723834", size = 148848, upload-time = "2024-04-29T19:52:55.591Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c4/cb/00451c3cf31790287768bb12c6bec834f5d292eaf3022afc88e14b8afc94/paho_mqtt-2.1.0-py3-none-any.whl", hash = "sha256:6db9ba9b34ed5bc6b6e3812718c7e06e2fd7444540df2455d2c51bd58808feee", size = 67219, upload-time = "2024-04-29T19:52:48.345Z" },
 ]
 
 [[package]]
@@ -904,6 +948,7 @@ dependencies = [
     { name = "core" },
     { name = "crypto" },
     { name = "email" },
+    { name = "messaging" },
     { name = "storage" },
 ]
 
@@ -923,6 +968,7 @@ requires-dist = [
     { name = "core", editable = "packages/core" },
     { name = "crypto", editable = "packages/crypto" },
     { name = "email", editable = "packages/email" },
+    { name = "messaging", editable = "packages/messaging" },
     { name = "storage", editable = "packages/storage" },
 ]
 

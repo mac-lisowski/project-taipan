@@ -3,6 +3,7 @@ from api.routers.auth import router as auth_router
 from api.routers.chat import router as chat_router
 from api.routers.email_webhooks import router as email_webhooks_router
 from api.routers.files import router as files_router
+from api.routers.health import router as health_router
 from api.routers.password_change import router as password_change_router
 from api.routers.password_reset import router as password_reset_router
 from api.routers.profiles import router as profiles_router
@@ -19,6 +20,7 @@ __all__ = [
     "chat_router",
     "email_webhooks_router",
     "files_router",
+    "health_router",
     "password_change_router",
     "password_reset_router",
     "profiles_router",

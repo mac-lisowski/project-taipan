@@ -29,6 +29,7 @@ from api.schemas.chat import (
     ThreadUpdate,
 )
 from api.schemas.files import FileOut, FilePageOut
+from api.schemas.health import BrokerState, HealthOut
 from api.schemas.profile import ProfileCreate, ProfileRead, ProfileUpdate
 from api.schemas.system import RegistrationSwitchIn, RegistrationSwitchOut
 from api.schemas.user import (
@@ -45,10 +46,12 @@ __all__ = [
     "ArtifactOut",
     "ArtifactPatch",
     "ArtifactSummaryOut",
+    "BrokerState",
     "CompletionIn",
     "FileOut",
     "FilePageOut",
     "ForgotIn",
+    "HealthOut",
     "MeOut",
     "PasswordChangeIn",
     "PasswordChangeOut",

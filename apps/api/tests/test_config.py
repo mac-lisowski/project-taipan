@@ -4,12 +4,14 @@ from dataclasses import FrozenInstanceError, fields
 
 import pytest
 from api.config import (
+    DEFAULT_BROKER_URL,
     DEFAULT_DATABASE_URL,
     DEFAULT_DEK_CACHE_L1_TTL,
     DEFAULT_DEK_CACHE_TTL,
     DEFAULT_FILES_MAX_BYTES,
     DEFAULT_HOST,
     DEFAULT_INFISICAL_URL,
+    DEFAULT_JETSTREAM_STORE,
     DEFAULT_KMS_BREAKER_COOLDOWN,
     DEFAULT_KMS_BREAKER_THRESHOLD,
     DEFAULT_MAIL_FROM,
@@ -34,6 +36,7 @@ def test_config_holds_only_the_expected_groups() -> None:
         "store",
         "crypto",
         "mail",
+        "msg",
         "server",
         "chat",
         "storage",
@@ -54,6 +57,8 @@ def test_config_defaults() -> None:
     assert cfg.crypto.dek_cache_l1_ttl == DEFAULT_DEK_CACHE_L1_TTL
     assert cfg.mail.resend_api_key == ""
     assert cfg.mail.mail_from_address == DEFAULT_MAIL_FROM
+    assert cfg.msg.broker_url == DEFAULT_BROKER_URL
+    assert cfg.msg.jetstream_store == DEFAULT_JETSTREAM_STORE
     assert cfg.server.host == DEFAULT_HOST
     assert cfg.server.port == DEFAULT_PORT
     assert cfg.storage.s3_endpoint == DEFAULT_S3_ENDPOINT
@@ -62,6 +67,28 @@ def test_config_defaults() -> None:
     assert cfg.storage.s3_bucket == DEFAULT_S3_BUCKET
     assert cfg.storage.s3_region == DEFAULT_S3_REGION
     assert cfg.storage.upload_max_bytes == DEFAULT_FILES_MAX_BYTES
+
+
+def test_broker_url_default_is_local_nats() -> None:
+    assert DEFAULT_BROKER_URL == "nats://localhost:4222"
+    assert Config.from_env({}).msg.broker_url == DEFAULT_BROKER_URL
+
+
+def test_jetstream_store_default_is_file() -> None:
+    assert DEFAULT_JETSTREAM_STORE == "file"
+    assert Config.from_env({}).msg.jetstream_store == DEFAULT_JETSTREAM_STORE
+
+
+def test_jetstream_store_env_selects_memory() -> None:
+    cfg = Config.from_env({"API_JETSTREAM_STORE": "memory"})
+
+    assert cfg.msg.jetstream_store == "memory"
+
+
+@pytest.mark.parametrize("val", ["disk", "MEMORY", "ram", ""])
+def test_jetstream_store_fails_loud_on_bad_values(val: str) -> None:
+    with pytest.raises(ValueError, match="API_JETSTREAM_STORE must be 'file' or 'memory'"):
+        Config.from_env({"API_JETSTREAM_STORE": val})
 
 
 def test_config_custom_values() -> None:
@@ -78,6 +105,7 @@ def test_config_custom_values() -> None:
         "HOST": "127.0.0.1",
         "PORT": "9000",
         "API_SESSION_TTL_SECONDS": "3600",
+        "API_BROKER_URL": "nats://broker.internal:4222",
     }
     cfg = Config.from_env(env)
     assert cfg.db.database_url == "postgresql://user:pass@db:5432/custom"
@@ -91,9 +119,16 @@ def test_config_custom_values() -> None:
     assert cfg.crypto.kms_breaker_cooldown == pytest.approx(45.5, abs=1e-3)
     assert cfg.mail.resend_api_key == ""
     assert cfg.mail.mail_from_address == DEFAULT_MAIL_FROM
+    assert cfg.msg.broker_url == "nats://broker.internal:4222"
     assert cfg.server.host == "127.0.0.1"
     assert cfg.server.port == 9000
     assert cfg.store.session_ttl_seconds == 3600
+
+
+def test_broker_url_env_strips_surrounding_whitespace() -> None:
+    cfg = Config.from_env({"API_BROKER_URL": "  nats://edge:4222  "})
+
+    assert cfg.msg.broker_url == "nats://edge:4222"
 
 
 @pytest.mark.parametrize(
@@ -116,6 +151,8 @@ def test_config_custom_values() -> None:
         ("API_CHAT_MODELS_TTL_SECONDS", "abc", "must be an integer"),
         ("API_FILES_MAX_BYTES", "abc", "must be an integer"),
         ("API_FILES_MAX_BYTES", "0", "must be at least 1"),
+        ("API_BROKER_URL", "", "API_BROKER_URL must be non-empty"),
+        ("API_BROKER_URL", "   ", "API_BROKER_URL must be non-empty"),
     ],
 )
 def test_config_fails_loud_on_invalid_env(key: str, val: str, match: str) -> None:
@@ -224,6 +261,7 @@ def test_config_has_no_test_url_fields() -> None:
         ("store", "session_ttl_seconds"),
         ("crypto", "dek_cache_ttl"),
         ("mail", "mail_from_address"),
+        ("msg", "broker_url"),
         ("server", "port"),
         ("chat", "chat_model"),
         ("storage", "s3_bucket"),

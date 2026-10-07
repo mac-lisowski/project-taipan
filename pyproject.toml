@@ -9,6 +9,7 @@ dependencies = [
     "cli",
     "crypto",
     "email",
+    "messaging",
     "storage",
 ]
 
@@ -19,6 +20,7 @@ cli = { workspace = true }
 crypto = { workspace = true }
 email = { workspace = true }
 kms = { workspace = true }
+messaging = { workspace = true }
 storage = { workspace = true }
 
 # Workspace members: shared libraries live in packages/, runnable apps in apps/
