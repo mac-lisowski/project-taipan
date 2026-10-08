@@ -6,7 +6,7 @@ from api.dek_store import PostgresDekStore
 from api.main import app
 from api.models import TenantDek, User, UserTenant
 from api.models.encrypted_string import EncryptedString
-from conftest import create_user
+from api_testsupport import create_user
 from crypto import tenant_scope
 from crypto.errors import CryptoCategory, CryptoError
 from fastapi.testclient import TestClient

@@ -1,6 +1,6 @@
 """Owner activation switch over HTTP: flip, revoke, refuse."""
 
-from conftest import create_user, login, setup_admin
+from api_testsupport import create_user, login, setup_admin
 
 UNKNOWN_LOGIN = {"email": "ghost@x.com", "password": "s3cret123"}
 

@@ -1,6 +1,6 @@
 """Owner account details over HTTP: joined shape, additive only."""
 
-from conftest import create_user, login, setup_admin
+from api_testsupport import create_user, login, setup_admin
 
 DETAIL_KEYS = {
     "id",

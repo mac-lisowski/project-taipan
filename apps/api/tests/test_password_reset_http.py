@@ -1,7 +1,7 @@
 """Password reset over HTTP: neutral forgot reply, pinned error map, login cookie."""
 
 from api.models import User
-from conftest import create_user
+from api_testsupport import create_user
 from email_delivery import FakeEmailSender
 from sqlalchemy import select
 

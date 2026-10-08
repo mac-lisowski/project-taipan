@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from api.models import UserProfile
-from conftest import create_user, login
+from api_testsupport import create_user, login
 from sqlalchemy import func, select
 
 

@@ -6,7 +6,6 @@ through the guard against the same parametrized store as the
 suppression tests.
 """
 
-from conftest import _address, _guarded
 from email_delivery import FakeEmailSender
 from email_delivery.sender import SendResult, SendStatus
 from email_delivery.suppression import (
@@ -15,6 +14,7 @@ from email_delivery.suppression import (
     GuardedEmailSender,
     SuppressionStore,
 )
+from email_testsupport import _address, _guarded
 
 
 def test_excess_sends_per_recipient_reject_with_retryable_reason(

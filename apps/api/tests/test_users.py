@@ -1,6 +1,6 @@
 from api.credentials import verify_password
 from api.models import User
-from conftest import create_user
+from api_testsupport import create_user
 from sqlalchemy import select
 
 

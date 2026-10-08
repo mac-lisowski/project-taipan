@@ -1,6 +1,6 @@
 """Settings over HTTP: public read of the switch, owner-only write, pinned body shape."""
 
-from conftest import create_user, login, setup_admin
+from api_testsupport import create_user, login, setup_admin
 
 
 def test_fresh_db_reads_switch_false(client):

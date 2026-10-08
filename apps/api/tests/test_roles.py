@@ -1,7 +1,7 @@
 import pytest
 from api import authz
 from api.models import Tenant, User, UserTenant, UserTenantRole
-from conftest import create_user, login, setup_admin
+from api_testsupport import create_user, login, setup_admin
 from crypto import tenant_scope
 from fastapi import HTTPException
 from sqlalchemy import delete, select

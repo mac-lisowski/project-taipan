@@ -1,12 +1,10 @@
 import uuid
-from pathlib import Path
 
 import pytest
 from api import db as db_module
 from api.db import Base
 from api.kvstore import SESSION_KEYS, TOKEN_KEYS, MemoryKVStore, set_session_store
 from api.main import app
-from api.models import Role, UserTenant, UserTenantRole
 from api.models.encrypted_string import set_field_crypto
 from api.tokens.store import set_token_store
 from api_testsupport import (
@@ -17,14 +15,12 @@ from api_testsupport import (
     MapStore,
     StubCipher,
 )
-from crypto import FieldCrypto, tenant_scope
+from crypto import FieldCrypto
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select, text
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
-
-ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
 
 @pytest.fixture
@@ -114,42 +110,6 @@ def memory_token_store():
     set_token_store(store)
     yield store
     set_token_store(None)
-
-
-def create_user(client, email: str, password: str = "s3cret123") -> int:
-    """Create a user through the gated route; caller holds an admin session."""
-    resp = client.post("/api/users", json={"email": email, "password": password})
-    assert resp.status_code == 201
-    return resp.json()["id"]
-
-
-def grant_tenant_admin(session_factory, user_id: int) -> None:
-    """Grant the admin tenant role in the user's personal tenant; no owner role."""
-    with session_factory() as session:
-        tenant_id = session.scalar(
-            select(UserTenant.tenant_id).where(UserTenant.user_id == user_id)
-        )
-        # Tenant-carrying writes must flush inside the scope they point at.
-        with tenant_scope(tenant_id):
-            session.add(UserTenantRole(user_id=user_id, tenant_id=tenant_id, role=Role.ADMIN))
-            session.flush()
-        session.commit()
-
-
-def setup_admin(client, email: str = "admin@x.com", password: str = "s3cret123") -> int:
-    """Run POST setup once; returns the admin user id."""
-    resp = client.post("/api/setup", json={"email": email, "password": password})
-    assert resp.status_code == 201
-    return resp.json()["id"]
-
-
-def login(client, email: str, password: str = "s3cret123") -> str:
-    """Log in; returns the session cookie for manual request building."""
-    resp = client.post("/api/auth/login", json={"email": email, "password": password})
-    assert resp.status_code == 204
-    token = resp.cookies.get("session")
-    assert token is not None
-    return token
 
 
 def _stub_register():

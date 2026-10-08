@@ -7,7 +7,7 @@ user_roles, and a downgrade that removes only the new tables.
 import pytest
 from alembic import command
 from alembic.config import Config
-from conftest import ALEMBIC_INI
+from api_testsupport import ALEMBIC_INI
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
 

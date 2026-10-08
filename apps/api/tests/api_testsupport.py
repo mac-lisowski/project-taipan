@@ -1,10 +1,23 @@
-"""Shared fakes and constants for the api tests. No network, no real KMS."""
+"""Shared fakes, constants, and route helpers for the api tests.
+
+No network, no real KMS. Helpers live here, not in conftest, so test
+modules never import the bare name `conftest` (every tests dir's
+conftest competes for that one module name; importing it is
+collection-order luck).
+"""
 
 import base64
 import os
 import uuid
+from pathlib import Path
+
+from api.models import Role, UserTenant, UserTenantRole
+from crypto import tenant_scope
+from sqlalchemy import select
 
 KEY_ID = "5f0c9a1e-2222-4333-8444-555566667777"
+
+ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
 # Test databases are the suite's business, not production Config's.
 # Read at import so docker/devcontainer env overrides keep working.
@@ -101,3 +114,39 @@ class MapStore:
     def put(self, tenant_id: str, wrapped_dek: str) -> str:
         self.rows[tenant_id] = wrapped_dek
         return wrapped_dek
+
+
+def create_user(client, email: str, password: str = "s3cret123") -> int:
+    """Create a user through the gated route; caller holds an admin session."""
+    resp = client.post("/api/users", json={"email": email, "password": password})
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def grant_tenant_admin(session_factory, user_id: int) -> None:
+    """Grant the admin tenant role in the user's personal tenant; no owner role."""
+    with session_factory() as session:
+        tenant_id = session.scalar(
+            select(UserTenant.tenant_id).where(UserTenant.user_id == user_id)
+        )
+        # Tenant-carrying writes must flush inside the scope they point at.
+        with tenant_scope(tenant_id):
+            session.add(UserTenantRole(user_id=user_id, tenant_id=tenant_id, role=Role.ADMIN))
+            session.flush()
+        session.commit()
+
+
+def setup_admin(client, email: str = "admin@x.com", password: str = "s3cret123") -> int:
+    """Run POST setup once; returns the admin user id."""
+    resp = client.post("/api/setup", json={"email": email, "password": password})
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def login(client, email: str, password: str = "s3cret123") -> str:
+    """Log in; returns the session cookie for manual request building."""
+    resp = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert resp.status_code == 204
+    token = resp.cookies.get("session")
+    assert token is not None
+    return token

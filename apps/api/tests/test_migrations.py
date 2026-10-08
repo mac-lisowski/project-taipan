@@ -6,7 +6,7 @@ cascade, unique index, types, CHECKs) is only pinned here.
 
 from alembic import command
 from alembic.config import Config
-from conftest import ALEMBIC_INI
+from api_testsupport import ALEMBIC_INI
 from sqlalchemy import create_engine, text
 
 

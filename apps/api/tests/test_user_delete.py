@@ -1,7 +1,7 @@
 """Owner delete over HTTP: refuse self, revoke, cascade."""
 
 from api.models import Tenant, UserTenant
-from conftest import create_user, login, setup_admin
+from api_testsupport import create_user, login, setup_admin
 from sqlalchemy import select
 
 

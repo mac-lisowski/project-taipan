@@ -2,7 +2,7 @@
 
 import pytest
 from api.models import SystemRole, Tenant, User, UserSystemRole, UserTenant, UserTenantRole
-from conftest import create_user, setup_admin
+from api_testsupport import create_user, setup_admin
 from crypto import tenant_scope
 from crypto.errors import CryptoCategory, CryptoError
 from sqlalchemy import select

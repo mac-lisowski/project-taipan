@@ -2,7 +2,7 @@
 
 from alembic import command
 from alembic.config import Config
-from conftest import ALEMBIC_INI
+from api_testsupport import ALEMBIC_INI
 from sqlalchemy import create_engine, text
 
 # The revision at which this file's user_roles DDL froze; two later

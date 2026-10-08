@@ -3,7 +3,7 @@
 from api import sessions
 from api.credentials import verify_password
 from api.models import User
-from conftest import login
+from api_testsupport import login
 from email_delivery import FakeEmailSender
 from sqlalchemy import select
 

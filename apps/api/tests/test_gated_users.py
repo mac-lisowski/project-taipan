@@ -1,6 +1,6 @@
 """The users router needs the system owner; profiles need a session and stay self only."""
 
-from conftest import create_user, grant_tenant_admin, login, setup_admin
+from api_testsupport import create_user, grant_tenant_admin, login, setup_admin
 
 NO_SESSION = {"Cookie": ""}
 

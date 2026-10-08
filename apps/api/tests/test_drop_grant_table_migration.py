@@ -7,7 +7,7 @@ and the user and role pairs copied back from user_tenant_roles.
 
 from alembic import command
 from alembic.config import Config
-from conftest import ALEMBIC_INI
+from api_testsupport import ALEMBIC_INI
 from sqlalchemy import create_engine, text
 
 # The last revision that still ships the old grant table.

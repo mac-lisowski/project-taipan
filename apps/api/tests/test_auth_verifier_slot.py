@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from api.main import app
 from api.verifiers import get_credential_verifier
-from conftest import setup_admin
+from api_testsupport import setup_admin
 from sqlalchemy.orm import Session
 
 

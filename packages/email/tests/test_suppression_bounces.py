@@ -1,10 +1,9 @@
 """Suppression conformance: memory and Postgres stores behave the same.
 
-One behavior per test, asserted through the guard. Store legs, the
-guard factory, and address helpers live in conftest.py.
+One behavior per test, asserted through the guard. The store legs
+live in conftest.py; guard and address helpers in email_testsupport.py.
 """
 
-from conftest import _TABLES_DDL, TEST_DB_URL, _address, _guarded, needs_postgres
 from email_delivery.sender import SendStatus
 from email_delivery.suppression import (
     MAX_SENDS_PER_RECIPIENT,
@@ -14,6 +13,7 @@ from email_delivery.suppression import (
     PostgresSuppressionStore,
     SuppressionStore,
 )
+from email_testsupport import _TABLES_DDL, TEST_DB_URL, _address, _guarded, needs_postgres
 
 
 def test_bounds_match_spec_values() -> None:
