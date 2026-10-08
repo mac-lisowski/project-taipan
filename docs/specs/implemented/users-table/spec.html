@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec: users table</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+<header class="mb-8">
+<h1 class="text-2xl font-bold mb-2">Users Table</h1>
+<p class="text-slate-500">Owner only page. Registered users in a table. Search, status filter, page size, pager.
+Spec: <code>docs/specs/planned/users-table/spec.md</code>.</p>
+</header>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+<h2 class="font-bold mb-4">Page flow</h2>
+<div class="mermaid">
+flowchart TD
+O["system owner"] --> N["nav: system section"] --> P["/users"]
+P --> L["lib: load users via BFF"]
+L --> F["pure: search + filter + page"]
+F --> T["table: email, badge, date"]
+V["non owner"] --> R["redirect /dashboard"]
+A["no session"] --> L2["redirect login"]
+</div>
+</section>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+<h2 class="font-bold mb-4">Module seam</h2>
+<div class="mermaid">
+flowchart LR
+P["users page"] --> LIB["users lib: states + pure helpers"]
+LIB -- "GET /api/users via BFF" --> U["existing users endpoint"]
+P --> UI["ui barrel: table, select, badge, input, button"]
+</div>
+<p class="mt-3 text-slate-500">Web only. The API gains no code. The endpoint result is the only source of list state.</p>
+</section>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+<h2 class="font-bold mb-4">Depth: before and after</h2>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="lbl mb-2">Before</p>
+<div class="space-y-2">
+<div class="h-8 rounded bg-slate-200 flex items-center px-3 text-xs">user list: database only</div>
+<div class="h-8 rounded bg-slate-100 flex items-center px-3 text-xs text-slate-400">no page, no search, no filter</div>
+</div>
+</div>
+<div>
+<p class="lbl mb-2">After</p>
+<div class="space-y-2">
+<div class="h-8 rounded bg-emerald-600 text-white flex items-center px-3 text-xs">/users owner page</div>
+<div class="h-8 rounded bg-emerald-100 flex items-center px-3 text-xs">search + filter + paging in browser</div>
+<div class="h-8 rounded bg-emerald-50 flex items-center px-3 text-xs">API untouched, one endpoint read</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+<h2 class="font-bold mb-4">Test seam</h2>
+<ul class="list-disc ml-5 space-y-1">
+<li>Web lib tests with stubbed fetch. Loader calls the BFF users path, maps body and failures.</li>
+<li>Pin pure helpers: case insensitive email search, status filter, page slicing and bounds.</li>
+<li>No render tests. Known repo gap, same as the auth forms.</li>
+<li>API gains no tests because it gains no code.</li>
+</ul>
+</section>
+
+<footer class="bg-slate-800 text-slate-100 rounded-xl p-6">
+<h2 class="font-bold mb-2">Out of scope</h2>
+<p class="text-slate-300">Server paging and query params, row actions, role and name columns, tenant scoping of the endpoint, sorting, CSV export.</p>
+</footer>
+</div>
+</body>
+</html>

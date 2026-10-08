@@ -25,6 +25,26 @@ function GearIcon(): ReactNode {
   );
 }
 
+function UsersIcon(): ReactNode {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="inline-block h-3 w-3 align-[-2px]"
+    >
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 function NavItemLink({ item, active }: { item: NavItem; active: boolean }): ReactNode {
   return (
     <Link
@@ -34,7 +54,7 @@ function NavItemLink({ item, active }: { item: NavItem; active: boolean }): Reac
         active ? "bg-accent text-foreground" : "text-muted-foreground"
       }`}
     >
-      {item.icon === "gear" && <GearIcon />} {item.label}
+      {item.icon === "gear" && <GearIcon />} {item.icon === "users" && <UsersIcon />} {item.label}
     </Link>
   );
 }

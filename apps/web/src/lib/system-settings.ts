@@ -2,6 +2,8 @@
 // BFF plus a small view-state machine. The endpoint result is the only
 // source of switch state; the client never decides a value on its own.
 
+import { errorDetailOf } from "./api-detail";
+
 export const REGISTRATION_PATH = "/api/system/registration";
 
 export type LoadResult =
@@ -10,17 +12,10 @@ export type LoadResult =
 
 export type SetResult = { ok: true } | { ok: false; error: string };
 
-async function errorOf(res: Response): Promise<string> {
-  const body = (await res.json().catch(() => null)) as {
-    detail?: string;
-  } | null;
-  return body?.detail ?? `request failed (${res.status})`;
-}
-
 export async function loadRegistrationSwitch(): Promise<LoadResult> {
   try {
     const res = await fetch(REGISTRATION_PATH);
-    if (!res.ok) return { ok: false, error: await errorOf(res) };
+    if (!res.ok) return { ok: false, error: await errorDetailOf(res) };
     const body = (await res.json().catch(() => null)) as {
       enabled?: unknown;
     } | null;
@@ -39,7 +34,7 @@ export async function setRegistrationSwitch(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled }),
     });
-    if (!res.ok) return { ok: false, error: await errorOf(res) };
+    if (!res.ok) return { ok: false, error: await errorDetailOf(res) };
     return { ok: true };
   } catch {
     return { ok: false, error: "network error" };
