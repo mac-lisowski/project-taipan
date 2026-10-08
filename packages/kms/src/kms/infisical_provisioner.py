@@ -8,6 +8,7 @@ v0.165.16: create and rotate responses come back wrapped.
 import base64
 
 from kms._infisical_transport import InfisicalTransport
+from kms.errors import KmsError
 
 
 class InfisicalProvisioner:
@@ -35,6 +36,17 @@ class InfisicalProvisioner:
         )
         return body["project"]["id"]
 
+    def find_project(self, name: str) -> str | None:
+        # The list is membership-scoped, so only the adapter sees the
+        # raw names; ambiguity must fail loud here, not pick silently.
+        body = self._transport.request("GET", "/api/v1/projects?type=kms")
+        matches = [p["id"] for p in body["projects"] if p["name"] == name]
+        if len(matches) > 1:
+            raise KmsError(
+                f"find_project: {len(matches)} kms projects named {name}; clean up duplicates"
+            )
+        return matches[0] if matches else None
+
     def create_key(self, project_id: str, name: str) -> str:
         body = self._transport.request(
             "POST",
@@ -42,10 +54,24 @@ class InfisicalProvisioner:
             {
                 "projectId": project_id,
                 "name": name,
-                "encryptionAlgorithm": "aes-256-gcm",
+                "algorithm": "aes-256-gcm",
                 "keyUsage": "encrypt-decrypt",
+                "isExportable": False,
+                "hasDeleteProtection": True,
             },
         )
+        return body["key"]["id"]
+
+    def find_key(self, project_id: str, name: str) -> str | None:
+        # The transport has no query params, so the filter rides in the path.
+        path = f"/api/v1/kms/keys/key-name/{name}?projectId={project_id}"
+        try:
+            body = self._transport.request("GET", path)
+        except KmsError as exc:
+            # Absent key is the 404 case, not a transport failure.
+            if exc.status_code == 404:
+                return None
+            raise
         return body["key"]["id"]
 
     def delete_project(self, project_id: str) -> None:

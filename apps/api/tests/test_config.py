@@ -22,13 +22,14 @@ from api.config import (
 VALID_UUID = "5f0c9a1e-2222-4333-8444-555566667777"
 
 
-def test_config_holds_only_the_five_groups() -> None:
+def test_config_holds_only_the_expected_groups() -> None:
     assert [f.name for f in fields(Config)] == [
         "db",
         "store",
         "crypto",
         "mail",
         "server",
+        "chat",
     ]
 
 
@@ -124,6 +125,32 @@ def test_multi_invalid_env_keeps_old_error_order(env: dict[str, str], match: str
         Config.from_env(env)
 
 
+def test_chat_config_defaults() -> None:
+    # Literals, not constants: the dev defaults are the spec's pinned values.
+    cfg = Config.from_env({})
+    assert cfg.chat.litellm_url == "http://localhost:4000"
+    assert cfg.chat.litellm_api_key == ""
+    assert cfg.chat.chat_model == "gpt-4o-mini"
+
+
+def test_chat_config_custom_values() -> None:
+    env = {
+        "API_LITELLM_URL": "http://litellm:4000/",
+        "API_LITELLM_API_KEY": "sk-dev-key",
+        "API_CHAT_MODEL": "llama-3",
+    }
+    cfg = Config.from_env(env)
+    assert cfg.chat.litellm_url == "http://litellm:4000/"
+    assert cfg.chat.litellm_api_key == "sk-dev-key"
+    assert cfg.chat.chat_model == "llama-3"
+
+
+def test_empty_chat_env_vars_fall_back_to_defaults() -> None:
+    cfg = Config.from_env({"API_LITELLM_URL": "", "API_CHAT_MODEL": ""})
+    assert cfg.chat.litellm_url == "http://localhost:4000"
+    assert cfg.chat.chat_model == "gpt-4o-mini"
+
+
 def test_same_env_yields_equal_config() -> None:
     env = {
         "API_DATABASE_URL": "postgresql://user:pass@db:5432/custom",
@@ -146,6 +173,7 @@ def test_config_has_no_test_url_fields() -> None:
         ("crypto", "dek_cache_ttl"),
         ("mail", "mail_from_address"),
         ("server", "port"),
+        ("chat", "chat_model"),
     ],
 )
 def test_groups_are_frozen(group: str, field: str) -> None:

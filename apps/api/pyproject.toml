@@ -5,11 +5,13 @@ description = "FastAPI composition root: auth, tenancy, field encryption"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.20.0",
+    "anyio>=4",
     "core",
     "crypto",
     "email",
     "email-validator>=2.3.0",
     "fastapi>=0.142.2",
+    "httpx2>=2.13.1",
     "kms",
     "psycopg[binary]>=3.3.6",
     "pwdlib[argon2]>=0.3.1",

@@ -150,3 +150,23 @@ def login(client, email: str, password: str = "s3cret123") -> str:
     token = resp.cookies.get("session")
     assert token is not None
     return token
+
+
+def admit_user(client, email: str, password: str = "s3cret123") -> None:
+    """Create the user, running setup first when the instance is fresh."""
+    if client.get("/api/setup").json()["needs_setup"]:
+        setup_admin(client)
+    create_user(client, email, password)
+
+
+def signin(client, email: str, password: str = "s3cret123") -> None:
+    """Admit then log in; the standard chat-test entry."""
+    admit_user(client, email, password)
+    login(client, email, password)
+
+
+def create_thread(client, *messages) -> dict:
+    """POST threads/create; returns the boundary Thread body."""
+    resp = client.post("/api/threads/create", json={"messages": list(messages)})
+    assert resp.status_code == 200
+    return resp.json()

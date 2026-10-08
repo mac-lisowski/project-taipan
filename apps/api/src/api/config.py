@@ -28,6 +28,8 @@ DEFAULT_ACTIVATION_TOKEN_TTL_SECONDS = 3600
 DEFAULT_MAIL_FROM = "noreply@localhost"
 # Non-empty so a built reset link always passes render validation.
 DEFAULT_APP_BASE_URL = "http://localhost:3000"
+DEFAULT_LITELLM_URL = "http://localhost:4000"
+DEFAULT_CHAT_MODEL = "gpt-4o-mini"
 
 
 @dataclass(frozen=True)
@@ -69,12 +71,20 @@ class ServerConfig:
 
 
 @dataclass(frozen=True)
+class ChatConfig:
+    litellm_url: str = DEFAULT_LITELLM_URL
+    litellm_api_key: str = ""
+    chat_model: str = DEFAULT_CHAT_MODEL
+
+
+@dataclass(frozen=True)
 class Config:
     db: DbConfig
     store: StoreConfig
     crypto: CryptoConfig
     mail: MailConfig
     server: ServerConfig
+    chat: ChatConfig
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Config:
@@ -172,6 +182,12 @@ class Config:
                 app_base_url=e.get("API_APP_BASE_URL") or DEFAULT_APP_BASE_URL,
             ),
             server=ServerConfig(host=host, port=port),
+            chat=ChatConfig(
+                # An empty var falls back to the default, like the web base URL.
+                litellm_url=e.get("API_LITELLM_URL") or DEFAULT_LITELLM_URL,
+                litellm_api_key=e.get("API_LITELLM_API_KEY", ""),
+                chat_model=e.get("API_CHAT_MODEL") or DEFAULT_CHAT_MODEL,
+            ),
         )
 
 

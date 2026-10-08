@@ -17,6 +17,7 @@ core = { workspace = true }
 cli = { workspace = true }
 crypto = { workspace = true }
 email = { workspace = true }
+kms = { workspace = true }
 
 # Workspace members: shared libraries live in packages/, runnable apps in apps/
 [tool.uv.workspace]
@@ -27,6 +28,7 @@ exclude = ["apps/web"]
 [dependency-groups]
 dev = [
     "httpx2>=2.13.1",
+    "kms",
     "pre-commit>=4.6.2",
     "pytest>=8",
     "ruff>=0.6",

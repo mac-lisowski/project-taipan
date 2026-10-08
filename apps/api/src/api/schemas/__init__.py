@@ -8,6 +8,13 @@ from api.schemas.auth import (
     ResetIn,
     SetupStatus,
 )
+from api.schemas.chat import (
+    CompletionIn,
+    ThreadCreate,
+    ThreadListRead,
+    ThreadRead,
+    ThreadUpdate,
+)
 from api.schemas.profile import ProfileCreate, ProfileRead, ProfileUpdate
 from api.schemas.system import RegistrationSwitchIn, RegistrationSwitchOut
 from api.schemas.user import (
@@ -19,6 +26,7 @@ from api.schemas.user import (
 
 __all__ = [
     "ActivateIn",
+    "CompletionIn",
     "ForgotIn",
     "MeOut",
     "PasswordChangeIn",
@@ -31,6 +39,10 @@ __all__ = [
     "RegistrationSwitchOut",
     "ResetIn",
     "SetupStatus",
+    "ThreadCreate",
+    "ThreadListRead",
+    "ThreadRead",
+    "ThreadUpdate",
     "UserActivationUpdate",
     "UserCreate",
     "UserDetailOut",
