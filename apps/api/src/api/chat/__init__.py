@@ -1,5 +1,5 @@
-"""Chat feature: thread storage and completion."""
+"""Chat feature: thread storage, completion, and the send queue."""
 
-from api.chat import complete, gateway, threads
+from api.chat import complete, gateway, queue, threads
 
-__all__ = ["complete", "gateway", "threads"]
+__all__ = ["complete", "gateway", "queue", "threads"]

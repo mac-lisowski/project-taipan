@@ -70,3 +70,30 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     thread: Mapped["ChatThread"] = relationship(back_populates="messages")
+
+
+class ChatQueuedMessage(Base):
+    """Extension table: one message queued against a thread while a run is active."""
+
+    __tablename__ = "chat_queued_messages"
+    __table_args__ = (
+        # NULL->>'text' passes a bare length check, so the key must exist too.
+        CheckConstraint(
+            "content ? 'text' AND LENGTH(content->>'text') > 0",
+            name="ck_chat_queued_messages_text",
+        ),
+        Index("ix_chat_queued_messages_thread_seq", "thread_id", "seq"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    thread_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chat_threads.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    tenant_id: Mapped[str] = mapped_column(Text)
+    seq: Mapped[int]
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    thread: Mapped["ChatThread"] = relationship()
+    user: Mapped["User"] = relationship()

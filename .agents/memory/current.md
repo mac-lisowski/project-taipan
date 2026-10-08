@@ -1,5 +1,16 @@
 # Current state
 
+- Worktree project-taipan-chat-queued-messages, branch
+  feat/chat-queued-messages: both tickets implemented, uncommitted.
+  API: chat_queued_messages table (migration 1e8aa4dfa422 off
+  7f7c0b2d3a74), api/chat/queue.py, four /api/threads/queue/* routes,
+  cap 10, owner-scoped. Web: chat-queue.ts store + use-chat-queue
+  hook, Mode C ChatComposer (hand-rolled starters), QueueChips,
+  QueueDispatch in slots.rest. Review fixes applied: row deletes at
+  run start via text-matched noteRunStarted (not at settle), enqueue
+  returns bool for draft clearing, enqueue/hydrate guard stale
+  thread replies, createdAt is a number. Next: gates, stamp, commit,
+  PR to dev.
 - Dev pushed through fb6c115: 34a7d97 fixes all 21 falsegreen
   findings (email suite split under the 300-LOC gate: conftest.py +
   test_send_budget.py), 1e57f54 moves bff-result-module,

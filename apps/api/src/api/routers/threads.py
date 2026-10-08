@@ -8,8 +8,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from api import chat
 from api.authz import Principal, current_principal
 from api.db import DbSession
-from api.models import ChatThread
-from api.schemas import ThreadCreate, ThreadListRead, ThreadRead, ThreadUpdate
+from api.models import ChatQueuedMessage, ChatThread
+from api.schemas import (
+    QueueCreate,
+    QueueRead,
+    QueueUpdate,
+    ThreadCreate,
+    ThreadListRead,
+    ThreadRead,
+    ThreadUpdate,
+)
 
 PrincipalSession = Annotated[Principal, Depends(current_principal)]
 
@@ -19,6 +27,16 @@ router = APIRouter(prefix="/threads", tags=["chat"])
 def _thread_out(thread: ChatThread) -> ThreadRead:
     return ThreadRead(
         id=str(thread.id), title=thread.title, created_at=thread.created_at.timestamp()
+    )
+
+
+def _queue_out(row: ChatQueuedMessage) -> QueueRead:
+    return QueueRead(
+        id=str(row.id),
+        thread_id=str(row.thread_id),
+        seq=row.seq,
+        content=row.content,
+        created_at=row.created_at.timestamp(),
     )
 
 
@@ -72,3 +90,52 @@ def delete_thread(thread_id: UUID, db: DbSession, principal: PrincipalSession) -
         chat.threads.delete(db, principal.user_id, thread_id)
     except chat.threads.NotFound as exc:
         raise HTTPException(status_code=404, detail="thread not found") from exc
+
+
+@router.post("/queue/create", response_model=QueueRead)
+def enqueue_queued_message(
+    payload: QueueCreate, db: DbSession, principal: PrincipalSession
+) -> QueueRead:
+    try:
+        row = chat.queue.enqueue(
+            db,
+            principal.user_id,
+            principal.tenant_id,
+            payload.thread_id,
+            payload.content.model_dump(),
+        )
+    except chat.queue.NotFound as exc:
+        raise HTTPException(status_code=404, detail="thread not found") from exc
+    except chat.queue.QueueFull as exc:
+        raise HTTPException(status_code=422, detail="queue is full") from exc
+    return _queue_out(row)
+
+
+@router.get("/queue/get", response_model=list[QueueRead])
+def get_queued_messages(
+    thread_id: UUID, db: DbSession, principal: PrincipalSession
+) -> list[QueueRead]:
+    try:
+        rows = chat.queue.list_for_thread(db, principal.user_id, thread_id)
+    except chat.queue.NotFound as exc:
+        raise HTTPException(status_code=404, detail="thread not found") from exc
+    return [_queue_out(row) for row in rows]
+
+
+@router.patch("/queue/update/{entry_id}", response_model=QueueRead)
+def update_queued_message(
+    entry_id: UUID, payload: QueueUpdate, db: DbSession, principal: PrincipalSession
+) -> QueueRead:
+    try:
+        row = chat.queue.update(db, principal.user_id, entry_id, payload.content.model_dump())
+    except chat.queue.NotFound as exc:
+        raise HTTPException(status_code=404, detail="queued message not found") from exc
+    return _queue_out(row)
+
+
+@router.delete("/queue/delete/{entry_id}", status_code=204)
+def delete_queued_message(entry_id: UUID, db: DbSession, principal: PrincipalSession) -> None:
+    try:
+        chat.queue.remove(db, principal.user_id, entry_id)
+    except chat.queue.NotFound as exc:
+        raise HTTPException(status_code=404, detail="queued message not found") from exc

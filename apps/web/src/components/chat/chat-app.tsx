@@ -6,6 +6,8 @@ import {
   type Theme,
 } from "@openuidev/react-ui";
 import { AssistantMessage } from "@/components/chat/assistant-message";
+import { ChatComposer } from "@/components/chat/chat-composer";
+import { QueueDispatch } from "@/components/chat/queue-dispatch";
 import { LayoutDashboard, User, Users } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
@@ -152,6 +154,14 @@ export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
     >
       <AgentInterface.MobileHeader logo={<TMark />} agentName={<Brand />} />
       <AgentInterface.Welcome glowAnimation promptTemplates={promptTemplates} />
+      {/* Mode C: custom composer owns the queue UI; starters are hand-rolled
+          inside it because the SDK starter chip is not exported. */}
+      <AgentInterface.Composer>
+        <ChatComposer starters={starters} />
+      </AgentInterface.Composer>
+      {/* Non-slot child: stays mounted on route views so the queue keeps
+          dispatching while the composer is unmounted. */}
+      <QueueDispatch />
       <AgentInterface.Sidebar>
         <ChatSidebarContents
           links={links}
