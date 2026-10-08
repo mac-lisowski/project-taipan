@@ -1,4 +1,4 @@
-"""Chat storage tables: threads and their OpenAI-shaped messages."""
+"""Chat storage tables: threads, their messages, and share snapshots."""
 
 import uuid
 from datetime import datetime
@@ -97,3 +97,36 @@ class ChatQueuedMessage(Base):
 
     thread: Mapped["ChatThread"] = relationship()
     user: Mapped["User"] = relationship()
+
+
+class ChatThreadShare(Base):
+    """Frozen thread snapshot behind a hashed token; revoked rows stay as audit.
+
+    No ChatThread.shares relationship on purpose: an ORM cascade would
+    NULL share.thread_id on thread delete instead of firing ON DELETE
+    CASCADE.
+    """
+
+    __tablename__ = "chat_thread_shares"
+    __table_args__ = (
+        # Unique only while live; a revoked row frees the thread's slot.
+        Index(
+            "ix_chat_thread_shares_thread_live",
+            "thread_id",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    token_hash: Mapped[str] = mapped_column(Text, unique=True)
+    thread_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chat_threads.id", ondelete="CASCADE"))
+    tenant_id: Mapped[str] = mapped_column(Text)
+    snapshot: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    title: Mapped[str] = mapped_column(Text)
+    created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

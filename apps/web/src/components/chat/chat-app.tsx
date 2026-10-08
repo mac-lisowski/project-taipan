@@ -18,6 +18,7 @@ import {
   TMark,
   type ChatSidebarLink,
 } from "@/components/chat/chat-sidebar";
+import { ThreadShareControls } from "@/components/chat/thread-share-controls";
 import { AccountView } from "@/components/account/account-view";
 import { useShellAccount, useShellThreads } from "@/components/shell/shell-context";
 import { OverviewView } from "@/components/dashboard/overview-view";
@@ -171,6 +172,8 @@ export function ChatApp({
     navigate(next);
   }
 
+  const shareControls = <ThreadShareControls />;
+
   return (
     <AgentInterface
       llm={llm}
@@ -182,9 +185,14 @@ export function ChatApp({
       path={path}
       onNavigate={openSurfaceLink}
     >
-      <AgentInterface.MobileHeader logo={<TMark />} agentName={<Brand />} />
+      <AgentInterface.MobileHeader
+        logo={<TMark />}
+        agentName={<Brand />}
+        actions={shareControls}
+      />
       <AgentInterface.ThreadHeader>
         <ChatModelSwitcher />
+        {shareControls}
       </AgentInterface.ThreadHeader>
       <AgentInterface.Welcome glowAnimation promptTemplates={promptTemplates} />
       {/* Mode C: custom composer owns the queue UI; starters are hand-rolled

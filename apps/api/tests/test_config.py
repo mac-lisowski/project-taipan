@@ -134,6 +134,8 @@ def test_chat_config_defaults() -> None:
     assert cfg.chat.litellm_api_key == ""
     assert cfg.chat.chat_model == "gpt-4o-mini"
     assert cfg.chat.chat_models_ttl_seconds == 60
+    # Empty, never random: api.chat.shares owns the per-process fallback.
+    assert cfg.chat.share_token_secret == ""
 
 
 def test_chat_config_custom_values() -> None:

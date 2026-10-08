@@ -77,3 +77,19 @@ class QueueRead(BaseModel):
 
 class QueueUpdate(BaseModel):
     content: QueueContent
+
+
+class ShareCreateRead(BaseModel):
+    token: str
+    # The web app prefixes its own origin; the api returns the path only.
+    path: str
+
+
+class ShareStatusRead(BaseModel):
+    shared: bool
+
+
+class SharedThreadRead(BaseModel):
+    # The response model is the leak guard: only these keys leave the api.
+    title: str
+    messages: list[dict]

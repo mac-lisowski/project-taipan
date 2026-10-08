@@ -36,12 +36,20 @@ const CASES = [
     body: '{"content":{"text":"edited"}}',
   },
   { method: "DELETE", path: "/api/threads/queue/delete/q-1" },
+  // Share create/revoke ride the same relay; the cookie must forward.
+  { method: "POST", path: "/api/threads/shares/create/t-1" },
+  { method: "DELETE", path: "/api/threads/shares/delete/t-1" },
+  { method: "GET", path: "/api/threads/shares/get/t-1" },
 ] as const;
 
 describe("threads BFF route", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+  });
+
+  it("stays dynamic so cookies never cache", () => {
+    expect(route.dynamic).toBe("force-dynamic");
   });
 
   it.each(CASES)(

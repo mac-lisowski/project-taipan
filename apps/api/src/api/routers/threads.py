@@ -1,4 +1,4 @@
-"""Thin chat thread routes: the five storage endpoints, session scoped."""
+"""Thin chat thread routes: storage and share endpoints, session scoped."""
 
 from typing import Annotated
 from uuid import UUID
@@ -13,6 +13,8 @@ from api.schemas import (
     QueueCreate,
     QueueRead,
     QueueUpdate,
+    ShareCreateRead,
+    ShareStatusRead,
     ThreadCreate,
     ThreadListRead,
     ThreadRead,
@@ -139,3 +141,33 @@ def delete_queued_message(entry_id: UUID, db: DbSession, principal: PrincipalSes
         chat.queue.remove(db, principal.user_id, entry_id)
     except chat.queue.NotFound as exc:
         raise HTTPException(status_code=404, detail="queued message not found") from exc
+
+
+@router.post("/shares/create/{thread_id}", response_model=ShareCreateRead)
+def create_share(thread_id: UUID, db: DbSession, principal: PrincipalSession) -> ShareCreateRead:
+    try:
+        _share, token = chat.shares.create_or_refresh(
+            db, principal.user_id, principal.tenant_id, thread_id
+        )
+    except chat.threads.NotFound as exc:
+        raise HTTPException(status_code=404, detail="thread not found") from exc
+    return ShareCreateRead(token=token, path=f"/share/{token}")
+
+
+@router.get("/shares/get/{thread_id}", response_model=ShareStatusRead)
+def get_share(thread_id: UUID, db: DbSession, principal: PrincipalSession) -> ShareStatusRead:
+    try:
+        shared = chat.shares.is_shared(db, principal.user_id, principal.tenant_id, thread_id)
+    except chat.threads.NotFound as exc:
+        raise HTTPException(status_code=404, detail="thread not found") from exc
+    return ShareStatusRead(shared=shared)
+
+
+@router.delete("/shares/delete/{thread_id}", status_code=204)
+def delete_share(thread_id: UUID, db: DbSession, principal: PrincipalSession) -> None:
+    try:
+        chat.shares.revoke(db, principal.user_id, principal.tenant_id, thread_id)
+    except chat.threads.NotFound as exc:
+        raise HTTPException(status_code=404, detail="thread not found") from exc
+    except chat.shares.NotFound as exc:
+        raise HTTPException(status_code=404, detail="share not found") from exc
