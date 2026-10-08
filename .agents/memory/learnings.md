@@ -44,3 +44,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Explicit pytest args break conftest imports](learnings/pytest-arg-conftest-collision.md)
 - [OpenUI composer unmounts on Route views; slots.rest stays mounted](learnings/openui-composer-route-slots.md)
 - [git-grep gates need git add -N on new files](learnings/git-grep-gates-need-add-n.md)
+- [OpenUI SDK pane hooks](learnings/openui-sdk-pane-hooks.md)

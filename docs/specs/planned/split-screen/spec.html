@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Split screen, spec map</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"; mermaid.initialize({ startOnLoad: true, theme: "neutral" });</script>
+</head>
+<body class="bg-neutral-50 text-neutral-900 max-w-4xl mx-auto px-6 py-10 space-y-10">
+
+<header class="space-y-2">
+  <h1 class="text-3xl font-bold">Split screen</h1>
+  <p class="text-neutral-600">One <code>AgentInterface</code> owns the screen. A rest-slot child becomes a resizable right pane: an app view, or a second independent chat. State rides the <code>?pane=</code> param. Read <code>spec.md</code> for the full text.</p>
+</header>
+
+<section class="space-y-3">
+  <h2 class="text-xl font-semibold">Layout shape</h2>
+  <p class="text-neutral-600">The pane is a flex sibling inside the SDK root container. It never remounts on navigation. The chat kind mounts a nested interface with its own provider.</p>
+  <div class="bg-white rounded-xl border border-neutral-200 p-4">
+    <pre class="mermaid">
+flowchart LR
+  subgraph AI["AgentInterface (one instance, full width)"]
+    SB["SDK sidebar: nav + thread list"]
+    TC["thread region: chat OR route view"]
+    SEP["drag separator (ARIA)"]
+    PANE["SplitPane (rest slot child)"]
+  end
+  PANE --> PV["view kind: UsersView, SettingsView, ..."]
+  PANE --> PC["chat kind: nested AgentInterface, own ChatProvider"]
+  ST["lib/pane-state: open, kind, viewPath, ratio"] --> PANE
+  URL["?pane=view:/users or ?pane=chat"] <--> ST
+    </pre>
+  </div>
+</section>
+
+<section class="space-y-3">
+  <h2 class="text-xl font-semibold">Options weighed</h2>
+  <div class="bg-white rounded-xl border border-neutral-200 p-5 space-y-3 text-sm">
+    <div class="flex items-center gap-2">
+      <span class="w-44 text-right text-neutral-500 shrink-0">rest-slot pane</span>
+      <div class="h-4 rounded bg-emerald-500" style="width:82%"></div>
+      <span class="text-neutral-600">persistent, any ratio, chosen</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-44 text-right text-neutral-500 shrink-0">SDK detailed view</span>
+      <div class="h-4 rounded bg-amber-400" style="width:52%"></div>
+      <span class="text-neutral-600">free resize, dies on thread switch</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-44 text-right text-neutral-500 shrink-0">two interfaces</span>
+      <div class="h-4 rounded bg-amber-400" style="width:34%"></div>
+      <span class="text-neutral-600">mobile chrome under 1536px viewport</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-44 text-right text-neutral-500 shrink-0">parallel routes</span>
+      <div class="h-4 rounded bg-rose-400" style="width:20%"></div>
+      <span class="text-neutral-600">one URL cannot hold two panes</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-44 text-right text-neutral-500 shrink-0">iframes</span>
+      <div class="h-4 rounded bg-rose-400" style="width:12%"></div>
+      <span class="text-neutral-600">double runtime, history mess</span>
+    </div>
+  </div>
+</section>
+
+<section class="space-y-3">
+  <h2 class="text-xl font-semibold">Depth before and after</h2>
+  <p class="text-neutral-600">One new lib module, two new components, small edits in the chat app. No backend, no schema.</p>
+  <div class="bg-white rounded-xl border border-neutral-200 p-5 space-y-4">
+    <div>
+      <p class="text-sm font-medium mb-1">Pane capability</p>
+      <div class="flex items-center gap-2 text-xs">
+        <span class="w-14 text-right text-neutral-500">before</span>
+        <div class="w-6 h-4 rounded bg-neutral-300"></div><span class="text-neutral-500">none</span>
+      </div>
+      <div class="flex items-center gap-2 text-xs mt-1">
+        <span class="w-14 text-right text-neutral-500">after</span>
+        <div class="flex gap-0.5">
+          <div class="w-20 h-4 rounded bg-indigo-500" title="pane-state"></div>
+          <div class="w-24 h-4 rounded bg-indigo-400" title="split-pane shell"></div>
+          <div class="w-20 h-4 rounded bg-indigo-300" title="pane host"></div>
+          <div class="w-10 h-4 rounded bg-indigo-200" title="chat-app edits"></div>
+        </div>
+        <span class="text-neutral-500">state, shell, host, edits</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="space-y-3">
+  <h2 class="text-xl font-semibold">Test seam</h2>
+  <p class="text-neutral-600">All logic sits in one pure module. Vitest covers it with stubbed window and local storage, matching the sidebar-state suite. No DOM tests, no HTTP tests.</p>
+  <div class="bg-white rounded-xl border border-neutral-200 p-4">
+    <pre class="mermaid">
+flowchart LR
+  T["vitest"] --> PS["pane-state reducer:<br>transitions, clamps, role gate"]
+  T --> SER["?pane= serialize/parse:<br>round trip, close clears"]
+  T --> SYN["syncUrl merge:<br>param survives main nav"]
+    </pre>
+  </div>
+</section>
+
+</body>
+</html>
