@@ -1,6 +1,6 @@
 # Spec: Users Admin
 
-Status: planned.
+Status: implemented (PR #44).
 
 Seam: the users module owns account administration over the injected
 session. Deactivation reuses the one revoke-all sessions seam. The
