@@ -10,6 +10,10 @@ from api.schemas.auth import (
 )
 from api.schemas.chat import (
     CompletionIn,
+    QueueContent,
+    QueueCreate,
+    QueueRead,
+    QueueUpdate,
     ThreadCreate,
     ThreadListRead,
     ThreadRead,
@@ -34,6 +38,10 @@ __all__ = [
     "ProfileCreate",
     "ProfileRead",
     "ProfileUpdate",
+    "QueueContent",
+    "QueueCreate",
+    "QueueRead",
+    "QueueUpdate",
     "RegisterIn",
     "RegistrationSwitchIn",
     "RegistrationSwitchOut",

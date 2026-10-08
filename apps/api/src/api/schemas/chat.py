@@ -51,3 +51,27 @@ class ThreadUpdate(BaseModel):
     id: str | None = None
     title: str = Field(min_length=1, max_length=TITLE_MAX)
     created_at: float | None = Field(default=None, alias="createdAt")
+
+
+class QueueContent(BaseModel):
+    # extra="allow" keeps the content dict verbatim; parts keys fit later.
+    model_config = ConfigDict(extra="allow")
+
+    text: str = Field(min_length=1)
+
+
+class QueueCreate(BaseModel):
+    thread_id: UUID = Field(alias="threadId")
+    content: QueueContent
+
+
+class QueueRead(BaseModel):
+    id: str
+    thread_id: str = Field(serialization_alias="threadId")
+    seq: int
+    content: QueueContent
+    created_at: float = Field(serialization_alias="createdAt")
+
+
+class QueueUpdate(BaseModel):
+    content: QueueContent

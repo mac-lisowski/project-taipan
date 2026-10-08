@@ -12,7 +12,7 @@ const handlers = route as unknown as Record<
   Handler
 >;
 
-// The five contract calls the storage adapter makes, verbatim.
+// The contract calls the storage adapter makes, plus the four queue calls.
 const CASES = [
   { method: "GET", path: "/api/threads/get?cursor=cur-1" },
   { method: "POST", path: "/api/threads/create", body: '{"messages":[]}' },
@@ -23,6 +23,19 @@ const CASES = [
     body: '{"id":"t-1","title":"x","createdAt":1}',
   },
   { method: "DELETE", path: "/api/threads/delete/t-1" },
+  // The queued-message contract; the catch-all relays it 1:1.
+  {
+    method: "POST",
+    path: "/api/threads/queue/create",
+    body: '{"threadId":"t-1","content":{"text":"hi"}}',
+  },
+  { method: "GET", path: "/api/threads/queue/get?thread_id=t-1" },
+  {
+    method: "PATCH",
+    path: "/api/threads/queue/update/q-1",
+    body: '{"content":{"text":"edited"}}',
+  },
+  { method: "DELETE", path: "/api/threads/queue/delete/q-1" },
 ] as const;
 
 describe("threads BFF route", () => {
@@ -59,6 +72,8 @@ describe("threads BFF route", () => {
       const headers = call.init.headers;
       if (!(headers instanceof Headers)) throw new Error("no Headers upstream");
       expect(headers.get("cookie")).toBe("session=tok");
+      // The proxy forwards the request body stream verbatim.
+      expect(call.init.body ?? null).toBe("body" in c ? req.body : null);
       expect(res.status).toBe(204);
     },
   );

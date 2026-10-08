@@ -41,3 +41,5 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [`bl` on PATH is Blaxel, not Bailian](learnings/bl-binary-collision.md)
 - [gh --env 404s on spaces+slash env names](learnings/gh-env-name-encoding.md) - use raw API with %20%2F%20 + pynacl sealed box
 - [Explicit pytest args break conftest imports](learnings/pytest-arg-conftest-collision.md)
+- [OpenUI composer unmounts on Route views; slots.rest stays mounted](learnings/openui-composer-route-slots.md)
+- [git-grep gates need git add -N on new files](learnings/git-grep-gates-need-add-n.md)
