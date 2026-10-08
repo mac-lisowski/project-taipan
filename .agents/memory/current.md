@@ -27,15 +27,18 @@
   index, EncryptedString email, per-row re-scope helper, boot-time
   db-encrypt-emails). Both validated by research agents; fixes
   folded in.
-- Spec A (platform-key-provisioning) implemented and reviewed on
-  feat/chat-surface (3 subagent review rounds, all findings fixed):
-  find ops + hardened create, ensure_project/ensure_key with
-  Ensured(id, created), cause-matched verify hints, typed
-  KmsError.status_code, scripts/provision_kms.py (root dev-group kms
-  dep), docs swapped. Live two-run demo: same key id, verify ok.
-  kms suite: 48 passed, 0 skipped with the live stack up.
-- Next: commit, push, PR to dev (branch also carries the chat-surface
-  spec commit from the parallel session).
+- Spec A (platform-key-provisioning) DONE on feat/chat-surface
+  (commit 6fe08bc amended): find ops + hardened create,
+  ensure_project/ensure_key with Ensured(id, created), cause-matched
+  verify hints, typed KmsError.status_code, scripts/provision_kms.py
+  (root dev-group kms dep), docs swapped. 4 subagent review rounds,
+  all findings fixed. kms suite: 48 passed, 0 skipped with live
+  stack. Gotchas: testsupport.py name collided with crypto's (now
+  kms_testsupport.py); pre-push pytest failed on the parallel
+  session's in-flight chat tests until they settled.
+- PR #46 open (feat/chat-surface to dev); branch also carries the
+  parallel session's chat surface implementation.
+- Next: merge PR #46; Spec B (email-at-rest) is queued after it.
 - Python suite: bare `uv run pytest` with the API_TEST_* env vars for
   the 15432 test DB; explicit arg orders work too (92f41f3).
   Green: 473 passed, 9 skipped under three collection orders.
