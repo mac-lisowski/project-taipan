@@ -99,6 +99,8 @@ def test_config_custom_values() -> None:
         ("PORT", "0", "must be between 1 and 65535"),
         ("PORT", "70000", "must be between 1 and 65535"),
         ("API_SESSION_TTL_SECONDS", "0", "must be at least 1 second"),
+        ("API_CHAT_MODELS_TTL_SECONDS", "0", "must be at least 1 second"),
+        ("API_CHAT_MODELS_TTL_SECONDS", "abc", "must be an integer"),
     ],
 )
 def test_config_fails_loud_on_invalid_env(key: str, val: str, match: str) -> None:
@@ -131,6 +133,7 @@ def test_chat_config_defaults() -> None:
     assert cfg.chat.litellm_url == "http://localhost:4000"
     assert cfg.chat.litellm_api_key == ""
     assert cfg.chat.chat_model == "gpt-4o-mini"
+    assert cfg.chat.chat_models_ttl_seconds == 60
 
 
 def test_chat_config_custom_values() -> None:
@@ -138,11 +141,13 @@ def test_chat_config_custom_values() -> None:
         "API_LITELLM_URL": "http://litellm:4000/",
         "API_LITELLM_API_KEY": "sk-dev-key",
         "API_CHAT_MODEL": "llama-3",
+        "API_CHAT_MODELS_TTL_SECONDS": "5",
     }
     cfg = Config.from_env(env)
     assert cfg.chat.litellm_url == "http://litellm:4000/"
     assert cfg.chat.litellm_api_key == "sk-dev-key"
     assert cfg.chat.chat_model == "llama-3"
+    assert cfg.chat.chat_models_ttl_seconds == 5
 
 
 def test_empty_chat_env_vars_fall_back_to_defaults() -> None:

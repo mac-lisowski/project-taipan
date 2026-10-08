@@ -27,6 +27,8 @@ class CompletionIn(BaseModel):
     # The chat SDK always sends runId; it carries no storage role.
     run_id: str = Field(min_length=1, alias="runId")
     messages: list[CompletionMessageIn] = []
+    # Optional model pick; the route checks it against the catalog's set.
+    model: str | None = None
 
 
 class ThreadCreate(BaseModel):

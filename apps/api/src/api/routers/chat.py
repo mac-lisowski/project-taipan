@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from api import chat
 from api.authz import Principal, current_principal
 from api.chat.gateway import GatewayDep, GatewayError
+from api.chat.models import ModelCatalogDep
 from api.db import DbSession
 from api.schemas import CompletionIn
 
@@ -16,9 +17,18 @@ PrincipalSession = Annotated[Principal, Depends(current_principal)]
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
+@router.get("/models")
+async def models(principal: PrincipalSession, catalog: ModelCatalogDep) -> list[dict]:
+    return await catalog.list()
+
+
 @router.post("/complete")
 async def complete(
-    payload: CompletionIn, db: DbSession, principal: PrincipalSession, gateway: GatewayDep
+    payload: CompletionIn,
+    db: DbSession,
+    principal: PrincipalSession,
+    gateway: GatewayDep,
+    catalog: ModelCatalogDep,
 ) -> StreamingResponse:
     try:
         thread = chat.threads.get(db, principal.user_id, payload.thread_id)
@@ -29,8 +39,16 @@ async def complete(
         chat.complete.validate(incoming)
     except chat.complete.MessageCapError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if payload.model is not None:
+        # The 422 names the same set GET /models serves; the gateway still enforces.
+        allowed = await catalog.allowed_ids()
+        if payload.model not in allowed:
+            raise HTTPException(
+                status_code=422,
+                detail=f"unknown model {payload.model!r}; allowed: {', '.join(sorted(allowed))}",
+            )
     upstream = chat.complete.stream_reply(
-        db, thread, incoming, gateway.stream(chat.complete.prepare(incoming))
+        db, thread, incoming, gateway.stream(chat.complete.prepare(incoming), payload.model)
     )
     try:
         # First pull opens the gateway connection, so a dead gateway fails here.

@@ -7,6 +7,7 @@ import {
 } from "@openuidev/react-ui";
 import { AssistantMessage } from "@/components/chat/assistant-message";
 import { ChatComposer } from "@/components/chat/chat-composer";
+import { ChatModelSwitcher } from "@/components/chat/chat-model-switcher";
 import { QueueDispatch } from "@/components/chat/queue-dispatch";
 import { LayoutDashboard, User, Users } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
@@ -153,6 +154,9 @@ export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
       onNavigate={navigate}
     >
       <AgentInterface.MobileHeader logo={<TMark />} agentName={<Brand />} />
+      <AgentInterface.ThreadHeader>
+        <ChatModelSwitcher />
+      </AgentInterface.ThreadHeader>
       <AgentInterface.Welcome glowAnimation promptTemplates={promptTemplates} />
       {/* Mode C: custom composer owns the queue UI; starters are hand-rolled
           inside it because the SDK starter chip is not exported. */}
