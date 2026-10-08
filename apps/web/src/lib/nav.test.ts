@@ -9,6 +9,7 @@ describe("privateNav", () => {
         heading: null,
         items: [
           { href: "/dashboard", label: "dashboard" },
+          { href: "/chat", label: "chat" },
           { href: "/account", label: "account" },
           { href: "/docs", label: "docs" },
         ],
@@ -26,6 +27,7 @@ describe("privateNav", () => {
         heading: null,
         items: [
           { href: "/dashboard", label: "dashboard" },
+          { href: "/chat", label: "chat" },
           { href: "/account", label: "account" },
           { href: "/docs", label: "docs" },
         ],

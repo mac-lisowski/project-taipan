@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat surface, spec map</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"; mermaid.initialize({ startOnLoad: true, theme: "neutral" });</script>
+</head>
+<body class="bg-neutral-50 text-neutral-900 max-w-4xl mx-auto px-6 py-10 space-y-10">
+
+<header class="space-y-2">
+  <h1 class="text-3xl font-bold">Chat surface</h1>
+  <p class="text-neutral-600">OpenUI <code>AgentInterface</code> at <code>/chat</code>. Threads persist in the API. Light and dark themes, always in sync. This page is a map. Read <code>spec.md</code> for the full text.</p>
+</header>
+
+<section class="space-y-3">
+  <h2 class="text-xl font-semibold">Module shape</h2>
+  <p class="text-neutral-600">The browser holds no provider key. The BFF relays. The API owns threads, persistence, and the gateway call.</p>
+  <div class="bg-white rounded-xl border border-neutral-200 p-4">
+    <pre class="mermaid">
+flowchart LR
+  U["Browser: AgentInterface at /chat"] -->|"POST /api/chat, session cookie"| BFF1["BFF chat proxy: stream relay, long timeout"]
+  U -->|"/api/threads CRUD"| BFF2["BFF threads proxy"]
+  BFF1 --> API1["API chat router: validate, replace history, stream"]
+  BFF2 --> API2["API threads router: restStorage contract"]
+  API1 -->|"OpenAI SSE"| GW["LiteLLM gateway"]
+  API1 --> DB[(Postgres)]
+  API2 --> DB
+    </pre>
+  </div>
+</section>
+
+<section class="space-y-3">
+  <h2 class="text-xl font-semibold">Depth before and after</h2>
+  <p class="text-neutral-600">Chat capability grows from nothing to a full vertical slice. The theme system grows from one palette to two.</p>
+  <div class="bg-white rounded-xl border border-neutral-200 p-5 space-y-4">
+    <div>
+      <p class="text-sm font-medium mb-1">Chat vertical slice</p>
+      <div class="flex items-center gap-2 text-xs">
+        <span class="w-14 text-right text-neutral-500">before</span>
+        <div class="w-6 h-4 rounded bg-neutral-300"></div><span class="text-neutral-500">none</span>
+      </div>
+      <div class="flex items-center gap-2 text-xs mt-1">
+        <span class="w-14 text-right text-neutral-500">after</span>
+        <div class="flex gap-0.5">
+          <div class="w-16 h-4 rounded bg-indigo-500"></div>
+          <div class="w-14 h-4 rounded bg-indigo-400"></div>
+          <div class="w-16 h-4 rounded bg-indigo-300"></div>
+          <div class="w-12 h-4 rounded bg-indigo-200"></div>
+        </div>
+        <span class="text-neutral-500">UI, BFF, API, DB</span>
+      </div>
+    </div>
+    <div>
+      <p class="text-sm font-medium mb-1">Theme system</p>
+      <div class="flex items-center gap-2 text-xs">
+        <span class="w-14 text-right text-neutral-500">before</span>
+        <div class="w-24 h-4 rounded bg-neutral-800"></div><span class="text-neutral-500">dark only</span>
+      </div>
+      <div class="flex items-center gap-2 text-xs mt-1">
+        <span class="w-14 text-right text-neutral-500">after</span>
+        <div class="w-24 h-4 rounded bg-neutral-800"></div>
+        <div class="w-24 h-4 rounded bg-amber-200"></div>
+        <span class="text-neutral-500">dark + light, toggle, chat follows</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="space-y-3">
+  <h2 class="text-xl font-semibold">Test seams</h2>
+  <p class="text-neutral-600">Three established seams. The only new test infrastructure is the fake gateway. No OpenUI internals, no DOM tests.</p>
+  <div class="bg-white rounded-xl border border-neutral-200 p-5 text-sm">
+    <table class="w-full text-left">
+      <thead><tr class="border-b border-neutral-200 text-neutral-500">
+        <th class="py-2 pr-4">Seam</th><th class="py-2 pr-4">Tests cross</th><th class="py-2">Assert</th>
+      </tr></thead>
+      <tbody class="align-top">
+        <tr class="border-b border-neutral-100">
+          <td class="py-2 pr-4 font-medium">API HTTP</td>
+          <td class="py-2 pr-4">Test client, test DB, fake gateway with canned SSE</td>
+          <td class="py-2">Contract shapes, auth, owner isolation, tenant stamp, title, paging, history replace, reply stored at stream end and on abort</td>
+        </tr>
+        <tr class="border-b border-neutral-100">
+          <td class="py-2 pr-4 font-medium">BFF routes</td>
+          <td class="py-2 pr-4">Injected fetch, as in existing proxy tests</td>
+          <td class="py-2">Cookie forward, byte-identical stream relay, extended timeout, no key material out</td>
+        </tr>
+        <tr>
+          <td class="py-2 pr-4 font-medium">Web lib</td>
+          <td class="py-2 pr-4">Vitest unit, as other lib modules</td>
+          <td class="py-2">Theme mode resolution and persistence, chat client adapter config</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="text-xs text-neutral-400 pt-4 border-t border-neutral-200">
+  <p>Spec: docs/specs/planned/chat-surface/spec.md</p>
+</footer>
+
+</body>
+</html>

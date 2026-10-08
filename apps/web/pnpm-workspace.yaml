@@ -1,3 +1,4 @@
 allowBuilds:
+  '@openuidev/lang-core': false
   sharp: false
   unrs-resolver: false

@@ -162,6 +162,16 @@ First run of a new instance needs an admin, org, and machine identity:
 bash scripts/infisical-bootstrap.sh   # prints the MI token
 ```
 
+Then provision the platform KMS key. Set `INFISICAL_ADMIN_TOKEN` to
+the admin identity token from the bootstrap step, then:
+
+```bash
+uv run python scripts/provision_kms.py   # finds or creates the key, prints only its id
+```
+
+The script is safe to rerun. `--verify` proves the runtime token can
+decrypt. Env vars, verify, and the identity grant: `docs/infisical.md`.
+
 `docker-compose.yaml` provides development defaults for
 `INFISICAL_ENCRYPTION_KEY` and `INFISICAL_AUTH_SECRET`. Set both through
 your production deployment environment. Keep a backup of

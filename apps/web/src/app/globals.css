@@ -1,6 +1,10 @@
+/* Layer order is declared once here because the OpenUI layered stylesheet
+ * must keep a single import site (Turbopack misorders layers otherwise). */
+@layer theme, base, openui, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@openuidev/react-ui/layered/styles/index.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -115,8 +119,47 @@
   }
 }
 
-/* Dark-only theme: a single palette in :root, no .dark block. */
+/* Two palettes on one token set: light in :root, dark in .dark. The html
+ * element ships with the dark class, so dark stays the default look and
+ * only a stored choice removes it. Same specificity, source order wins. */
 :root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(0.145 0 0 / 10%);
+  --input: oklch(0.145 0 0 / 15%);
+  /* Functional accent: taipan green. Sparingly - status, focus, gains. */
+  --signal: oklch(0.58 0.15 155);
+  --ring: var(--signal);
+  --chart-1: oklch(0.269 0 0);
+  --chart-2: oklch(0.371 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.556 0 0);
+  --chart-5: oklch(0.87 0 0);
+  --radius: 0;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.145 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+.dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

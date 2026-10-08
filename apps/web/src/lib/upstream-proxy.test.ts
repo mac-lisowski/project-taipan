@@ -185,6 +185,29 @@ test("sends no body for GET", async () => {
   expect(init.body).toBeUndefined();
 });
 
+// The budget number itself is only observable through the factory, so the
+// spy records it while the real signal keeps the behavior honest.
+test("keeps the 30s default budget when timeoutMs is omitted", async () => {
+  const { fetchImpl } = recordingFetch();
+  const spy = vi.spyOn(AbortSignal, "timeout");
+  await proxyUpstream(request("/api/things"), {
+    upstreamUrl: UPSTREAM,
+    fetchImpl,
+  });
+  expect(spy).toHaveBeenCalledWith(30_000);
+});
+
+test("passes an explicit timeoutMs into the upstream budget", async () => {
+  const { fetchImpl } = recordingFetch();
+  const spy = vi.spyOn(AbortSignal, "timeout");
+  await proxyUpstream(request("/api/things"), {
+    upstreamUrl: UPSTREAM,
+    timeoutMs: 300_000,
+    fetchImpl,
+  });
+  expect(spy).toHaveBeenCalledWith(300_000);
+});
+
 // AbortSignal.timeout bypasses fake timers on this Node, so real timers with a short budget stay fast and stable.
 test("aborts the upstream fetch after timeoutMs", async () => {
   let signal: AbortSignal | undefined;

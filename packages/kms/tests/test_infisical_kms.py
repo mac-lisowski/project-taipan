@@ -1,37 +1,19 @@
 """KMS adapter integration tests against the live Infisical instance.
 
-Skip when the instance is unreachable or no admin token is set, same
-convention as test_infisical.py. The fixture self-provisions a KMS
-project and key through the provisioner, then deletes the project on
-teardown. Transport error and structural tests run everywhere because
-they need no live instance.
+Live tests carry the `live_only` mark from kms_testsupport and skip when
+the instance is unreachable or no token is set. The fixture
+self-provisions a KMS project and key through the provisioner, then
+deletes the project on teardown. Transport error and structural tests
+run everywhere because they need no live instance.
 """
 
 import base64
-import os
-import urllib.error
-import urllib.request
 
 import pytest
 from kms import KmsError
 from kms.infisical_cipher import InfisicalCipher
 from kms.infisical_provisioner import InfisicalProvisioner
-
-INFISICAL_URL = os.environ.get("API_INFISICAL_URL", "http://localhost:8080")
-TOKEN = os.environ.get("API_INFISICAL_TOKEN", "")
-
-
-def _reachable() -> bool:
-    try:
-        with urllib.request.urlopen(f"{INFISICAL_URL}/api/status", timeout=2) as r:
-            return r.status == 200
-    except (OSError, urllib.error.URLError):
-        return False
-
-
-live_only = pytest.mark.skipif(
-    not _reachable() or not TOKEN, reason="infisical not reachable or token unset"
-)
+from kms_testsupport import live_only
 
 
 @live_only
@@ -91,30 +73,26 @@ def test_transport_error_raises_kmserror() -> None:
 def test_cipher_has_no_provisioning_methods() -> None:
     # Two-identity rule lives in the types; structural, so it never skips.
     cipher = InfisicalCipher("http://127.0.0.1:1", "unused-token")
-    assert hasattr(cipher, "encrypt")
-    assert hasattr(cipher, "decrypt")
-    for name in ("rotate", "create_project", "create_key", "delete_project"):
-        assert not hasattr(cipher, name)
+    surface = {name for name in dir(cipher) if not name.startswith("_")}
+    assert surface == {"encrypt", "decrypt"}
 
 
-def test_provisioner_exposes_both_identities() -> None:
-    # The admin token may encrypt too; structural, so it never skips.
-    provisioner = InfisicalProvisioner("http://127.0.0.1:1", "unused-token")
-    for name in ("encrypt", "decrypt", "rotate", "create_project", "create_key", "delete_project"):
-        assert hasattr(provisioner, name)
+def test_provisioning_protocol_matches_the_adapter_surface() -> None:
+    # Structural: the port carries the provisioning ops, the adapter
+    # carries exactly those plus the Cipher ops and nothing else.
+    from kms.ports import Provisioning
 
-
-@live_only
-def test_cipher_roundtrip_live(keys) -> None:
-    plaintext = b"taipan cipher secret"
-    ciphertext = keys.cipher.encrypt(keys.key_a, plaintext)
-    assert keys.cipher.decrypt(keys.key_a, ciphertext) == plaintext
-
-
-@live_only
-def test_cipher_garbage_ciphertext_raises_kmserror(keys) -> None:
-    with pytest.raises(KmsError):
-        keys.cipher.decrypt(keys.key_a, "junk")
+    protocol = {name for name in dir(Provisioning) if not name.startswith("_")}
+    adapter = {name for name in dir(InfisicalProvisioner) if not name.startswith("_")}
+    assert protocol == {
+        "create_project",
+        "create_key",
+        "delete_project",
+        "find_key",
+        "find_project",
+        "rotate",
+    }
+    assert adapter == protocol | {"encrypt", "decrypt"}
 
 
 def test_transport_error_raises_kmserror_via_cipher() -> None:

@@ -10,15 +10,22 @@
   helpers public (make_guarded, unique_address) and dedupes table
   resets into init_tables/reset_tables.
 - docs/specs/planned/ holds nats-jetstream (PR #38 open) and
-  chat-surface (spec.md + spec.html written 2026-10-08, tickets not
-  yet cut).
-- chat-surface: full OpenUI AgentInterface adoption at /chat. BFF
-  chat + threads proxies; API threads router (restStorage contract)
-  and streaming completion router to LiteLLM; chat_threads +
-  chat_messages tables; light palette + toggle (web is dark-only
-  today); chat follows app theme. Message persistence is server side:
-  restStorage has no append op, the completion run replaces stored
-  history and appends the assistant row.
+  chat-surface (implemented on this branch; spec moves to
+  implemented/ at merge).
+- chat-surface IMPLEMENTED on feat/chat-surface (tickets 01-05 done,
+  reports in .scratch/chat-surface/issues/): full OpenUI
+  AgentInterface at /chat (pinned 0.17.0/0.3.1 exact); BFF chat
+  (300s stream relay) + threads proxies; API threads router
+  (restStorage contract) + /api/chat/complete streaming from
+  LiteLLM; chat_threads + chat_messages (migration 7f7c0b2d3a74);
+  server-side history replace per run + assistant append at close,
+  partial on abort; light palette + toggle, chat follows app mode.
+  Four two-axis review rounds. Round 2 key bug: the OpenUI adapter
+  silently drops SSE error payloads, so pre-stream gateway failure
+  answers 502 (SDK shows thread error); mid-stream keeps the SSE
+  event. Suites: 505 pytest (2 skipped), 216 vitest, build + all
+  gates green. Live smoke blocked: LiteLLM has zero models
+  registered (ops: register one, set API_CHAT_MODEL to match).
 - One platform KMS key decided, per-tenant keys dropped:
   decisions/platform-key-only.md.
 - Two new specs in docs/specs/planned/:
@@ -27,7 +34,18 @@
   index, EncryptedString email, per-row re-scope helper, boot-time
   db-encrypt-emails). Both validated by research agents; fixes
   folded in.
-- Next: tickets for Spec A on a feat branch.
+- Spec A (platform-key-provisioning) DONE on feat/chat-surface
+  (commit 6fe08bc amended): find ops + hardened create,
+  ensure_project/ensure_key with Ensured(id, created), cause-matched
+  verify hints, typed KmsError.status_code, scripts/provision_kms.py
+  (root dev-group kms dep), docs swapped. 4 subagent review rounds,
+  all findings fixed. kms suite: 48 passed, 0 skipped with live
+  stack. Gotchas: testsupport.py name collided with crypto's (now
+  kms_testsupport.py); pre-push pytest failed on the parallel
+  session's in-flight chat tests until they settled.
+- PR #46 open (feat/chat-surface to dev); branch also carries the
+  parallel session's chat surface implementation.
+- Next: merge PR #46; Spec B (email-at-rest) is queued after it.
 - Python suite: bare `uv run pytest` with the API_TEST_* env vars for
   the 15432 test DB; explicit arg orders work too (92f41f3).
   Green: 473 passed, 9 skipped under three collection orders.

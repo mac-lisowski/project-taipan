@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { sidebarOpenStore, writeSidebarOpen } from "@/components/shell/sidebar-state";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { privateNav, type NavItem } from "@/lib/nav";
 
 function GearIcon(): ReactNode {
@@ -136,6 +137,7 @@ export function PrivateShell({
           >
             {open ? "hide menu" : "show menu"}
           </button>
+          <ThemeToggle />
           <p className="truncate font-mono text-[10px] tracking-[0.2em] text-muted-foreground md:hidden">
             {email}
           </p>
