@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useReducer, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -143,6 +144,9 @@ export function UsersTable(): ReactNode {
                 <TableHead>email</TableHead>
                 <TableHead>status</TableHead>
                 <TableHead>registered</TableHead>
+                <TableHead>
+                  <span className="sr-only">actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -158,6 +162,15 @@ export function UsersTable(): ReactNode {
                   </TableCell>
                   <TableCell className="font-mono text-xs">
                     {formatDate(user.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    <Link
+                      href={`/users/${user.id}`}
+                      aria-label={`open details for ${user.email}`}
+                      className="font-mono text-xs text-muted-foreground underline-offset-4 hover:underline"
+                    >
+                      view
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}

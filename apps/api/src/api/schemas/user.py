@@ -8,6 +8,10 @@ class UserCreate(BaseModel):
     password: str
 
 
+class UserActivationUpdate(BaseModel):
+    active: bool
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -16,3 +20,24 @@ class UserOut(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class UserProfileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    display_name: str | None
+    avatar_url: str | None
+    bio: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserTenantMembershipOut(BaseModel):
+    tenant_id: str
+    roles: list[str]
+
+
+class UserDetailOut(UserOut):
+    profile: UserProfileOut | None
+    system_roles: list[str]
+    tenants: list[UserTenantMembershipOut]

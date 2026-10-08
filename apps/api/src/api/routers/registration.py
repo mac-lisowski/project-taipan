@@ -5,7 +5,7 @@ from typing import Annotated
 from email_delivery import EmailSender
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from api import registration, sessions, tokens
+from api import registration, sessions, tokens, users
 from api.db import DbSession
 from api.mail import get_email_sender
 from api.schemas import ActivateIn, RegisterIn
@@ -31,6 +31,9 @@ def activate(payload: ActivateIn, response: Response, db: DbSession) -> None:
     try:
         token = registration.activate(db, token=payload.token, new_password=payload.password)
     except tokens.TokenError as exc:
+        raise HTTPException(status_code=400, detail="invalid or expired activation link") from exc
+    except users.NotFound as exc:
+        # The user row can vanish while a link lives; a dead link stays dead.
         raise HTTPException(status_code=400, detail="invalid or expired activation link") from exc
     except registration.WeakPassword as exc:
         raise HTTPException(status_code=422, detail="weak password") from exc

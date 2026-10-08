@@ -100,10 +100,10 @@ flowchart TD
   the own profile. Another user's read answers 403, and an own read
   of a missing profile keeps its 404. The owner reads other profiles
   through the detail response, not through the profiles routes.
-- Deletion leaves the user's personal tenant row and its tenant keys
-  in place. They orphan quietly with no reader. A later cleanup or
-  invite spec owns them. Email suppressions stay, because they are
-  keyed by address and still protect the mail flow.
+- Deletion removes the user's personal tenant and its tenant data
+  key with the account. The key wraps nothing once the tenant is
+  gone, so removal is safe. Email suppressions stay, because they
+  are keyed by address and still protect the mail flow.
 - The web gains a details route under the users path. It guards like
   the list page. A lib module owns the detail load, the activation
   set, and the delete, each as a small state machine fed only by
@@ -143,7 +143,8 @@ flowchart TD
   tenant memberships with roles, a null profile for a user without
   one, and 404 for an unknown id.
 - Delete tests pin: revoke before removal, cascade removes profile
-  and links, 204, and 409 on self.
+  and links, the personal tenant and its data key are gone, 204, and
+  409 on self.
 - Activation link tests pin the invalid-link answer for a deleted
   user, in the exact response shape the registration and reset
   routers use.
@@ -160,7 +161,6 @@ flowchart TD
 - Editing another user's profile, even for the owner.
 - Role management: granting or revoking the owner role.
 - Invites and tenant-scoped user lists for tenant admins.
-- Cleanup of personal tenants and tenant keys after deletion.
 - Audit log and event publishing.
 - Bulk actions and CSV export.
 - Password reset flows for inactive accounts.

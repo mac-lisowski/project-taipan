@@ -48,8 +48,11 @@ def current_principal(request: Request, db: DbSession) -> Principal:
     sess = resolve_session(request)
     if sess is None:
         raise HTTPException(status_code=401, detail="not authenticated")
-    row = db.execute(select(User.id, User.email).where(User.id == sess.user_id)).first()
-    if row is None:
+    row = db.execute(
+        select(User.id, User.email, User.is_active).where(User.id == sess.user_id)
+    ).first()
+    # A missing or deactivated user must not ride a live session.
+    if row is None or not row.is_active:
         raise HTTPException(status_code=401, detail="not authenticated")
     # Roles bound to another tenant must not ride along, or admin leaks across tenants.
     roles = tuple(

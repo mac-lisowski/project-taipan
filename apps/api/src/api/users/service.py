@@ -5,9 +5,11 @@ from __future__ import annotations
 from uuid import uuid4
 
 from crypto import tenant_scope
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
+from api import sessions
 from api.credentials import (
     WeakPassword,
     ensure_acceptable,
@@ -19,7 +21,9 @@ from api.models import (
     Role,
     SystemRole,
     Tenant,
+    TenantDek,
     User,
+    UserProfile,
     UserSystemRole,
     UserTenant,
     UserTenantRole,
@@ -29,10 +33,13 @@ __all__ = [
     "SETUP_LOCK_KEY",
     "AlreadySetup",
     "EmailTaken",
+    "LastActiveOwner",
     "NotFound",
+    "SelfChange",
     "WeakPassword",
     "authenticate",
     "bootstrap",
+    "detail",
     "get",
     "get_by_email",
     "list",
@@ -40,6 +47,7 @@ __all__ = [
     "register",
     "register_passwordless",
     "remove",
+    "set_active",
     "tenant_id_for_user",
 ]
 
@@ -57,6 +65,14 @@ class EmailTaken(Exception):
 
 class NotFound(Exception):
     """No user with the requested id."""
+
+
+class SelfChange(Exception):
+    """The caller targeted their own account for deactivation or removal."""
+
+
+class LastActiveOwner(Exception):
+    """The change would leave the platform without an active owner."""
 
 
 def register(session: Session, email: str, password: str) -> User:
@@ -124,9 +140,95 @@ def list(session: Session) -> list[User]:
     return session.scalars(select(User).order_by(User.id)).all()
 
 
-def remove(session: Session, user_id: int) -> None:
-    session.delete(get(session, user_id))
+def remove(session: Session, user_id: int, caller_id: int) -> None:
+    user = get(session, user_id)
+    if user_id == caller_id:
+        raise SelfChange(user_id)
+    _ensure_not_last_active_owner(session, user)
+    sessions.revoke_all(user_id)
+    # The personal tenant and its data key belong to the account; both go
+    # when one exists.
+    tenant_id = session.scalar(select(UserTenant.tenant_id).where(UserTenant.user_id == user_id))
+    session.delete(user)
+    if tenant_id is not None:
+        session.execute(sa_delete(TenantDek).where(TenantDek.tenant_id == tenant_id))
+        session.execute(sa_delete(Tenant).where(Tenant.id == tenant_id))
     session.flush()
+
+
+def set_active(session: Session, user_id: int, active: bool, caller_id: int) -> User:
+    """Flip the account switch; deactivation revokes the user's sessions first."""
+    user = get(session, user_id)
+    if user_id == caller_id:
+        raise SelfChange(user_id)
+    if not active:
+        _ensure_not_last_active_owner(session, user)
+        sessions.revoke_all(user_id)
+    user.is_active = active
+    session.flush()
+    session.refresh(user)
+    return user
+
+
+def _ensure_not_last_active_owner(session: Session, user: User) -> None:
+    # Under the setup lock: racing changes must not pass the count with a stale number.
+    session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": SETUP_LOCK_KEY})
+    target_is_active_owner = user.is_active and (
+        session.scalar(
+            select(UserSystemRole.user_id).where(
+                UserSystemRole.user_id == user.id,
+                UserSystemRole.role == SystemRole.SYSTEM_OWNER,
+            )
+        )
+        is not None
+    )
+    if not target_is_active_owner:
+        return
+    active_owners = session.scalar(
+        select(func.count())
+        .select_from(UserSystemRole)
+        .join(User, User.id == UserSystemRole.user_id)
+        .where(UserSystemRole.role == SystemRole.SYSTEM_OWNER, User.is_active.is_(True))
+    )
+    if active_owners == 1:
+        raise LastActiveOwner(user.id)
+
+
+def detail(session: Session, user_id: int) -> dict:
+    """The account with profile, system roles, and tenant memberships joined."""
+    user = get(session, user_id)
+    profile = session.scalar(select(UserProfile).where(UserProfile.user_id == user_id))
+    system_roles = session.scalars(
+        select(UserSystemRole.role)
+        .where(UserSystemRole.user_id == user_id)
+        .order_by(UserSystemRole.role)
+    ).all()
+    rows = session.execute(
+        select(UserTenant.tenant_id, UserTenantRole.role)
+        .join(
+            UserTenantRole,
+            (UserTenantRole.user_id == UserTenant.user_id)
+            & (UserTenantRole.tenant_id == UserTenant.tenant_id),
+        )
+        .where(UserTenant.user_id == user_id)
+        .order_by(UserTenant.tenant_id, UserTenantRole.role)
+    ).all()
+    memberships: dict[str, list[str]] = {}
+    for tenant_id, role in rows:
+        memberships.setdefault(tenant_id, []).append(role)
+    return {
+        "id": user.id,
+        "email": user.email,
+        "is_active": user.is_active,
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
+        "profile": profile,
+        # `list` is this module's function; unpack instead of calling the builtin.
+        "system_roles": [*system_roles],
+        "tenants": [
+            {"tenant_id": tenant_id, "roles": roles} for tenant_id, roles in memberships.items()
+        ],
+    }
 
 
 def needs_setup(session: Session) -> bool:
