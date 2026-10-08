@@ -20,6 +20,14 @@
   relayed the route (test only). Worktree
   project-taipan-chat-model-switcher and branch
   feat/chat-model-switcher now deletable.
+- Composer/queue/mermaid follow-up fixes on dev: the custom Mode C
+  composer now uses one toggle button (stop replaces send while
+  running, SDK pattern); QueueChips moved inside the composer
+  container (the SDK slot div is unstyled, so bare children sat
+  flush left) and restyled as a numbered scrolling stack panel;
+  assistant ```mermaid fences render via the mermaid package
+  (pre-level component override, 250ms stream debounce,
+  suppressErrorRendering, raw-source fallback while parsing fails).
 - Latest dev work: fixes all 21 falsegreen findings (email suite
   split under the 300-LOC gate: conftest.py + test_send_budget.py),
   moves bff-result-module, magic-link-mailer, litellm-gateway-docker

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Check, Pencil, X } from "lucide-react";
+import { ArrowUp, Check, ListOrdered, Pencil, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import type { ChatQueueSnapshot, QueueRow } from "@/lib/chat-queue";
@@ -14,15 +14,18 @@ type QueueChipsProps = {
   onSendHead: () => void;
 };
 
-const chipClass =
-  "flex max-w-full items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-xs";
+const rowClass =
+  "flex min-w-0 items-center gap-2 rounded-lg border border-border bg-background px-2 py-1.5 text-xs";
 const iconBtnClass =
   "rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
+const badgeClass =
+  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium tabular-nums";
 
 // One queued message; a row being dispatched is locked so its text cannot
 // shift mid-run.
-function QueueChip({
+function QueueRowItem({
   row,
+  position,
   isHead,
   failed,
   sending,
@@ -32,6 +35,7 @@ function QueueChip({
   onSendHead,
 }: {
   row: QueueRow;
+  position: number;
   isHead: boolean;
   failed: boolean;
   sending: boolean;
@@ -48,9 +52,23 @@ function QueueChip({
     if (next && next !== row.content.text) onEdit(row.id, next);
   }
 
+  const sendNow =
+    isHead && (failed || canSendHead) ? (
+      <button
+        type="button"
+        className={`${iconBtnClass} ${failed ? "text-destructive" : ""}`}
+        onClick={onSendHead}
+        aria-label="Send queued message"
+        title={failed ? "Send failed - send now" : "Send now"}
+      >
+        <ArrowUp className="h-3 w-3" />
+      </button>
+    ) : null;
+
   if (draft !== null) {
     return (
-      <li className={chipClass}>
+      <li className={rowClass}>
+        {sendNow}
         <input
           value={draft}
           autoFocus
@@ -59,7 +77,7 @@ function QueueChip({
             if (e.key === "Enter") saveEdit();
             if (e.key === "Escape") setDraft(null);
           }}
-          className="w-40 bg-transparent text-xs outline-none"
+          className="min-w-0 flex-1 bg-transparent outline-none"
           aria-label="Edit queued message"
         />
         <button type="button" className={iconBtnClass} onClick={saveEdit} aria-label="Save edit">
@@ -79,27 +97,19 @@ function QueueChip({
 
   if (sending) {
     return (
-      <li className={`${chipClass} text-muted-foreground`}>
-        <span className="truncate">{row.content.text}</span>
+      <li className={`${rowClass} text-muted-foreground`}>
+        <span className={badgeClass}>{position}</span>
+        <span className="min-w-0 flex-1 truncate">{row.content.text}</span>
         <span className="shrink-0 italic">sending…</span>
       </li>
     );
   }
 
   return (
-    <li className={`${chipClass} ${failed ? "border-destructive/50" : ""}`}>
-      {isHead && (failed || canSendHead) ? (
-        <button
-          type="button"
-          className={`${iconBtnClass} ${failed ? "text-destructive" : ""}`}
-          onClick={onSendHead}
-          aria-label="Send queued message"
-          title={failed ? "Send failed - send now" : "Send now"}
-        >
-          <ArrowUp className="h-3 w-3" />
-        </button>
-      ) : null}
-      <span className="truncate" title={row.content.text}>
+    <li className={`${rowClass} ${failed ? "border-destructive/50" : ""}`}>
+      {sendNow}
+      <span className={badgeClass}>{position}</span>
+      <span className="min-w-0 flex-1 truncate" title={row.content.text}>
         {row.content.text}
       </span>
       {failed ? <span className="shrink-0 text-destructive">failed</span> : null}
@@ -123,8 +133,8 @@ function QueueChip({
   );
 }
 
-// Chips above the composer mirror the server-side queue; a failed or
-// idle head offers a manual send.
+// Panel above the composer input mirrors the server-side queue; a failed or
+// idle head offers a manual send. The list scrolls past a few rows.
 export function QueueChips({
   queue,
   canSendHead,
@@ -134,26 +144,36 @@ export function QueueChips({
 }: QueueChipsProps): ReactNode {
   if (queue.rows.length === 0 && queue.notice === null) return null;
   return (
-    <div className="mb-1.5">
+    <div className="mb-2 rounded-xl border border-border bg-muted/40 p-1.5">
       {queue.rows.length > 0 ? (
-        <ul className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
-          {queue.rows.map((row, index) => (
-            <QueueChip
-              key={row.id}
-              row={row}
-              isHead={index === 0}
-              failed={queue.failedId === row.id}
-              sending={queue.dispatch?.id === row.id}
-              canSendHead={canSendHead && queue.dispatch === null}
-              onEdit={onEdit}
-              onRemove={onRemove}
-              onSendHead={onSendHead}
-            />
-          ))}
-        </ul>
+        <>
+          <div className="flex items-center gap-1.5 px-1.5 pb-1 pt-0.5 text-[11px] font-medium text-muted-foreground">
+            <ListOrdered className="h-3 w-3" />
+            Queued
+            <span className="rounded-full bg-muted px-1.5 text-[10px] tabular-nums">
+              {queue.rows.length}
+            </span>
+          </div>
+          <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+            {queue.rows.map((row, index) => (
+              <QueueRowItem
+                key={row.id}
+                row={row}
+                position={index + 1}
+                isHead={index === 0}
+                failed={queue.failedId === row.id}
+                sending={queue.dispatch?.id === row.id}
+                canSendHead={canSendHead && queue.dispatch === null}
+                onEdit={onEdit}
+                onRemove={onRemove}
+                onSendHead={onSendHead}
+              />
+            ))}
+          </ul>
+        </>
       ) : null}
       {queue.notice !== null ? (
-        <p className="pt-1 text-xs text-destructive">
+        <p className="px-1.5 pt-1 text-xs text-destructive">
           {queue.notice === "enqueue-failed"
             ? "Could not queue the message. The queue may be full."
             : "Queue out of sync with the server."}

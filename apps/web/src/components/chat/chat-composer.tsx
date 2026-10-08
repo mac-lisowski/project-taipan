@@ -89,25 +89,26 @@ export function ChatComposer({
           ))}
         </div>
       ) : null}
-      <QueueChips
-        queue={queue}
-        canSendHead={!isRunning && !isLoadingMessages}
-        onEdit={(id, next) => void chatQueue.update(id, next)}
-        onRemove={(id) => void chatQueue.remove(id)}
-        onSendHead={() => chatQueue.dispatchHead({ send })}
-      />
       <div
         className="openui-agent-thread-composer"
         data-drafting={text.length > 0 || undefined}
         onClick={(e) => {
+          // Form fields inside the container (queue edit input) keep focus.
           if (
             e.target instanceof Element &&
-            !e.target.closest("button, a, [role='button']")
+            !e.target.closest("button, a, [role='button'], input, textarea")
           ) {
             inputRef.current?.focus();
           }
         }}
       >
+        <QueueChips
+          queue={queue}
+          canSendHead={!isRunning && !isLoadingMessages}
+          onEdit={(id, next) => void chatQueue.update(id, next)}
+          onRemove={(id) => void chatQueue.remove(id)}
+          onSendHead={() => chatQueue.dispatchHead({ send })}
+        />
         <div className="openui-agent-thread-composer__input-wrapper">
           <textarea
             ref={inputRef}
@@ -120,21 +121,18 @@ export function ChatComposer({
             onKeyDown={onKeyDown}
           />
           <div className="openui-agent-thread-composer__action-bar">
-            {isRunning ? (
-              <IconButton
-                onClick={cancelMessage}
-                icon={<Square size="1em" fill="currentColor" />}
-                size="extra-small"
-                variant="secondary"
-                aria-label="Cancel message"
-              />
-            ) : null}
             <IconButton
-              onClick={submit}
-              icon={<ArrowUp size="1em" />}
+              onClick={isRunning ? cancelMessage : submit}
+              icon={
+                isRunning ? (
+                  <Square size="1em" fill="currentColor" />
+                ) : (
+                  <ArrowUp size="1em" />
+                )
+              }
               size="extra-small"
               variant="primary"
-              aria-label={isRunning ? "Queue message" : "Send message"}
+              aria-label={isRunning ? "Cancel message" : "Send message"}
               className="openui-agent-thread-composer__submit-button"
             />
           </div>
