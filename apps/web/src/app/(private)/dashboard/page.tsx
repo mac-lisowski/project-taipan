@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { OverviewView } from "@/components/dashboard/overview-view";
+import { ChatApp } from "@/components/chat/chat-app";
 
-// Thin server page; the body is the reusable client view.
+// Every private surface is the chat app; the URL only picks the view.
 export default function DashboardPage(): ReactNode {
-  return <OverviewView />;
+  return <ChatApp initialPath="/dashboard" />;
 }

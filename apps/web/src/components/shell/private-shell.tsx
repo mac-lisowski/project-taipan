@@ -86,9 +86,12 @@ export function PrivateShell({
   const sections = privateNav(systemRoles);
   const account: ShellAccount = { email, tenant, systemRoles };
 
-  // The chat is a full-viewport OpenUI surface with its own sidebar; the
-  // shell stays out of the way and only hands over the session identity.
-  if (pathname === "/chat" || pathname.startsWith("/chat/")) {
+  // The chat app (chat + its route views) is a full-viewport OpenUI surface
+  // with its own sidebar; the shell stays out of the way and only hands
+  // over the session identity. Deep pages (account, docs, user detail)
+  // keep the classic shell.
+  const chatRoutes = new Set(["/chat", "/dashboard", "/users", "/settings"]);
+  if (chatRoutes.has(pathname)) {
     return (
       <ShellAccountProvider account={account}>
         <div className="h-dvh w-full overflow-hidden bg-background">{children}</div>

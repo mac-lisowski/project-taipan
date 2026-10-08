@@ -31,11 +31,10 @@ function Brand(): ReactNode {
   );
 }
 
-// OpenUI sidebar for the chat page: brand, New Chat, nav links, threads,
-// and a footer with theme toggle plus an account menu. The integrator nests
-// this inside <AgentInterface>; the wrappers mirror the SDK default DOM so
-// its openui-agent-sidebar-* styles keep applying.
-export function ChatSidebar({
+// Inner sidebar content. The parent MUST wrap this in a literal
+// <AgentInterface.Sidebar> child: the SDK extracts slots by direct child
+// element type and never sees through wrapper components.
+export function ChatSidebarContents({
   links,
   email,
   tenant,
@@ -62,7 +61,7 @@ export function ChatSidebar({
     "cursor-default rounded px-2 py-1.5 text-xs text-popover-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground";
 
   return (
-    <AgentInterface.Sidebar>
+    <>
       <div className="openui-agent-sidebar-actions">
         <AgentInterface.SidebarHeader agentName={<Brand />} />
         <div className="openui-agent-sidebar-primary-actions">
@@ -110,9 +109,9 @@ export function ChatSidebar({
                 </Menu.Popup>
               </Menu.Positioner>
             </Menu.Portal>
-          </Menu.Root>
-        </div>
+            </Menu.Root>
+          </div>
       </AgentInterface.SidebarContent>
-    </AgentInterface.Sidebar>
+    </>
   );
 }
