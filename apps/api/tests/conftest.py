@@ -65,8 +65,11 @@ def engine():
 
     eng = create_engine(TEST_URL)
     with eng.begin() as conn:
+        # Other worktrees run their suites against the same database and
+        # their create_all leaves tables whose foreign keys break drop_all.
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-    Base.metadata.drop_all(eng)
     Base.metadata.create_all(eng)
     yield eng
     eng.dispose()
