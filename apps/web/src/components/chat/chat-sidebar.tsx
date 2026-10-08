@@ -18,7 +18,7 @@ export type ChatSidebarLink = {
 
 // Shell brand mark for the header slot. The SDK class carries the collapse
 // behavior; no Tailwind display class here or utilities beat its display:none.
-function Brand(): ReactNode {
+export function Brand(): ReactNode {
   return (
     <span className="openui-agent-sidebar-header__agent-name">
       <span className="block font-mono text-[10px] tracking-[0.35em] text-muted-foreground">
@@ -32,7 +32,7 @@ function Brand(): ReactNode {
 }
 
 // Collapsed-sidebar mark: the header swaps agentName for this 32px square.
-function TMark(): ReactNode {
+export function TMark(): ReactNode {
   return (
     <span className="openui-agent-sidebar-header__logo flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-display text-base uppercase text-primary-foreground">
       t

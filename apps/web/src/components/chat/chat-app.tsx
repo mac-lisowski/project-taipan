@@ -1,10 +1,17 @@
 "use client";
 
-import { AgentInterface, type Theme } from "@openuidev/react-ui";
+import {
+  AgentInterface,
+  type PromptTemplate,
+  type Theme,
+} from "@openuidev/react-ui";
+import { AssistantMessage } from "@/components/chat/assistant-message";
 import { LayoutDashboard, User, Users } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  Brand,
   ChatSidebarContents,
+  TMark,
   type ChatSidebarLink,
 } from "@/components/chat/chat-sidebar";
 import { AccountView } from "@/components/account/account-view";
@@ -51,6 +58,19 @@ const starters = [
   },
 ];
 
+// Fill-in-the-blank chip; a completion is appended to the stem, so it carries only the tail.
+const promptTemplates: PromptTemplate[] = [
+  {
+    displayText: "Explain a page",
+    prompt: "Explain how the ",
+    completions: [
+      { displayText: "users list", prompt: "users list works." },
+      { displayText: "system settings", prompt: "system settings page works." },
+      { displayText: "account page", prompt: "account page works." },
+    ],
+  },
+];
+
 const LINK_ICONS: Record<string, ReactNode> = {
   "/dashboard": <LayoutDashboard className="h-4 w-4" />,
   "/account": <User className="h-4 w-4" />,
@@ -74,7 +94,8 @@ function RouteView({
 }): ReactNode {
   return (
     <div className="openui-agent-thread-scroll-area">
-      <div className="mx-auto flex w-full max-w-3xl flex-col px-6 py-8">
+      {/* Same 880px column the SDK gives chat messages, so all views match. */}
+      <div className="mx-auto flex w-full max-w-[calc(880px+2*var(--openui-space-m-l))] flex-col px-[var(--openui-space-m-l)] py-8">
         <button
           type="button"
           onClick={onExit}
@@ -123,11 +144,14 @@ export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
       llm={llm}
       storage={storage}
       agentName="taipan"
+      components={{ AssistantMessage }}
       starters={starters}
       theme={{ mode, lightTheme: brandLight, darkTheme: brandDark }}
       path={path}
       onNavigate={navigate}
     >
+      <AgentInterface.MobileHeader logo={<TMark />} agentName={<Brand />} />
+      <AgentInterface.Welcome glowAnimation promptTemplates={promptTemplates} />
       <AgentInterface.Sidebar>
         <ChatSidebarContents
           links={links}
