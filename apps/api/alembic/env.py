@@ -14,9 +14,10 @@ config = context.config
 config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 # Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# Existing loggers must survive: pytest captures records from loggers
+# that were created before alembic runs.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

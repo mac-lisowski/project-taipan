@@ -39,3 +39,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Rewrite current.md, never append history](learnings/memory-hygiene.md)
 - [httpx2 retries requests that lose their response](learnings/httpx2-retry-lost-response.md)
 - [`bl` on PATH is Blaxel, not Bailian](learnings/bl-binary-collision.md)
+- [gh --env 404s on spaces+slash env names](learnings/gh-env-name-encoding.md) - use raw API with %20%2F%20 + pynacl sealed box

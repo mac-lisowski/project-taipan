@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec visual - email delivery</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+<header class="mb-8">
+<h1 class="text-2xl font-bold mb-2">Email delivery package</h1>
+<p class="text-slate-500">Visual companion to <code>spec.md</code>. One seam for all sends. Resend in prod. Fake in dev.</p>
+</header>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+<h2 class="font-bold mb-4">Module seam</h2>
+<div class="mermaid">
+graph LR
+subgraph "app code"
+A["auth flows"] --> S["sender.send: template + data + to"]
+end
+S --> T["templates: one per email"]
+T --> G["suppression check"]
+G -->|clean| R["Resend adapter: prod"]
+G -->|local or test| F["fake adapter: in memory"]
+G -->|suppressed| X["short circuit: suppressed"]
+R --> L["log outcome"]
+F --> L
+</div>
+<p class="text-xs text-slate-500 mt-2">App code sees the sender only. Adapter choice happens once at startup from config.</p>
+</section>
+
+<section class="grid md:grid-cols-2 gap-6 mb-6">
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+<p class="lbl mb-2">Contracts kept</p>
+<ul class="list-disc ml-5 space-y-1 text-xs text-slate-600">
+<li>All sends cross the one package seam.</li>
+<li>Tokens stay single use, hashed, short lived.</li>
+<li>Login and activation land on dashboard.</li>
+<li>Sessions reuse the current table pattern.</li>
+</ul>
+</div>
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+<p class="lbl mb-2">Bounce stance</p>
+<ul class="list-disc ml-5 space-y-1 text-xs text-slate-600">
+<li>Log each outcome with template and cause.</li>
+<li>Hard bounce marks address do not send.</li>
+<li>Soft bounce retries a small bound, then stops.</li>
+<li>No inbound mail in this spec.</li>
+</ul>
+</div>
+</section>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+<h2 class="font-bold mb-4">Test seam</h2>
+<div class="mermaid">
+graph LR
+T1["tests: fake adapter"] --> T2["send activation or login"]
+T2 --> T3["read captured link"]
+T3 --> T4["complete flow: land on dashboard"]
+</div>
+<ul class="list-disc ml-5 mt-3 space-y-1 text-xs text-slate-600">
+<li>One render case per template.</li>
+<li>Missing data fails before send.</li>
+<li>Suppressed address never calls vendor.</li>
+<li>No test hits real Resend.</li>
+</ul>
+</section>
+
+<section class="bg-slate-800 text-slate-100 rounded-xl p-6">
+<h2 class="font-bold mb-2">Why it matters</h2>
+<p class="text-slate-300">One seam keeps keys, copy, and failure modes in one place. Dev stays safe. Tests stay fast.</p>
+</section>
+
+</div>
+</body>
+</html>

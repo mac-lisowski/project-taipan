@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec visual - suppression persistence</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">Suppression persistence</h1>
+    <p class="text-slate-500">Visual companion to <code>spec.md</code>.
+      Memory store out, Postgres store in, webhook feeds bounces.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Module and seam map</h2>
+    <div class="mermaid">
+graph LR
+  subgraph "unchanged seam"
+    G["GuardedEmailSender"]
+  end
+  subgraph "swapped adapters"
+    M["MemorySuppressionStore - tests"]
+    P["PostgresSuppressionStore - prod"]
+  end
+  subgraph "new feed"
+    W["POST /api/email/webhooks/resend"]
+  end
+  G --> M
+  G --> P
+  W --> P
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Tables</h2>
+    <p><code>email_suppressions</code>: address PK, reason check, soft-bounce count, timestamps.</p>
+    <p><code>email_send_counters</code>: recipient plus template PK, sent count. Totals derive from SUM.</p>
+  </section>
+
+</div>
+</body>
+</html>

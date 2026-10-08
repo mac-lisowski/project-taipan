@@ -85,6 +85,42 @@ jobs:
           docker compose -f docker-compose.yaml config -q
           docker compose -f .devcontainer/docker-compose.yml config -q
 
+  commit-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: lint commit messages
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            printf '%s\n' "${{ github.event.pull_request.title }}" > /tmp/pr-title.txt
+            scripts/check-commit-msg.sh /tmp/pr-title.txt
+          else
+            before="${{ github.event.before }}"
+            case "$before" in
+              0000000000000000000000000000000000000000|"") range="HEAD" ;;
+              *) range="$before..${{ github.sha }}" ;;
+            esac
+            fail=0
+            for c in $(git log --format=%H "$range"); do
+              git log -1 --format=%B "$c" > /tmp/commit-msg.txt
+              scripts/check-commit-msg.sh /tmp/commit-msg.txt || fail=1
+            done
+            exit $fail
+          fi
+      - name: lint branch name
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            scripts/check-branch-name.sh "${{ github.head_ref }}"
+          else
+            scripts/check-branch-name.sh "${{ github.ref_name }}"
+          fi
+      - name: shell gate tests and docs sync
+        run: |
+          bash scripts/tests/test-commit-msg.sh
+          bash scripts/tests/test-branch-name.sh
+
   test-web:
     needs: changes
     if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.web == 'true') }}
@@ -177,14 +213,14 @@ jobs:
         run: docker run --rm taipan-api python -c "import api.main"
 
   ci-done:
-    needs: [changes, lint, test-core, test-crypto, test-kms, test-api, test-web]
+    needs: [changes, lint, commit-lint, test-core, test-crypto, test-kms, test-api, test-web]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: verify required jobs passed
         run: |
           status=0
-          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "test-core:${{ needs.test-core.result }}" "test-crypto:${{ needs.test-crypto.result }}" "test-kms:${{ needs.test-kms.result }}" "test-api:${{ needs.test-api.result }}" "test-web:${{ needs.test-web.result }}"; do
+          for pair in "changes:${{ needs.changes.result }}" "lint:${{ needs.lint.result }}" "commit-lint:${{ needs.commit-lint.result }}" "test-core:${{ needs.test-core.result }}" "test-crypto:${{ needs.test-crypto.result }}" "test-kms:${{ needs.test-kms.result }}" "test-api:${{ needs.test-api.result }}" "test-web:${{ needs.test-web.result }}"; do
             result="${pair##*:}"
             echo "${pair%%:*}: $result"
             case "$result" in success|skipped) ;; *) status=1 ;; esac
@@ -202,23 +238,37 @@ jobs:
     # Literal: selects which GitHub environment's secrets/vars resolve.
     environment: project-taipan / dev
     env:
-      # Project token scoped to the Railway dev environment.
+      # Everything the deploy job needs lives in environment secrets:
+      # service names and ids are infrastructure identifiers, and the
+      # project token must never sit in a collaborator-readable var.
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-      RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
-      RAILWAY_SERVICE_WEB: ${{ vars.RAILWAY_SERVICE_WEB }}
-      RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
-      RAILWAY_SERVICE_INFISICAL: ${{ vars.RAILWAY_SERVICE_INFISICAL }}
+      RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
+      RAILWAY_SERVICE_WEB: ${{ secrets.RAILWAY_SERVICE_WEB }}
+      RAILWAY_SERVICE_API: ${{ secrets.RAILWAY_SERVICE_API }}
+      RAILWAY_SERVICE_INFISICAL: ${{ secrets.RAILWAY_SERVICE_INFISICAL }}
+      RAILWAY_SERVICE_LITELLM: ${{ secrets.RAILWAY_SERVICE_LITELLM }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: install railway cli
         run: npm install -g @railway/cli@5.41.2
       - name: deploy web
+        timeout-minutes: 10
         run: railway up --service "$RAILWAY_SERVICE_WEB" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
       - name: deploy api
+        timeout-minutes: 10
         run: railway up --service "$RAILWAY_SERVICE_API" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
       - name: deploy infisical
         # Skipped until the Railway service exists and the GitHub
-        # environment var RAILWAY_SERVICE_INFISICAL is set.
-        if: ${{ vars.RAILWAY_SERVICE_INFISICAL != '' }}
+        # environment secret RAILWAY_SERVICE_INFISICAL is set.
+        if: ${{ env.RAILWAY_SERVICE_INFISICAL != '' }}
+        timeout-minutes: 10
         run: railway up --service "$RAILWAY_SERVICE_INFISICAL" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
+      - name: deploy litellm
+        # Skipped until the Railway service exists (with its Dockerfile
+        # builder set to docker/litellm/Dockerfile) and the GitHub
+        # environment secret RAILWAY_SERVICE_LITELLM is set.
+        if: ${{ env.RAILWAY_SERVICE_LITELLM != '' }}
+        timeout-minutes: 10
+        run: railway up --service "$RAILWAY_SERVICE_LITELLM" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --ci
+

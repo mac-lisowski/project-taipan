@@ -41,3 +41,46 @@ def test_build_with_valid_uuid_key_id_builds(monkeypatch: pytest.MonkeyPatch) ->
     _pin_env(monkeypatch, VALID_KEY_ID)
     module = build_field_crypto()
     assert isinstance(module, FieldCrypto)
+
+
+@pytest.mark.anyio
+async def test_lifespan_runs_upgrade_when_auto_migrate_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import MagicMock
+
+    from api import db_cli
+    from api.main import app, lifespan
+
+    mock_upgrade = MagicMock()
+    monkeypatch.setattr(db_cli, "upgrade", mock_upgrade)
+    monkeypatch.setenv("API_AUTO_MIGRATE", "1")
+    async with lifespan(app):
+        pass
+    mock_upgrade.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_lifespan_skips_upgrade_when_auto_migrate_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from unittest.mock import MagicMock
+
+    from api import db_cli
+    from api.main import app, lifespan
+
+    mock_upgrade = MagicMock()
+    monkeypatch.setattr(db_cli, "upgrade", mock_upgrade)
+    monkeypatch.delenv("API_AUTO_MIGRATE", raising=False)
+    async with lifespan(app):
+        pass
+    mock_upgrade.assert_not_called()
+
+
+def test_wait_for_db_raises_on_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    from api.db_cli import wait_for_db
+    from sqlalchemy.exc import OperationalError
+
+    monkeypatch.setenv(
+        "API_DATABASE_URL", "postgresql+psycopg://postgres:postgres@127.0.0.1:59999/app"
+    )
+    with pytest.raises(OperationalError):
+        wait_for_db(timeout_seconds=0.1, interval=0.05)

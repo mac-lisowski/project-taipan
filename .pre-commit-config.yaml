@@ -35,11 +35,23 @@ repos:
         entry: scripts/check-docker.sh
         language: system
         pass_filenames: false
-      - id: commit-msg-len
-        name: commit message line cap (120 chars)
+      - id: commit-msg
+        name: commit message convention (120 chars)
         entry: scripts/check-commit-msg.sh
         language: system
         stages: [commit-msg]
+      - id: branch-name
+        name: branch name convention
+        entry: scripts/check-branch-name.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      - id: branch-name-commit
+        name: branch name convention (current branch)
+        entry: scripts/check-branch-name.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
       - id: pytest
         name: pytest
         entry: uv run pytest

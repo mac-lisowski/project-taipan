@@ -38,8 +38,11 @@
     clean, stamp with
     `bash .agents/hooks/review-stamp.sh` - the hook blocks the commit
     without it and any edit invalidates the stamp. Never use
-    `--no-verify` or `-n`. Commit messages: subject and every line
-    <= 120 chars (`scripts/check-commit-msg.sh`). Comments explain
+    `--no-verify` or `-n`. Commit messages follow Conventional
+    Commits: `<type>(scope): description` (scopes in
+    `docs/commit-convention.md`); branch names use the same
+    types: `<type>/<slug>`. Subject and every line <= 120
+    chars (`scripts/check-commit-msg.sh`). Comments explain
     why, not what: one line, no narration blocks.
 12. A done spec ticket carries an HTML change report next to the
     ticket file: `.scratch/<slug>/issues/<NN>-<slug>.html`. The
@@ -50,7 +53,7 @@
     and reusable capabilities live in `packages/<name>/`. Runnable
     apps in `apps/<name>/` are thin composition roots that wire
     packages and HTTP routes. Packages must never import from apps.
-14. Extensible Entities (Pattern A): core database entities (such as
+14. Extensible Entities: core database entities (such as
     `User`) stay minimal and hold only essential identity fields.
     Never add feature-specific columns directly to core entity
     models. Features attach through separate 1:1 or 1:N extension

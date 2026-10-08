@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
-# commit-msg gate: subject non-empty, every line <= 120 chars.
+# commit-msg gate: Conventional Commits subject, plus 120-char lines.
+# Format: <type>(optional scope)(optional !): <description>
+# Types and generic scopes come from scripts/conventions.sh. App and
+# package scopes are read from apps/* and packages/*.
+# See docs/commit-convention.md for the full convention.
 # Skips #-comment lines and everything under the `commit -v` scissors;
 # git strips those after this hook runs.
 set -u
 msg_file="${1:?usage: check-commit-msg.sh <message-file>}"
 [ -f "$msg_file" ] || { echo "no message file: $msg_file" >&2; exit 1; }
+
+# shellcheck disable=SC1091
+. "$(cd "$(dirname "$0")" && pwd)/conventions.sh"
 
 fail=0
 subject=$(awk '{ sub(/\r$/,""); if ($0 ~ /[^[:space:]]/ && $0 !~ /^#/) { print; exit } }' "$msg_file")
@@ -27,5 +34,33 @@ if awk '
 else
   echo "keep every commit-message line <= 120 chars." >&2
   fail=1
+fi
+
+# Exempt subjects skip the format check; the length gate still applies.
+case "$subject" in
+  Merge\ *|Revert\ *|fixup!\ *|squash!\ *|amend!\ *) exit "$fail" ;;
+esac
+
+TYPES="$(printf '%s' "$TAIPAN_TYPES" | tr ' ' '|')"
+GENERIC="$(printf '%s' "$TAIPAN_GENERIC_SCOPES" | tr ' ' '|')"
+allowed="$GENERIC"
+if top="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  for d in "$top"/apps/*/ "$top"/packages/*/; do
+    [ -d "$d" ] || continue
+    allowed="$allowed|$(basename "$d")"
+  done
+fi
+
+if ! printf '%s' "$subject" | grep -Eq "^($TYPES)(\([a-z0-9-]+\))?(!)?: .+"; then
+  echo "subject must be '<type>(scope)!: description', e.g. 'feat(api): add login'." >&2
+  echo "types: $TAIPAN_TYPES." >&2
+  echo "scopes: docs/commit-convention.md." >&2
+  fail=1
+else
+  scope="$(printf '%s' "$subject" | sed -n 's/^[^(]*(\([a-z0-9-]*\)).*/\1/p')"
+  if [ -n "$scope" ] && ! printf '%s' "$scope" | grep -Eq "^($allowed)$"; then
+    echo "unknown scope '$scope'. See docs/commit-convention.md for the list." >&2
+    fail=1
+  fi
 fi
 exit "$fail"

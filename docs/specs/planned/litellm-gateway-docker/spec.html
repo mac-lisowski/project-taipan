@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spec map: LiteLLM gateway docker stack</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({startOnLoad:true});</script>
+</head>
+<body class="bg-stone-50 text-stone-800 antialiased">
+<main class="mx-auto max-w-4xl px-6 py-10 space-y-8">
+
+  <header class="space-y-2">
+    <p class="text-sm uppercase tracking-wide text-stone-500">Spec map &middot; status: planned</p>
+    <h1 class="text-2xl font-bold">LiteLLM gateway docker stack</h1>
+    <p class="text-stone-600">Run the LiteLLM proxy from the docker quickstart in both dev
+    stacks. Ship a pinned pull-through image for deployment. No API code
+    touches the gateway yet. Prose lives in
+    <a class="text-sky-700 underline" href="spec.md">spec.md</a>.</p>
+  </header>
+
+  <section class="space-y-3">
+    <h2 class="text-lg font-semibold">Shape</h2>
+    <p>Both stacks get the same two services. The host stack owns port
+    4000. The devcontainer stack publishes no port, like Infisical on
+    8080. One Dockerfile pins the image tag for every environment.</p>
+    <div class="bg-white rounded-lg border border-stone-200 p-4 overflow-x-auto">
+<pre class="mermaid">
+flowchart LR
+  subgraph stack["Host stack and devcontainer stack, same shape"]
+    L[litellm gateway :4000]
+    D[(litellm-db<br>postgres:17-alpine)]
+    L --> D
+  end
+  U[Developer UI<br>host :4000] --> L
+  DC[devcontainer app<br>http://litellm:4000] -.-> L
+  R[railway up] -.-> F[docker/litellm Dockerfile<br>FROM docker.litellm.ai/berriai/litellm:v1.104.0]
+  F -.-> L
+</pre>
+    </div>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-lg font-semibold">Key decisions</h2>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div class="bg-white rounded-lg border border-stone-200 p-4">
+        <h3 class="font-medium">Pull-through pin</h3>
+        <p class="text-sm text-stone-600">One new pull-through image
+        file beside the Infisical one pins
+        <code>litellm:v1.104.0</code>. The gateway service builds from
+        it in both stacks. Railway uses it too. An upgrade is a
+        one-line tag edit.</p>
+      </div>
+      <div class="bg-white rounded-lg border border-stone-200 p-4">
+        <h3 class="font-medium">Quickstart environment</h3>
+        <p class="text-sm text-stone-600">Master key with a committed
+        dev default, salt key with a stable dev default, database URL,
+        and models stored in the database. Real values come from
+        Railway variables.</p>
+      </div>
+      <div class="bg-white rounded-lg border border-stone-200 p-4">
+        <h3 class="font-medium">Dedicated database</h3>
+        <p class="text-sm text-stone-600"><code>litellm-db</code> runs
+        the repo-standard Postgres 17 on its own volume per stack. It
+        health-checks with <code>pg_isready</code> and publishes no
+        port. The gateway starts only when it is healthy.</p>
+      </div>
+      <div class="bg-white rounded-lg border border-stone-200 p-4">
+        <h3 class="font-medium">Parity rule</h3>
+        <p class="text-sm text-stone-600">Both compose files mirror
+        each other, as the Infisical blocks already do. Only the host
+        stack serves a browser; the devcontainer serves the
+        in-network address the API will use later.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="text-lg font-semibold">Test seam</h2>
+    <p>No code seam moves, so no pytest or vitest file changes. The
+    seam is the running stack. Four checks cross it, in order:</p>
+    <div class="bg-white rounded-lg border border-stone-200 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-stone-100 text-left">
+          <tr><th class="px-4 py-2">Check crosses</th><th class="px-4 py-2">Asserts</th></tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100">
+          <tr><td class="px-4 py-2">Compose parse</td><td class="px-4 py-2"><code>docker compose config</code> exits clean on both files</td></tr>
+          <tr><td class="px-4 py-2">Docker gate</td><td class="px-4 py-2"><code>scripts/check-docker.sh</code> passes with the new file</td></tr>
+          <tr><td class="px-4 py-2">Image build</td><td class="px-4 py-2">The pull-through Dockerfile builds</td></tr>
+          <tr><td class="px-4 py-2">Bring-up</td><td class="px-4 py-2">Database turns healthy. Liveliness answers <code>I'm alive!</code>. UI serves. No key means 401, master key passes auth</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm text-stone-600">No provider key is needed for any
+    check. A master-key chat call without a model fails for lack of a
+    model, which still proves the gateway is up.</p>
+  </section>
+
+  <section class="space-y-2">
+    <h2 class="text-lg font-semibold">Out of scope</h2>
+    <p class="text-sm text-stone-600">API integration, model and
+    provider setup, virtual keys and budgets, Redis and observability,
+    Railway dashboard wiring, new CI jobs, and production hardening.
+    Details in spec.md.</p>
+  </section>
+
+</main>
+</body>
+</html>

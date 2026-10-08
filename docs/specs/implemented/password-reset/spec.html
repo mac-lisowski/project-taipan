@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec visual - password reset</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">Password reset</h1>
+    <p class="text-slate-500">Visual companion to <code>spec.md</code>.
+      Forgot link plus token reset over one mail seam.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Module and seam map</h2>
+    <div class="mermaid">
+graph LR
+  subgraph "thin adapters"
+    R1["POST forgot - email in, neutral reply"]
+    R2["POST reset - token plus new password"]
+  end
+  subgraph "password-reset module - deep"
+    R1 --> REQ["request: silent lookup, mint token, store hash"]
+    R2 --> RST["reset: check token, set hash, burn token, revoke all"]
+    RST --> SES[("sessions table pattern")]
+  end
+  REQ --> MAIL["email-delivery seam - Resend adapter"]
+  MAIL --> LINK["link mail to known email only"]
+  RST --> LOGIN["new login session - land on /dashboard"]
+    </div>
+    <p class="text-xs text-slate-500 mt-2">Tokens are single use,
+    hashed at rest, short expiry. Unknown emails get the same
+    reply and no mail. Routers map errors and cookies only.</p>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">The test seam</h2>
+    <div class="mermaid">
+graph LR
+  T["tests: real session plus stub mailer"] --> M["request / reset acts"]
+  M --> A["assert: hash not raw, one mail, burn, revoke"]
+  H["HTTP tests"] --> MAP["pin neutral reply, error map, cookie, /dashboard"]
+    </div>
+    <ul class="list-disc ml-5 mt-3 space-y-1">
+      <li>known email stores a hash and queues one link</li>
+      <li>unknown email sends nothing, same reply</li>
+      <li>reuse or past expiry fails</li>
+      <li>reset kills all old sessions, then logs in</li>
+    </ul>
+  </section>
+
+  <section class="bg-slate-800 text-slate-100 rounded-xl p-6">
+    <h2 class="font-bold mb-2">Why it matters</h2>
+    <p class="text-slate-300">One mail seam stops sender drift.
+    Hash plus expiry plus revoke keeps a leaked link weak.</p>
+  </section>
+</div>
+</body>
+</html>

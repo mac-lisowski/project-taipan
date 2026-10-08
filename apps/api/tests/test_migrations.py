@@ -4,43 +4,10 @@ create_all never executes the migration files, so the shipped DDL (FK
 cascade, unique index, types, CHECKs) is only pinned here.
 """
 
-import uuid
-from pathlib import Path
-
-import pytest
 from alembic import command
 from alembic.config import Config
-from conftest import ADMIN_URL, TEST_URL
+from conftest import ALEMBIC_INI
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import make_url
-from sqlalchemy.exc import OperationalError
-
-ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
-
-
-@pytest.fixture
-def scratch_url(monkeypatch):
-    """Unique scratch database per run; env rewired so env.py uses it."""
-    try:
-        admin = create_engine(ADMIN_URL, isolation_level="AUTOCOMMIT")
-        with admin.connect():
-            pass
-    except OperationalError:
-        pytest.skip("postgres not running (docker compose up -d)")
-
-    dbname = f"app_test_alembic_{uuid.uuid4().hex[:10]}"
-    with admin.connect() as conn:
-        conn.execute(text(f'CREATE DATABASE "{dbname}"'))
-
-    url = make_url(TEST_URL).set(database=dbname).render_as_string(hide_password=False)
-    # env.py imports DATABASE_URL from api.db at run time, so both must
-    # point at the scratch DB before any alembic command executes.
-    monkeypatch.setattr("api.db.DATABASE_URL", url)
-    monkeypatch.setenv("API_DATABASE_URL", url)
-    yield url
-    with admin.connect() as conn:
-        conn.execute(text(f'DROP DATABASE IF EXISTS "{dbname}" WITH (FORCE)'))
-    admin.dispose()
 
 
 def _assert_profiles_ddl(url):
@@ -204,3 +171,69 @@ def test_downgrade_upgrade_round_trip(scratch_url):
     assert not _table_exists(scratch_url, "user_profiles")
     command.upgrade(cfg, "head")
     _assert_profiles_ddl(scratch_url)
+
+
+def _assert_system_settings_ddl(url):
+    """Assert the DDL the migration must ship for system_settings."""
+    eng = create_engine(url)
+    try:
+        with eng.connect() as conn:
+            columns = dict(
+                conn.execute(
+                    text(
+                        "SELECT column_name, data_type FROM information_schema.columns "
+                        "WHERE table_name = 'system_settings'"
+                    )
+                ).all()
+            )
+            # Global table: exactly these columns, no tenant_id.
+            assert columns == {
+                "key": "text",
+                "value": "text",
+                "updated_at": "timestamp with time zone",
+            }
+            pk = (
+                conn.execute(
+                    text(
+                        "SELECT kcu.column_name FROM information_schema.table_constraints tc "
+                        "JOIN information_schema.key_column_usage kcu "
+                        "ON tc.constraint_name = kcu.constraint_name "
+                        "WHERE tc.table_name = 'system_settings' "
+                        "AND tc.constraint_type = 'PRIMARY KEY'"
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            assert pk == ["key"]
+    finally:
+        eng.dispose()
+
+
+def test_system_settings_migration_round_trip(scratch_url):
+    cfg = Config(str(ALEMBIC_INI))
+    command.upgrade(cfg, "head")
+    _assert_system_settings_ddl(scratch_url)
+    # Pinned, not "-1": later heads must not redefine this round trip.
+    command.downgrade(cfg, "12cb7ee20e8d")
+    assert not _table_exists(scratch_url, "system_settings")
+    command.upgrade(cfg, "head")
+    _assert_system_settings_ddl(scratch_url)
+
+
+def test_users_hashed_password_allows_null_at_head(scratch_url):
+    """Passwordless accounts need a nullable hash; the model change alone is not DDL."""
+    cfg = Config(str(ALEMBIC_INI))
+    command.upgrade(cfg, "head")
+    eng = create_engine(scratch_url)
+    try:
+        with eng.connect() as conn:
+            nullable = conn.execute(
+                text(
+                    "SELECT is_nullable FROM information_schema.columns "
+                    "WHERE table_name = 'users' AND column_name = 'hashed_password'"
+                )
+            ).scalar_one()
+            assert nullable == "YES"
+    finally:
+        eng.dispose()

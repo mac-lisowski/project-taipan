@@ -2,7 +2,7 @@
 
 The devcontainer gives a full dev environment: Python 3.12, uv, git,
 pre-commit hooks, Node 24 + pnpm, Postgres 17 + pgvector, Redis,
-Infisical, and a Docker-in-Docker daemon for testcontainers.
+Infisical, LiteLLM, and a Docker-in-Docker daemon for testcontainers.
 Everything the README commands need is inside.
 
 ## Layout
@@ -15,25 +15,31 @@ graph TD
     E[redis<br>redis:8-alpine]
     I[infisical<br>secrets + KMS]
     IB[infisical-db<br>postgres:17-alpine]
+    L[litellm<br>gateway :4000]
+    LB[litellm-db<br>postgres:17-alpine]
     D[dind<br>docker:28-dind, privileged]
     V1[(devcontainer-venv<br>masks host .venv)]
     V2[(devcontainer-pgdata)]
     V3[(devcontainer-uvcache)]
     V4[(devcontainer-dind<br>/var/lib/docker)]
     V5[(devcontainer-infisical-pgdata)]
+    V6[(devcontainer-litellm-pgdata)]
   end
   R[repo on host] -->|bind mount| A
   A -->|db:5432| B
   A -->|redis:6379| E
   A -->|infisical:8080| I
   A -->|DOCKER_HOST tcp://dind:2375| D
+  A -.->|litellm:4000, wired later| L
   I --> IB
   I -->|queues/cache db 1| E
+  L --> LB
   D -->|spawns| T[testcontainers]
   A --- V1
   A --- V3
   B --- V2
   IB --- V5
+  LB --- V6
   D --- V4
   B -.->|initdb: CREATE EXTENSION vector| V2
 ```
@@ -43,7 +49,8 @@ Files:
 - `.devcontainer/Dockerfile` - dev image. `devcontainers/python:3.12`
   gives git, ssh, zsh, and the `vscode` user. uv is copied in, pinned.
 - `.devcontainer/docker-compose.yml` - `app`, `db`, `redis`,
-  `infisical`, `infisical-db`, and `dind` services.
+  `infisical`, `infisical-db`, `litellm`, `litellm-db`, and `dind`
+  services.
 - `.devcontainer/devcontainer.json` - service, lifecycle hooks, ports,
   editor extensions. Node 24 comes from the `devcontainers/features/node`
   feature; `corepack` in `postCreate` enables pnpm.
@@ -55,8 +62,9 @@ The root `docker-compose.yaml` db publishes `5432:5432` on the host.
 Inside a devcontainer that publish is useless (the dev container reaches
 db over the compose network) and can collide with anything else on the
 host port. So the devcontainer stack is self-contained and publishes
-nothing. Cost: the `db` and `infisical` service blocks are duplicated.
-Keep their images and env in sync with `docker-compose.yaml` when they
+nothing. Cost: the `db`, `infisical` + `infisical-db`, and
+`litellm` + `litellm-db` service blocks are duplicated. Keep their
+images and env in sync with `docker-compose.yaml` when they
 change.
 
 ## How the app finds the db
@@ -153,9 +161,9 @@ git commit / git push    # hooks run inside the container
 After editing `.devcontainer/Dockerfile` or `docker-compose.yml`:
 
 - VS Code: `Dev Containers: Rebuild Container`
-- Keeps all five volumes: `devcontainer-venv`, `devcontainer-pgdata`,
+- Keeps all six volumes: `devcontainer-venv`, `devcontainer-pgdata`,
   `devcontainer-uvcache`, `devcontainer-dind`,
-  `devcontainer-infisical-pgdata`.
+  `devcontainer-infisical-pgdata`, `devcontainer-litellm-pgdata`.
 
 Full reset (drops the dev db data):
 

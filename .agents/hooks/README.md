@@ -87,11 +87,20 @@ flowchart LR
   ticket commits are gated by the orchestrator's code-review step.
 - Humans committing in a terminal do not pass through these hooks;
   the git-level backstops are the pre-commit checks plus the
-  `commit-msg` stage (`scripts/check-commit-msg.sh`: every message
-  line <= 120 chars, `#` comments and `commit -v` scissors content
-  ignored). Fresh clones get the stage via
+  `commit-msg` stage (`scripts/check-commit-msg.sh`: Conventional
+  Commits subject with types and scopes from
+  `docs/commit-convention.md`, every message line <= 120 chars,
+  `#` comments and `commit -v` scissors content ignored).
+  Fresh clones get the stage via
   `default_install_hook_types`; existing checkouts need
   `pre-commit install` once.
+- Branch creation and renames (`checkout -b`, `switch -c`,
+  `branch <name>`, `branch -m`, `worktree add -b`) are blocked
+  by a pre-exec check enforcing `<type>/<slug>`
+  (`scripts/check-branch-name.sh`, types from
+  `scripts/conventions.sh`); the `pre-commit` and `pre-push`
+  stages plus CI re-check the name. Quoted spellings evade
+  the pre-exec match by design; the later gates do not.
 - `git merge`/`rebase`/`cherry-pick`/`stash`/`am`/`pull` create
   commits without matching `git commit` and are not gated;
   `export SKIP=` set by an earlier command, commits inside scripts

@@ -16,12 +16,13 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(unique=True, index=True)
-    hashed_password: Mapped[str]
+    # Nullable: a half account exists before activation sets the hash.
+    hashed_password: Mapped[str | None]
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
-    # Pattern A: identity stays here; profile data belongs to the
+    # Core identity stays here; profile data belongs to the
     # user_profiles extension table. ORM cascade mirrors the DB cascade.
     profile: Mapped["UserProfile | None"] = relationship(
         "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
