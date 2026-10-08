@@ -1,5 +1,9 @@
 # Current state
 
+- Typed system settings DONE on feat/typed-system-settings (PR open
+  to dev). Settings public surface is the typed pair only; raw get,
+  set, and key constant private; export-pin test added; spec in
+  docs/specs/implemented/typed-system-settings/.
 - Settings page registration control is now a shadcn Switch toggle
   (base-nova). Uncommitted on dev: components.json (@reui registry),
   ui/components/switch.tsx (new), ui/index.ts, settings page switch.
@@ -8,8 +12,8 @@
   primitives stay on official shadcn; `@reui/<name>` for composites;
   pro items 401 without license.
 - Registration MERGED to dev (PR #39). Spec in
-  docs/specs/implemented/registration/. Three planned specs queued:
-  magic-link-mailer, typed-system-settings, bff-result-module.
+  docs/specs/implemented/registration/. Two planned specs queued:
+  magic-link-mailer, bff-result-module.
 - Deferred: resend race (bounded by single use), users.NotFound 500 on
   deleted user between mint and activate, vitest .next exclude,
   APP_NAME x3 + BFF parser (spec'd in the planned specs).
