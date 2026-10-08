@@ -7,24 +7,19 @@ revoke, log in) inside one service call.
 
 from __future__ import annotations
 
-import logging
-
 from email_delivery import EmailSender
-from email_delivery.templates import RESET, rendered_send
+from email_delivery.templates import RESET
 from sqlalchemy.orm import Session
 
 from api import auth_flow, tokens, users
 from api.config import get_config
 from api.credentials import WeakPassword
+from api.link_mail import MailLink, send_link
 
-__all__ = ["APP_NAME", "WeakPassword", "request", "reset"]
-
-logger = logging.getLogger(__name__)
-
-APP_NAME = "Taipan"
+__all__ = ["WeakPassword", "request", "reset"]
 
 
-def request(session: Session, *, email: str, sender: EmailSender, app_base_url: str) -> None:
+def request(session: Session, *, email: str, sender: EmailSender) -> None:
     """Look up the email in silence; a known active user gets one link."""
     user = users.get_by_email(session, email)
     if user is None or not user.is_active:
@@ -34,11 +29,7 @@ def request(session: Session, *, email: str, sender: EmailSender, app_base_url: 
         tokens.PURPOSE_RESET,
         ttl_seconds=get_config().store.reset_token_ttl_seconds,
     )
-    link = f"{app_base_url}/reset?token={raw}"
-    try:
-        rendered_send(sender, RESET, user.email, {"app_name": APP_NAME, "link": link})
-    except Exception:  # noqa: BLE001 - mail must never break the neutral reply
-        logger.warning("password reset mail failed to send")
+    send_link(sender, RESET, user.email, MailLink("/reset", {"token": raw}))
 
 
 def reset(session: Session, *, token: str, new_password: str) -> str:

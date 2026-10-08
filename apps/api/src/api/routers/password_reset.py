@@ -6,7 +6,6 @@ from email_delivery import EmailSender
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from api import password_reset, sessions, tokens
-from api.config import get_config
 from api.db import DbSession
 from api.mail import get_email_sender
 from api.schemas import ForgotIn, ResetIn
@@ -20,12 +19,7 @@ def forgot(
     db: DbSession,
     sender: Annotated[EmailSender, Depends(get_email_sender)],
 ) -> None:
-    password_reset.request(
-        db,
-        email=payload.email,
-        sender=sender,
-        app_base_url=get_config().mail.app_base_url,
-    )
+    password_reset.request(db, email=payload.email, sender=sender)
 
 
 @router.post("/reset", status_code=204)
