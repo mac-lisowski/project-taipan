@@ -11,11 +11,16 @@ import os
 import uuid
 from pathlib import Path
 
+import httpx2
+from api.chat.models import ModelCatalog
 from api.models import Role, UserTenant, UserTenantRole
 from crypto import tenant_scope
 from sqlalchemy import select
 
 KEY_ID = "5f0c9a1e-2222-4333-8444-555566667777"
+
+DEFAULT_CHAT_MODEL = "gpt-4o-mini"
+CHAT_MODELS_LISTING = {"data": [{"id": "gpt-4o-mini"}, {"id": "llama-3"}]}
 
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
@@ -170,3 +175,15 @@ def create_thread(client, *messages) -> dict:
     resp = client.post("/api/threads/create", json={"messages": list(messages)})
     assert resp.status_code == 200
     return resp.json()
+
+
+def model_catalog(handler, *, ttl_seconds=60, clock=None, default=DEFAULT_CHAT_MODEL):
+    """A ModelCatalog on a MockTransport, shared by listing and completion tests."""
+    return ModelCatalog(
+        "http://gw.local:4000",
+        "secret-key",
+        default,
+        ttl_seconds,
+        transport=httpx2.MockTransport(handler),
+        clock=clock or FakeClock(),
+    )

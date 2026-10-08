@@ -1,16 +1,20 @@
 # Current state
 
-- Worktree project-taipan-chat-queued-messages, branch
-  feat/chat-queued-messages: both tickets implemented, uncommitted.
-  API: chat_queued_messages table (migration 1e8aa4dfa422 off
-  7f7c0b2d3a74), api/chat/queue.py, four /api/threads/queue/* routes,
-  cap 10, owner-scoped. Web: chat-queue.ts store + use-chat-queue
-  hook, Mode C ChatComposer (hand-rolled starters), QueueChips,
-  QueueDispatch in slots.rest. Review fixes applied: row deletes at
-  run start via text-matched noteRunStarted (not at settle), enqueue
-  returns bool for draft clearing, enqueue/hydrate guard stale
-  thread replies, createdAt is a number. Next: gates, stamp, commit,
-  PR to dev.
+- Queued chat messages merged as d351e3a (PR #47): chat_queued_messages
+  table, api/chat/queue.py, four /api/threads/queue/* routes, cap 10,
+  owner-scoped; web chat-queue store, Mode C ChatComposer, QueueChips,
+  QueueDispatch in slots.rest.
+- chat-model-switcher IMPLEMENTED on feat/chat-model-switcher
+  (worktree project-taipan-chat-model-switcher, tickets 01-04 done,
+  reports in .scratch/chat-model-switcher/issues/, PR #48 open):
+  ModelCatalog caches LiteLLM /v1/models behind
+  API_CHAT_MODELS_TTL_SECONDS (60s); GET /api/chat/models serves
+  [{id, name, default?}]; complete validates optional body model
+  against the same set (422 unknown, absent keeps chat_model); web
+  switcher in ThreadHeader persists taipan-chat-model; BFF catch-all
+  already relayed the route (test only). Three two-axis review
+  rounds; spec axis CLEAN, standards fixes landed (payload guard,
+  shared test helpers).
 - Dev pushed through fb6c115: 34a7d97 fixes all 21 falsegreen
   findings (email suite split under the 300-LOC gate: conftest.py +
   test_send_budget.py), 1e57f54 moves bff-result-module,

@@ -18,6 +18,7 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [setup-node cache needs pnpm first](learnings/gha-pnpm-order.md)
 - [next typegen before tsc on clean checkout](learnings/next-typegen.md)
 - [Verify CI jobs locally with act](learnings/act-local-ci.md)
+- [Guard gateway JSON before iterating](learnings/gateway-json-payload-guard.md)
 - [docker build apps/web tested a different context](learnings/docker-context-mismatch.md)
 - [corepack resolves packageManager from cwd, not -C](learnings/corepack-pnpm-cwd.md)
 - [Rootless containers cannot reach host-bound services](learnings/rootless-no-host-access.md)

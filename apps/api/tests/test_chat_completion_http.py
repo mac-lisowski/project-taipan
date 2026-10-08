@@ -32,12 +32,14 @@ class FakeGateway:
         self.chunks = CANNED_PARTS if chunks is None else chunks
         self.error = error
         self.calls: list[list[dict]] = []
+        self.models: list[str | None] = []
         self.close_calls = 0
 
-    def stream(self, messages: list[dict]):
+    def stream(self, messages: list[dict], model: str | None = None):
         # Not async def: like the real gateway, the call only builds the
         # generator and does no work until the first iteration.
         self.calls.append(messages)
+        self.models.append(model)
         return self._iter()
 
     async def _iter(self):

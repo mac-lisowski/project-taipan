@@ -33,6 +33,19 @@ async def test_stream_posts_openai_shape_and_yields_raw_bytes():
 
 
 @pytest.mark.anyio
+async def test_stream_with_explicit_model_overrides_the_configured_one():
+    seen = {}
+
+    async def handler(request):
+        seen["body"] = json.loads(request.content)
+        return httpx2.Response(200, content=CANNED)
+
+    b"".join([chunk async for chunk in _gateway(handler).stream(MESSAGES, model="llama-3")])
+
+    assert seen["body"]["model"] == "llama-3"
+
+
+@pytest.mark.anyio
 async def test_trailing_slash_in_url_still_hits_completions_path():
     seen = {}
 

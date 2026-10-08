@@ -35,7 +35,9 @@ side. The gateway key never leaves the API process.
 
 - New API endpoint `GET /api/chat/models` (session required). It calls
   `GET {API_LITELLM_URL}/v1/models` with the existing gateway key and maps
-  the result to `[{id, name}]`.
+  the result to `[{id, name, default?}]`. The configured `chat_model`
+  entry carries `default: true` (appended when the gateway list lacks it)
+  so the web can mark the API default without a second source.
 - LiteLLM scopes `/v1/models` to the key's model allowlist when the key has
   one. A key with no restriction returns the full registry, including
   wildcard routes not callable by exact name. The gateway therefore stays

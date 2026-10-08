@@ -30,6 +30,7 @@ DEFAULT_MAIL_FROM = "noreply@localhost"
 DEFAULT_APP_BASE_URL = "http://localhost:3000"
 DEFAULT_LITELLM_URL = "http://localhost:4000"
 DEFAULT_CHAT_MODEL = "gpt-4o-mini"
+DEFAULT_CHAT_MODELS_TTL_SECONDS = 60
 
 
 @dataclass(frozen=True)
@@ -75,6 +76,7 @@ class ChatConfig:
     litellm_url: str = DEFAULT_LITELLM_URL
     litellm_api_key: str = ""
     chat_model: str = DEFAULT_CHAT_MODEL
+    chat_models_ttl_seconds: int = DEFAULT_CHAT_MODELS_TTL_SECONDS
 
 
 @dataclass(frozen=True)
@@ -150,6 +152,13 @@ class Config:
             lo=1,
             range_msg="API_ACTIVATION_TOKEN_TTL_SECONDS must be at least 1 second",
         )
+        chat_models_ttl = _parse_int(
+            e,
+            "API_CHAT_MODELS_TTL_SECONDS",
+            DEFAULT_CHAT_MODELS_TTL_SECONDS,
+            lo=1,
+            range_msg="API_CHAT_MODELS_TTL_SECONDS must be at least 1 second",
+        )
 
         resend_api_key = e.get("API_RESEND_API_KEY", "")
         mail_from = e.get("API_MAIL_FROM", DEFAULT_MAIL_FROM)
@@ -187,6 +196,7 @@ class Config:
                 litellm_url=e.get("API_LITELLM_URL") or DEFAULT_LITELLM_URL,
                 litellm_api_key=e.get("API_LITELLM_API_KEY", ""),
                 chat_model=e.get("API_CHAT_MODEL") or DEFAULT_CHAT_MODEL,
+                chat_models_ttl_seconds=chat_models_ttl,
             ),
         )
 
