@@ -84,7 +84,7 @@ def test_completion_prepends_system_prompt_to_gateway_messages(client, fake_gate
 
     sent = fake_gateway.calls[0]
     assert sent[0]["role"] == "system"
-    assert "component" in sent[0]["content"]
+    assert "markdown" in sent[0]["content"]
     assert sent[1:] == [{"role": "user", "content": "hello"}]
 
 

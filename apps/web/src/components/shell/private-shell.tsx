@@ -67,13 +67,17 @@ function NavItemLink({ item, active }: { item: NavItem; active: boolean }): Reac
 // Collapsible sidebar shell for private routes. Open state persists in
 // localStorage; the header toggle stays visible so a closed bar reopens.
 export function PrivateShell({
+  id,
   email,
   tenant,
+  roles,
   systemRoles,
   children,
 }: {
+  id: number;
   email: string;
   tenant: string;
+  roles: string[];
   systemRoles: string[];
   children: ReactNode;
 }): ReactNode {
@@ -84,13 +88,12 @@ export function PrivateShell({
     sidebarOpenStore.getServerSnapshot,
   );
   const sections = privateNav(systemRoles);
-  const account: ShellAccount = { email, tenant, systemRoles };
+  const account: ShellAccount = { id, email, tenant, roles, systemRoles };
 
   // The chat app (chat + its route views) is a full-viewport OpenUI surface
   // with its own sidebar; the shell stays out of the way and only hands
-  // over the session identity. Deep pages (account, docs, user detail)
-  // keep the classic shell.
-  const chatRoutes = new Set(["/chat", "/dashboard", "/users", "/settings"]);
+  // over the session identity.
+  const chatRoutes = new Set(["/chat", "/dashboard", "/users", "/settings", "/account"]);
   if (chatRoutes.has(pathname)) {
     return (
       <ShellAccountProvider account={account}>

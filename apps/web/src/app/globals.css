@@ -119,27 +119,29 @@
   }
 }
 
-/* Two palettes on one token set: light in :root, dark in .dark. The html
- * element ships with the dark class, so dark stays the default look and
- * only a stored choice removes it. Same specificity, source order wins. */
+/* Two palettes on one token set: light in :root, dark in .dark. Values
+ * mirror the OpenUI theme tokens (canvas, borders, hover alphas, radii)
+ * so app pages and the chat surface read as one design; only the brand
+ * green is ours. The html element ships with the dark class, so dark
+ * stays the default look and only a stored choice removes it. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: oklch(0.994 0 89.876);
+  --foreground: oklch(0.097 0 0);
+  --card: oklch(0.994 0 89.876);
+  --card-foreground: oklch(0.097 0 0);
+  --popover: oklch(0.994 0 89.876);
+  --popover-foreground: oklch(0.097 0 0);
+  --primary: oklch(0.58 0.15 155);
+  --primary-foreground: oklch(0.994 0 89.876);
+  --secondary: oklch(0.097 0 0 / 0.04);
+  --secondary-foreground: oklch(0.097 0 0);
+  --muted: oklch(0.097 0 0 / 0.04);
+  --muted-foreground: oklch(0.097 0 0 / 0.5);
+  --accent: oklch(0.097 0 0 / 0.04);
+  --accent-foreground: oklch(0.097 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.145 0 0 / 10%);
-  --input: oklch(0.145 0 0 / 15%);
+  --border: oklch(0.097 0 0 / 0.06);
+  --input: oklch(0.097 0 0 / 0.12);
   /* Functional accent: taipan green. Sparingly - status, focus, gains. */
   --signal: oklch(0.58 0.15 155);
   --ring: var(--signal);
@@ -148,35 +150,35 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.556 0 0);
   --chart-5: oklch(0.87 0 0);
-  --radius: 0;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.145 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --radius: 10px;
+  --sidebar: oklch(0.97 0 89.876);
+  --sidebar-foreground: oklch(0.097 0 0);
+  --sidebar-primary: oklch(0.58 0.15 155);
+  --sidebar-primary-foreground: oklch(0.994 0 89.876);
+  --sidebar-accent: oklch(0.097 0 0 / 0.04);
+  --sidebar-accent-foreground: oklch(0.097 0 0);
+  --sidebar-border: oklch(0.097 0 0 / 0.06);
+  --sidebar-ring: oklch(0.58 0.15 155);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
+  --background: oklch(0.205 0 0);
+  --foreground: oklch(0.985 0 89.876);
   --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
+  --card-foreground: oklch(0.985 0 89.876);
   --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --popover-foreground: oklch(0.985 0 89.876);
+  --primary: oklch(0.72 0.17 155);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.994 0 89.876 / 0.04);
+  --secondary-foreground: oklch(0.985 0 89.876);
+  --muted: oklch(0.994 0 89.876 / 0.04);
+  --muted-foreground: oklch(0.985 0 89.876 / 0.5);
+  --accent: oklch(0.994 0 89.876 / 0.04);
+  --accent-foreground: oklch(0.985 0 89.876);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --border: oklch(0.994 0 89.876 / 0.06);
+  --input: oklch(0.994 0 89.876 / 0.12);
   /* Functional accent: taipan green. Sparingly - status, focus, gains. */
   --signal: oklch(0.72 0.17 155);
   --ring: var(--signal);
@@ -185,15 +187,15 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0;
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.922 0 0);
-  --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --radius: 10px;
+  --sidebar: oklch(0.145 0 0);
+  --sidebar-foreground: oklch(0.985 0 89.876);
+  --sidebar-primary: oklch(0.72 0.17 155);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(0.994 0 89.876 / 0.04);
+  --sidebar-accent-foreground: oklch(0.985 0 89.876);
+  --sidebar-border: oklch(0.994 0 89.876 / 0.06);
+  --sidebar-ring: oklch(0.72 0.17 155);
 }
 
 @layer base {

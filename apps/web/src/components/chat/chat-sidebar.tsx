@@ -16,17 +16,26 @@ export type ChatSidebarLink = {
   path: string;
 };
 
-// Shell brand mark for the header slot. Passed as agentName because children
-// on SidebarHeader replace the whole row and would drop the collapse button.
+// Shell brand mark for the header slot. The SDK classes carry the collapse
+// behavior: the name hides and the logo overlays the toggle when collapsed.
 function Brand(): ReactNode {
   return (
-    <span className="block">
+    <span className="openui-agent-sidebar-header__agent-name block">
       <span className="block font-mono text-[10px] tracking-[0.35em] text-muted-foreground">
         project
       </span>
       <span className="mt-1 block font-display text-2xl uppercase leading-none tracking-tight text-foreground">
         taipan
       </span>
+    </span>
+  );
+}
+
+// Collapsed-sidebar mark: the header swaps agentName for this 32px square.
+function TMark(): ReactNode {
+  return (
+    <span className="openui-agent-sidebar-header__logo flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-display text-base uppercase text-primary-foreground">
+      t
     </span>
   );
 }
@@ -63,24 +72,25 @@ export function ChatSidebarContents({
   return (
     <>
       <div className="openui-agent-sidebar-actions">
-        <AgentInterface.SidebarHeader agentName={<Brand />} />
+        <AgentInterface.SidebarHeader logo={<TMark />} agentName={<Brand />} />
         <div className="openui-agent-sidebar-primary-actions">
           <AgentInterface.NewChatButton />
         </div>
+        {links.length > 0 && (
+          <nav
+            aria-label="App"
+            className="flex flex-col gap-0.5 md:[margin-top:calc(-1*var(--openui-space-2xl)+var(--openui-space-2xs))]"
+          >
+            {links.map((link) => (
+              <AgentInterface.SidebarItem key={link.key} icon={link.icon} path={link.path}>
+                {link.label}
+              </AgentInterface.SidebarItem>
+            ))}
+          </nav>
+        )}
       </div>
       <AgentInterface.SidebarContent>
-        {links.length > 0 && (
-          <>
-            <div className="flex flex-col gap-1">
-              {links.map((link) => (
-                <AgentInterface.SidebarItem key={link.key} icon={link.icon} path={link.path}>
-                  {link.label}
-                </AgentInterface.SidebarItem>
-              ))}
-            </div>
-            <AgentInterface.SidebarSeparator />
-          </>
-        )}
+        {links.length > 0 && <AgentInterface.SidebarSeparator />}
         <AgentInterface.ThreadList />
         <div className="mt-auto flex items-center gap-2 pt-1">
           <ThemeToggle className="shrink-0 border-none p-1 hover:opacity-80" />
@@ -96,21 +106,27 @@ export function ChatSidebarContents({
               <ChevronUp aria-hidden="true" className="h-3 w-3 shrink-0" />
             </Menu.Trigger>
             <Menu.Portal>
-              <Menu.Positioner side="top" align="start" sideOffset={6} className="z-50">
+              {/* Above the sidebar's z-1000 or the popup paints under it. */}
+              <Menu.Positioner
+                side="top"
+                align="start"
+                sideOffset={6}
+                className="z-[1100]"
+              >
                 <Menu.Popup className="min-w-40 rounded-md border border-border bg-popover p-1 shadow-md">
                   {systemRoles.includes(SYSTEM_OWNER_ROLE) && (
                     <Menu.Item className={menuItem} onClick={() => openPath("/settings")}>
-                      system settings
+                      System settings
                     </Menu.Item>
                   )}
                   <Menu.Item className={menuItem} onClick={logout}>
-                    log out
+                    Log out
                   </Menu.Item>
                 </Menu.Popup>
               </Menu.Positioner>
             </Menu.Portal>
-            </Menu.Root>
-          </div>
+          </Menu.Root>
+        </div>
       </AgentInterface.SidebarContent>
     </>
   );

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useReducer, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -34,7 +33,12 @@ import {
 } from "@/lib/users-list";
 
 // The endpoint result is the only source of list state.
-export function UsersTable(): ReactNode {
+export function UsersTable({
+  onSelectUser,
+}: {
+  /** When set, the view action routes inside the chat surface. */
+  onSelectUser?: (id: number) => void;
+} = {}): ReactNode {
   const [view, dispatch] = useReducer(reduceUsersView, { state: "loading" });
   // Retry bumps the attempt so the load effect runs again.
   const [attempt, setAttempt] = useState(0);
@@ -164,13 +168,14 @@ export function UsersTable(): ReactNode {
                     {formatDate(user.created_at)}
                   </TableCell>
                   <TableCell>
-                    <Link
-                      href={`/users/${user.id}`}
+                    <button
+                      type="button"
+                      onClick={() => onSelectUser?.(user.id)}
                       aria-label={`open details for ${user.email}`}
                       className="font-mono text-xs text-muted-foreground underline-offset-4 hover:underline"
                     >
                       view
-                    </Link>
+                    </button>
                   </TableCell>
                 </TableRow>
               ))}

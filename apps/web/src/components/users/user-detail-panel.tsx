@@ -14,11 +14,23 @@ import {
 } from "@/lib/users-admin";
 
 // The endpoint result is the only source of detail state.
-export function UserDetailPanel({ id }: { id: number }): ReactNode {
+export function UserDetailPanel({
+  id,
+  onBack,
+}: {
+  id: number;
+  /** In-chat navigation back to the list; falls back to a route change. */
+  onBack?: () => void;
+}): ReactNode {
   const [view, dispatch] = useReducer(reduceDetailView, { state: "loading" });
   // Retry and target changes bump the attempt so the load effect runs again.
   const [attempt, setAttempt] = useState(0);
   const router = useRouter();
+
+  function back(): void {
+    if (onBack) onBack();
+    else router.push("/users");
+  }
 
   useEffect(() => {
     let alive = true;
@@ -67,7 +79,7 @@ export function UserDetailPanel({ id }: { id: number }): ReactNode {
     dispatch({ type: "delete_started" });
     const result = await deleteUser(id);
     dispatch({ type: "delete_finished", result });
-    if (result.ok) router.push("/users");
+    if (result.ok) back();
   }
 
   return (
@@ -79,7 +91,7 @@ export function UserDetailPanel({ id }: { id: number }): ReactNode {
         <Button
           variant="ghost"
           size="xs"
-          onClick={() => router.push("/users")}
+          onClick={back}
           className="font-mono text-[11px] uppercase tracking-[0.25em]"
         >
           {USERS_ADMIN_COPY.back}

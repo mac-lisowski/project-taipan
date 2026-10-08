@@ -18,7 +18,7 @@ export function ThemeToggle({ className }: { className?: string }): ReactNode {
       suppressHydrationWarning
       className={
         className ??
-        "border border-border p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       }
     >
       <Icon className="h-3.5 w-3.5" />

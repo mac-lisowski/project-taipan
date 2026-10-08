@@ -3,8 +3,10 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 export type ShellAccount = {
+  id: number;
   email: string;
   tenant: string;
+  roles: string[];
   systemRoles: string[];
 };
 

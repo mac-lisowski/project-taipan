@@ -12,12 +12,11 @@ from api.chat.gateway import GatewayError
 from api.chat.threads import append_message, replace_history
 from api.models import ChatThread
 
-# The model answers with the chat component library, not long prose.
+# Plain markdown: the chat renders markdown; component output is off.
 SYSTEM_PROMPT = (
-    "You are a chat assistant in a web app. Compose answers from the chat "
-    "component library: use steps for procedures, callouts for warnings and "
-    "tips, and offer follow-up suggestions when they help. Keep prose short "
-    "and prefer components over long paragraphs."
+    "You are taipan, the assistant in this web app. Answer in plain "
+    "markdown with short sentences and simple words. Use lists and tables "
+    "when they help. Never invent features of the app."
 )
 
 MAX_MESSAGES = 200
