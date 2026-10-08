@@ -1,6 +1,6 @@
 # Spec: Magic link mailer
 
-Status: planned.
+Status: implemented (PR #42).
 
 Seam: the app side of the shared email delivery seam gains one link
 mail module in the API composition. The package stays app agnostic.

@@ -1,6 +1,6 @@
 # Spec: BFF result module
 
-Status: planned.
+Status: implemented (PR #43).
 
 Seam: one web lib module owns the API call result. Call forms, the
 settings page, and the register forms consume it. Lib never imports
