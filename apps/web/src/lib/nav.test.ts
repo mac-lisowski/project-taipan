@@ -1,37 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { privateNav } from "@/lib/nav";
+import { chatNavLinks, privateNav } from "@/lib/nav";
 
 describe("privateNav", () => {
-  it("returns the base section without system for no roles", () => {
-    expect(privateNav([])).toEqual([
-      {
-        heading: null,
-        items: [
-          { href: "/dashboard", label: "dashboard" },
-          { href: "/chat", label: "chat" },
-          { href: "/account", label: "account" },
-          { href: "/docs", label: "docs" },
-        ],
-      },
-    ]);
+  it("returns no sections without system roles", () => {
+    expect(privateNav([])).toEqual([]);
   });
 
-  it("keeps the base-only shape for tenant roles", () => {
-    expect(privateNav(["admin", "member"])).toEqual(privateNav([]));
-  });
-
-  it("appends the system section for system_owner", () => {
+  it("returns only the system section for system_owner", () => {
     expect(privateNav(["admin", "member", "system_owner"])).toEqual([
-      {
-        heading: null,
-        items: [
-          { href: "/dashboard", label: "dashboard" },
-          { href: "/chat", label: "chat" },
-          { href: "/account", label: "account" },
-          { href: "/docs", label: "docs" },
-        ],
-      },
       {
         heading: "system",
         items: [
@@ -43,6 +20,20 @@ describe("privateNav", () => {
   });
 
   it("ignores unknown roles", () => {
-    expect(privateNav(["superadmin"])).toEqual(privateNav([]));
+    expect(privateNav(["superadmin"])).toEqual([]);
+  });
+});
+
+describe("chatNavLinks", () => {
+  it("gives members no links: chat plus threads is their surface", () => {
+    expect(chatNavLinks([])).toEqual([]);
+    expect(chatNavLinks(["admin", "member"])).toEqual([]);
+  });
+
+  it("gives system_owner the management links", () => {
+    expect(chatNavLinks(["system_owner"])).toEqual([
+      { href: "/users", label: "users", icon: "users" },
+      { href: "/settings", label: "settings", icon: "gear" },
+    ]);
   });
 });

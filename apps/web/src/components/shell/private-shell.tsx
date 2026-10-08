@@ -6,6 +6,10 @@ import { useSyncExternalStore, type ReactNode } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { sidebarOpenStore, writeSidebarOpen } from "@/components/shell/sidebar-state";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import {
+  ShellAccountProvider,
+  type ShellAccount,
+} from "@/components/shell/shell-context";
 import { privateNav, type NavItem } from "@/lib/nav";
 
 function GearIcon(): ReactNode {
@@ -80,6 +84,17 @@ export function PrivateShell({
     sidebarOpenStore.getServerSnapshot,
   );
   const sections = privateNav(systemRoles);
+  const account: ShellAccount = { email, tenant, systemRoles };
+
+  // The chat is a full-viewport OpenUI surface with its own sidebar; the
+  // shell stays out of the way and only hands over the session identity.
+  if (pathname === "/chat" || pathname.startsWith("/chat/")) {
+    return (
+      <ShellAccountProvider account={account}>
+        <div className="h-dvh w-full overflow-hidden bg-background">{children}</div>
+      </ShellAccountProvider>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background md:flex-row">
