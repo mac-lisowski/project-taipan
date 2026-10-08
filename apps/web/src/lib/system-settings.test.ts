@@ -22,7 +22,7 @@ describe("loadRegistrationSwitch", () => {
     const result = await loadRegistrationSwitch();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/system/registration");
-    expect(result).toEqual({ ok: true, enabled: true });
+    expect(result).toEqual({ ok: true, data: { enabled: true } });
   });
 
   it("maps an off switch", async () => {
@@ -32,7 +32,25 @@ describe("loadRegistrationSwitch", () => {
         new Response(JSON.stringify({ enabled: false }), { status: 200 }),
       ),
     );
-    expect(await loadRegistrationSwitch()).toEqual({ ok: true, enabled: false });
+    expect(await loadRegistrationSwitch()).toEqual({ ok: true, data: { enabled: false } });
+  });
+
+  it("coerces a non-boolean wire value to off", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ enabled: "true" }), { status: 200 }),
+      ),
+    );
+    expect(await loadRegistrationSwitch()).toEqual({ ok: true, data: { enabled: false } });
+  });
+
+  it("maps an absent body to an off switch", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
+    );
+    expect(await loadRegistrationSwitch()).toEqual({ ok: true, data: { enabled: false } });
   });
 
   it("surfaces the upstream detail on failure", async () => {
@@ -71,7 +89,7 @@ describe("setRegistrationSwitch", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled: true }),
     });
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, data: null });
   });
 
   it("carries the API error verbatim on denial", async () => {
@@ -90,7 +108,7 @@ describe("reduceSwitchView", () => {
   it("shows the loaded value as ready", () => {
     const view = reduceSwitchView(
       { state: "loading" },
-      { type: "loaded", result: { ok: true, enabled: false } },
+      { type: "loaded", result: { ok: true, data: { enabled: false } } },
     );
     expect(view).toEqual({ state: "ready", enabled: false });
   });
@@ -114,9 +132,17 @@ describe("reduceSwitchView", () => {
   it("is saved after a 204", () => {
     const view = reduceSwitchView(
       { state: "saving", enabled: false },
-      { type: "save_finished", result: { ok: true } },
+      { type: "save_finished", result: { ok: true, data: null } },
     );
     expect(view).toEqual({ state: "saved", enabled: false });
+  });
+
+  it("keeps the view when a save lands outside saving", () => {
+    const view = reduceSwitchView(
+      { state: "ready", enabled: true },
+      { type: "save_finished", result: { ok: true, data: null } },
+    );
+    expect(view).toEqual({ state: "ready", enabled: true });
   });
 
   it("reverts to the pre-flip value when the save fails", () => {

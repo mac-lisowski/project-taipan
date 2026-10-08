@@ -29,7 +29,7 @@ describe("resolveRegistrationSwitch", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(await resolveRegistrationSwitch()).toEqual({ ok: true, enabled: true });
+    expect(await resolveRegistrationSwitch()).toEqual({ ok: true, data: { enabled: true } });
     expect(fetchMock).toHaveBeenCalledWith("http://api:8000/api/system/registration", {
       cache: "no-store",
     });
@@ -43,7 +43,7 @@ describe("resolveRegistrationSwitch", () => {
         new Response(JSON.stringify({ enabled: false }), { status: 200 }),
       ),
     );
-    expect(await resolveRegistrationSwitch()).toEqual({ ok: true, enabled: false });
+    expect(await resolveRegistrationSwitch()).toEqual({ ok: true, data: { enabled: false } });
   });
 
   it("reports an error instead of a guess when the read fails", async () => {

@@ -8,8 +8,8 @@ import {
 } from "./register";
 import { RESET_LANDING } from "./reset-password";
 
-const OPEN = { ok: true, enabled: true } as const;
-const CLOSED = { ok: true, enabled: false } as const;
+const OPEN = { ok: true, data: { enabled: true } } as const;
+const CLOSED = { ok: true, data: { enabled: false } } as const;
 const UNKNOWN = { ok: false, error: "registration switch read failed" } as const;
 
 describe("chooseRegisterGate", () => {

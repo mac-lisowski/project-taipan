@@ -1,5 +1,5 @@
 import { submitAuth, type AuthResult } from "./auth-submit";
-import type { RegistrationSwitchRead } from "../app/api/upstream";
+import type { SwitchRead } from "./system-settings";
 
 // Single source for the post-activation destination. Login, activation,
 // and reset all land on the dashboard so the flows agree.
@@ -35,16 +35,16 @@ export type RegisterGate =
   | { view: "set-password"; token: string };
 
 export function chooseRegisterGate(
-  read: RegistrationSwitchRead,
+  read: SwitchRead,
   token?: string,
 ): RegisterGate {
   if (!read.ok) return { view: "error", message: read.error };
   if (token) return { view: "set-password", token };
-  if (!read.enabled) return { view: "not-found" };
+  if (!read.data.enabled) return { view: "not-found" };
   return { view: "email-form" };
 }
 
 // The sign up link shows only on an open switch; off and unknown hide it.
-export function showSignUpLink(read: RegistrationSwitchRead): boolean {
-  return read.ok && read.enabled;
+export function showSignUpLink(read: SwitchRead): boolean {
+  return read.ok && read.data.enabled;
 }

@@ -1,4 +1,5 @@
 import { apiInternalUrl } from "./env";
+import type { SwitchRead } from "../../lib/system-settings";
 
 export type Me = {
   id: number;
@@ -14,10 +15,6 @@ export type LandingDecision =
   | { view: "setup" }
   | { view: "login" }
   | { view: "error"; error: string };
-
-export type RegistrationSwitchRead =
-  | { ok: true; enabled: boolean }
-  | { ok: false; error: string };
 
 // Probe mapping for server render: failure is an error, never a wrong form.
 export async function resolveLanding(): Promise<LandingDecision> {
@@ -41,7 +38,7 @@ export async function resolveLanding(): Promise<LandingDecision> {
 
 // Server-side read of the public registration switch: no-store so a
 // flip to off closes the sign up door on the very next render.
-export async function resolveRegistrationSwitch(): Promise<RegistrationSwitchRead> {
+export async function resolveRegistrationSwitch(): Promise<SwitchRead> {
   let res: Response;
   try {
     res = await fetch(`${apiInternalUrl()}/api/system/registration`, {
@@ -61,7 +58,7 @@ export async function resolveRegistrationSwitch(): Promise<RegistrationSwitchRea
   ) {
     return { ok: false, error: "registration switch gave an unexpected answer" };
   }
-  return { ok: true, enabled: (data as { enabled: boolean }).enabled };
+  return { ok: true, data: { enabled: (data as { enabled: boolean }).enabled } };
 }
 
 // Best-effort revoke: never throws, so logout works with the API down.

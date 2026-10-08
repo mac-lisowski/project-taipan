@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MIN_PASSWORD_LENGTH,
-  PASSWORD_RULES,
   changePassword,
   mismatchError,
   outcomeNote,
@@ -87,7 +86,7 @@ describe("changePassword submit", () => {
     });
   });
 
-  it("reports the other-device outcome on success", async () => {
+  it("reports the other-device outcome on the data channel", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -102,7 +101,23 @@ describe("changePassword submit", () => {
           confirm_new_password: "n3w-secret-456",
         }),
       ),
-    ).toEqual({ ok: true, otherDevicesSignedOut: true });
+    ).toEqual({ ok: true, data: true });
+  });
+
+  it("maps an absent success body to data false", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 })),
+    );
+    expect(
+      await changePassword(
+        formWith({
+          current_password: "s3cret123",
+          new_password: "n3w-secret-456",
+          confirm_new_password: "n3w-secret-456",
+        }),
+      ),
+    ).toEqual({ ok: true, data: false });
   });
 
   it("surfaces the wrong-current detail verbatim", async () => {

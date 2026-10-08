@@ -1,36 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { postJson, type ApiResult } from "./api-result";
 
-export type AuthResult =
-  | { ok: true; data: unknown }
-  | { ok: false; error: string };
+// Alias kept here so register.ts and reset-password.ts need no edits.
+export type AuthResult = ApiResult<unknown>;
 
-// One submit path for every auth form: FormData -> JSON POST to the BFF,
-// upstream `detail` surfaced verbatim, network errors folded into the same
-// error channel so no form leaks an unhandled rejection. Success carries
-// the parsed JSON body (null when absent) for callers that need it.
+// Transport and parsing live in the lib result module; this only shapes the payload.
 export async function submitAuth(
   endpoint: string,
   formData: FormData,
 ): Promise<AuthResult> {
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(formData.entries())),
-    });
-    if (res.ok) {
-      const data = await res.json().catch(() => null);
-      return { ok: true, data };
-    }
-    const detail = (await res.json().catch(() => null)) as {
-      detail?: string;
-    } | null;
-    return { ok: false, error: detail?.detail ?? `request failed (${res.status})` };
-  } catch {
-    return { ok: false, error: "network error" };
-  }
+  return postJson(endpoint, Object.fromEntries(formData.entries()));
 }
 
 export function useAuthSubmit(endpoint: string): {

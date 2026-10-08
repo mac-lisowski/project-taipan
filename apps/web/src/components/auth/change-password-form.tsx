@@ -26,7 +26,7 @@ export function ChangePasswordForm(): ReactNode {
     setNote(null);
     const result = await changePassword(form);
     setPending(false);
-    if (result.ok) setNote(outcomeNote(result.otherDevicesSignedOut));
+    if (result.ok) setNote(outcomeNote(result.data));
     else setError(result.error);
   }
 
