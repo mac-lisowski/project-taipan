@@ -8,17 +8,23 @@ import { useThemeMode } from "@/lib/use-theme";
 // SVG colors follow the app palette (neutral on light, dark on dark).
 let initializedTheme: string | null = null;
 
+// Result of the last render attempt, keyed to its source text: an attempt
+// for older code is ignored, so no effect-body state resets are needed.
+type Outcome = { code: string; svg: string | null };
+
 // Fenced ```mermaid blocks stream in partially and fail to parse; the raw
 // source stands in until the diagram closes and renders.
 export function MermaidDiagram({ code }: { code: string }): ReactNode {
   const dark = useThemeMode() === "dark";
-  const [svg, setSvg] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
   const renderId = `mermaid-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+
+  const current = outcome !== null && outcome.code === code;
+  const svg = current ? outcome.svg : null;
+  const failed = current && outcome.svg === null;
 
   useEffect(() => {
     let cancelled = false;
-    setFailed(false);
     // Streams append tokens faster than diagrams can lay out; render settled code only.
     const timer = setTimeout(() => {
       void (async () => {
@@ -37,9 +43,9 @@ export function MermaidDiagram({ code }: { code: string }): ReactNode {
         }
         try {
           const { svg: next } = await mermaid.render(renderId, code);
-          if (!cancelled) setSvg(next);
+          if (!cancelled) setOutcome({ code, svg: next });
         } catch {
-          if (!cancelled) setFailed(true);
+          if (!cancelled) setOutcome({ code, svg: null });
         }
       })();
     }, 250);
