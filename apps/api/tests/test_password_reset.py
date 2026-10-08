@@ -3,15 +3,15 @@
 import pytest
 from api import password_reset, sessions, tokens, users
 from api.credentials import verify_password
+from api.mail import APP_NAME
 from api.tokens import TokenAlreadyUsed, TokenError, TokenNotFound
 from email_delivery import FakeEmailSender
 
-BASE_URL = "http://localhost:3000"
 NEW = "n3w-secret-456"
 
 
 def _request(db, fake, email):
-    return password_reset.request(db, email=email, sender=fake, app_base_url=BASE_URL)
+    return password_reset.request(db, email=email, sender=fake)
 
 
 def _sent_token(fake):
@@ -34,7 +34,7 @@ def test_known_active_email_sends_one_link(session_factory, memory_token_store):
 
         [mail] = fake.list_sent()
         assert mail.recipient == user.email
-        assert mail.data["app_name"] == password_reset.APP_NAME
+        assert mail.data["app_name"] == APP_NAME
         raw = _sent_token(fake)
         assert mail.data["link"].endswith(f"token={raw}")
         # One request backs exactly one token record.

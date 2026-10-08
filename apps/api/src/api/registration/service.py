@@ -2,28 +2,23 @@
 
 from __future__ import annotations
 
-import logging
-
 from email_delivery import EmailSender
-from email_delivery.templates import ACTIVATION, rendered_send
+from email_delivery.templates import ACTIVATION
 from sqlalchemy.orm import Session
 
 from api import auth_flow, system_settings, tokens, users
 from api.config import get_config
 from api.credentials import WeakPassword
+from api.link_mail import MailLink, send_link
 
-__all__ = ["APP_NAME", "RegistrationClosed", "WeakPassword", "activate", "request"]
-
-logger = logging.getLogger(__name__)
-
-APP_NAME = "Taipan"
+__all__ = ["RegistrationClosed", "WeakPassword", "activate", "request"]
 
 
 class RegistrationClosed(Exception):
     """Sign up is switched off; the caller maps this to 404."""
 
 
-def request(session: Session, *, email: str, sender: EmailSender, app_base_url: str) -> None:
+def request(session: Session, *, email: str, sender: EmailSender) -> None:
     """Answer the same for every email; only a passwordless account gets mail."""
     if not system_settings.get_registration_enabled(session):
         raise RegistrationClosed()
@@ -37,11 +32,7 @@ def request(session: Session, *, email: str, sender: EmailSender, app_base_url: 
         tokens.PURPOSE_ACTIVATION,
         ttl_seconds=get_config().store.activation_token_ttl_seconds,
     )
-    link = f"{app_base_url}/register?token={raw}"
-    try:
-        rendered_send(sender, ACTIVATION, user.email, {"app_name": APP_NAME, "link": link})
-    except Exception:  # noqa: BLE001 - mail must never break the neutral reply
-        logger.warning("activation mail failed to send")
+    send_link(sender, ACTIVATION, user.email, MailLink("/register", {"token": raw}))
 
 
 def activate(session: Session, *, token: str, new_password: str) -> str:

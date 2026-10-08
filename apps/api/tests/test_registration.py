@@ -2,18 +2,19 @@
 
 import pytest
 from api import registration, sessions, system_settings, tokens, users
+from api.config import DEFAULT_APP_BASE_URL
 from api.credentials import verify_password
+from api.mail import APP_NAME
 from api.models import User, UserTenant
 from api.tokens import TokenError, TokenNotFound
 from email_delivery import FakeEmailSender
 from sqlalchemy import func, select
 
-BASE_URL = "http://localhost:3000"
 PASSWORD = "n3w-secret-456"
 
 
 def _request(db, fake, email):
-    return registration.request(db, email=email, sender=fake, app_base_url=BASE_URL)
+    return registration.request(db, email=email, sender=fake)
 
 
 def _last_token(fake):
@@ -48,9 +49,9 @@ def test_open_switch_mails_one_link_and_creates_passwordless_row(session_factory
 
         [mail] = fake.list_sent()
         assert mail.recipient == "fresh@x.com"
-        assert mail.data["app_name"] == registration.APP_NAME
+        assert mail.data["app_name"] == APP_NAME
         raw = _last_token(fake)
-        assert mail.data["link"] == f"{BASE_URL}/register?token={raw}"
+        assert mail.data["link"] == f"{DEFAULT_APP_BASE_URL}/register?token={raw}"
         user = users.get_by_email(db, "fresh@x.com")
         assert user is not None
         assert user.hashed_password is None
