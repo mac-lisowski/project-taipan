@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec: platform-key-provisioning</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+.bar { height: 10px; border-radius: 9999px; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+<header class="mb-8">
+<h1 class="text-2xl font-bold mb-2">Platform KMS key provisioning</h1>
+<p class="text-slate-500">One idempotent command makes or finds the platform key. The admin token never enters the app runtime.
+Spec: <code>docs/specs/planned/platform-key-provisioning/spec.md</code>.</p>
+</header>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+<h2 class="font-bold mb-4">Setup flow</h2>
+<div class="mermaid">
+flowchart LR
+O["operator: INFISICAL_ADMIN_TOKEN"] --> S["scripts/provision_kms.py"]
+S --> F["find or create project + key"]
+F --> I["Infisical KMS"]
+I --> K["key id on stdout"]
+K --> E["API_INFISICAL_KMS_KEY_ID"]
+S -. optional --verify .-> V["runtime token roundtrip"]
+V --> I
+</div>
+<p class="mt-3 text-slate-500">Re-runs change nothing. Verify catches a missing identity grant at setup, not at boot.</p>
+</section>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+<h2 class="font-bold mb-4">Identity split</h2>
+<p class="lbl mb-2">Admin token: provisioning only, script only</p>
+<div class="bar bg-slate-200 mb-1"><div class="bar bg-amber-400" style="width:20%"></div></div>
+<p class="lbl mb-2 mt-4">Runtime token: encrypt + decrypt only, app only</p>
+<div class="bar bg-slate-200 mb-1"><div class="bar bg-emerald-500" style="width:30%"></div></div>
+<p class="mt-3 text-slate-500">The two-identity rule in packages/kms stays intact. App code does not move.</p>
+</section>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+<h2 class="font-bold mb-4">Test seam</h2>
+<ul class="list-disc ml-5 space-y-1">
+<li>Find ops: live tests against self-hosted Infisical.</li>
+<li>Create-or-get: pure function over finders, unit tests with fakes.</li>
+<li>Verify: thin Cipher call, one fake test pins the failure shape.</li>
+</ul>
+</section>
+
+<footer class="bg-slate-800 text-slate-100 rounded-xl p-6">
+<h2 class="font-bold mb-2">Out of scope</h2>
+<p class="text-slate-300">Per-tenant keys (dropped), rotation automation, identity grants, CI provisioning, Spec B schema work.</p>
+</footer>
+</div>
+</body>
+</html>
