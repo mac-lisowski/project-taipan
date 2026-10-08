@@ -27,7 +27,9 @@
   index, EncryptedString email, per-row re-scope helper, boot-time
   db-encrypt-emails). Both validated by research agents; fixes
   folded in.
-- Next: tickets for Spec A on a feat branch.
+- Next: Spec A tickets 01-04 cut and validated under
+  .scratch/platform-key-provisioning/issues/ on
+  feat/platform-key-provisioning; ready to implement.
 - Python suite: bare `uv run pytest` with the API_TEST_* env vars for
   the 15432 test DB; explicit arg orders work too (92f41f3).
   Green: 473 passed, 9 skipped under three collection orders.
