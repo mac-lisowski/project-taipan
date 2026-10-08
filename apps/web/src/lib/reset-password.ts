@@ -1,8 +1,8 @@
 import { submitAuth, type AuthResult } from "./auth-submit";
 
 // Single source for the post-reset destination. Login, activation, and
-// reset all land on the dashboard so the flows agree.
-export const RESET_LANDING = "/dashboard";
+// reset all land on chat so the flows agree.
+export const RESET_LANDING = "/chat";
 
 // Reset through the shared auth seam. The body carries the API's exact
 // field names ({"token", "new_password"}); upstream detail is surfaced

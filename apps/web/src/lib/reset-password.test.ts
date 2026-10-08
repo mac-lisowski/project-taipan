@@ -19,13 +19,13 @@ describe("submitReset", () => {
     });
   });
 
-  it("returns ok on success and RESET_LANDING is the dashboard", async () => {
+  it("returns ok on success and RESET_LANDING is chat", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
     expect(await submitReset("raw-token", "new-password-1")).toEqual({
       ok: true,
       data: null,
     });
-    expect(RESET_LANDING).toBe("/dashboard");
+    expect(RESET_LANDING).toBe("/chat");
   });
 
   it("surfaces the 400 detail verbatim", async () => {

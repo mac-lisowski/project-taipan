@@ -1,0 +1,4 @@
+litellm_settings:
+  # Reasoning models stream only delta.reasoning_content, which the chat
+  # UI renders as nothing; merging folds it into content as <think> text.
+  merge_reasoning_content_in_choices: true

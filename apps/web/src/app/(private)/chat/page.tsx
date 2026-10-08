@@ -1,11 +1,13 @@
 "use client";
 
 import { AgentInterface, openuiChatLibrary, type Theme } from "@openuidev/react-ui";
-import { useRouter } from "next/navigation";
-import { useMemo, type ReactNode } from "react";
-import { LogoutButton } from "@/components/auth/logout-button";
-import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { LayoutDashboard, Settings2, Users } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { ChatSidebar, type ChatSidebarLink } from "@/components/chat/chat-sidebar";
 import { useShellAccount } from "@/components/shell/shell-context";
+import { OverviewView } from "@/components/dashboard/overview-view";
+import { SettingsView } from "@/components/settings/settings-view";
+import { UsersView } from "@/components/users/users-view";
 import { chatLLM, chatStorage } from "@/lib/chat-config";
 import { chatNavLinks } from "@/lib/nav";
 import { useThemeMode } from "@/lib/use-theme";
@@ -42,15 +44,26 @@ const starters = [
   },
 ];
 
-// The chat owns the whole viewport; the SDK sizes its container at
-// 100dvw/100dvh, so it must never sit inside a padded scrolling shell.
+const LINK_ICONS: Record<string, ReactNode> = {
+  "/dashboard": <LayoutDashboard className="h-4 w-4" />,
+  "/users": <Users className="h-4 w-4" />,
+  "/settings": <Settings2 className="h-4 w-4" />,
+};
+
+// The chat owns the whole viewport; app views render as SDK routes so the
+// sidebar, threads, and branding never disappear between views.
 export default function ChatPage(): ReactNode {
   const mode = useThemeMode();
-  const router = useRouter();
   const account = useShellAccount();
+  const [path, setPath] = useState<string | undefined>(undefined);
   const llm = useMemo(() => chatLLM(), []);
   const storage = useMemo(() => chatStorage(), []);
-  const links = chatNavLinks(account.systemRoles);
+  const links: ChatSidebarLink[] = chatNavLinks(account.systemRoles).map((link) => ({
+    key: link.href,
+    label: link.label,
+    icon: LINK_ICONS[link.href] ?? null,
+    path: link.href,
+  }));
 
   return (
     <AgentInterface
@@ -60,40 +73,25 @@ export default function ChatPage(): ReactNode {
       agentName="taipan"
       starters={starters}
       theme={{ mode, lightTheme: brandLight, darkTheme: brandDark }}
+      path={path}
+      onNavigate={setPath}
     >
-      <AgentInterface.Sidebar>
-        <div className="openui-agent-sidebar-actions">
-          <AgentInterface.SidebarHeader />
-          <div className="openui-agent-sidebar-primary-actions">
-            <AgentInterface.NewChatButton />
-          </div>
-        </div>
-        <AgentInterface.SidebarContent>
-          {links.length > 0 && (
-            <>
-              <div className="flex flex-col gap-1">
-                {links.map((link) => (
-                  <AgentInterface.SidebarItem
-                    key={link.href}
-                    onClick={() => router.push(link.href)}
-                  >
-                    {link.label}
-                  </AgentInterface.SidebarItem>
-                ))}
-              </div>
-              <AgentInterface.SidebarSeparator />
-            </>
-          )}
-          <AgentInterface.ThreadList />
-          <div className="flex items-center gap-2 pt-1">
-            <ThemeToggle className="shrink-0 border-none p-1 hover:opacity-80" />
-            <span className="min-w-0 flex-1 truncate text-xs opacity-70">
-              {account.email}
-            </span>
-            <LogoutButton />
-          </div>
-        </AgentInterface.SidebarContent>
-      </AgentInterface.Sidebar>
+      <ChatSidebar
+        links={links}
+        email={account.email}
+        tenant={account.tenant}
+        systemRoles={account.systemRoles}
+        openPath={setPath}
+      />
+      <AgentInterface.Route path="/dashboard">
+        <OverviewView />
+      </AgentInterface.Route>
+      <AgentInterface.Route path="/users">
+        <UsersView />
+      </AgentInterface.Route>
+      <AgentInterface.Route path="/settings">
+        <SettingsView />
+      </AgentInterface.Route>
     </AgentInterface>
   );
 }

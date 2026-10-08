@@ -149,8 +149,8 @@ describe("submitActivation", () => {
 });
 
 describe("shared landing rule", () => {
-  it("lands activation on the same dashboard target as login and reset", () => {
-    expect(REGISTER_LANDING).toBe("/dashboard");
+  it("lands activation on the same chat target as login and reset", () => {
+    expect(REGISTER_LANDING).toBe("/chat");
     expect(REGISTER_LANDING).toBe(RESET_LANDING);
   });
 });

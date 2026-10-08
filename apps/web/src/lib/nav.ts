@@ -29,11 +29,14 @@ export function privateNav(systemRoles: string[]): NavSection[] {
 }
 
 // Links composed into the OpenUI chat sidebar above the thread list.
-// Members get none: the chat plus its threads is the whole member surface.
+// Overview is the member landing view; users and settings are owner-only.
 export function chatNavLinks(systemRoles: string[]): NavItem[] {
-  if (!systemRoles.includes(SYSTEM_OWNER_ROLE)) return [];
-  return [
-    { href: "/users", label: "users", icon: "users" },
-    { href: "/settings", label: "settings", icon: "gear" },
-  ];
+  const links: NavItem[] = [{ href: "/dashboard", label: "overview" }];
+  if (systemRoles.includes(SYSTEM_OWNER_ROLE)) {
+    links.push(
+      { href: "/users", label: "users", icon: "users" },
+      { href: "/settings", label: "settings", icon: "gear" },
+    );
+  }
+  return links;
 }

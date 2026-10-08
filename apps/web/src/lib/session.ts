@@ -34,8 +34,8 @@ export const requireAccount = cache(async (): Promise<Me> => {
 });
 
 
-// Steer authenticated visitors away from public auth forms.
-export async function redirectIfAuthenticated(to = "/dashboard"): Promise<void> {
+// Steer authenticated visitors away from public auth forms; chat is home.
+export async function redirectIfAuthenticated(to = "/chat"): Promise<void> {
   if (await hasSession()) {
     redirect(to);
   }

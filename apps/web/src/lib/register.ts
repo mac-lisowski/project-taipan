@@ -2,8 +2,8 @@ import { submitAuth, type AuthResult } from "./auth-submit";
 import type { SwitchRead } from "./system-settings";
 
 // Single source for the post-activation destination. Login, activation,
-// and reset all land on the dashboard so the flows agree.
-export const REGISTER_LANDING = "/dashboard";
+// and reset all land on chat so the flows agree.
+export const REGISTER_LANDING = "/chat";
 
 // Step one: request an activation mail. The API answers the same for
 // known and unknown mail, so ok only means "watch the inbox".
