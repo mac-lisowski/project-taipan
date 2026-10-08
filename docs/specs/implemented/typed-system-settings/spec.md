@@ -1,6 +1,6 @@
 # Spec: Typed system settings
 
-Status: planned.
+Status: implemented.
 
 Seam: the system settings module speaks in typed accessors. The key
 value encoding becomes private. Callers never see raw strings.
