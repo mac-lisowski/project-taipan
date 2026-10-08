@@ -98,6 +98,11 @@ uv sync                    # install/update everything into .venv
 uv run pytest              # run all tests across all packages
 uv run ruff check .        # lint everything
 
+# DB-backed tests run only when the test database is pinned (they skip
+# otherwise, they never guess a server). The root compose Postgres works:
+#   export API_TEST_ADMIN_URL=postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+#   export API_TEST_URL=postgresql+psycopg://postgres:postgres@localhost:5432/app_test
+
 uv add --package core requests   # add a dep to one member
 uv add pytest --dev              # add a shared dev dependency
 ```

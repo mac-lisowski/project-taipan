@@ -1,3 +1,4 @@
+import os
 import uuid
 
 import pytest
@@ -23,9 +24,17 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
 
+def _require_test_db_env() -> None:
+    """Skip rather than guess: the URL defaults hit a live dev server,
+    and only explicit env proves the target is a disposable database."""
+    if not (os.environ.get("API_TEST_URL") and os.environ.get("API_TEST_ADMIN_URL")):
+        pytest.skip("API_TEST_URL/API_TEST_ADMIN_URL unset")
+
+
 @pytest.fixture
 def scratch_url(monkeypatch):
     """Unique scratch database per run; env rewired so env.py uses it."""
+    _require_test_db_env()
     try:
         admin = create_engine(TEST_ADMIN_URL, isolation_level="AUTOCOMMIT")
         with admin.connect():
@@ -51,6 +60,7 @@ def scratch_url(monkeypatch):
 @pytest.fixture(scope="session")
 def engine():
     """One `app_test` database per test run, recreated clean."""
+    _require_test_db_env()
     try:
         admin = create_engine(TEST_ADMIN_URL, isolation_level="AUTOCOMMIT")
         with admin.connect() as conn:

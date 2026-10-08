@@ -189,6 +189,11 @@ jobs:
     needs: changes
     if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.shared == 'true' || needs.changes.outputs.api == 'true') }}
     runs-on: ubuntu-latest
+    # The suite skips DB tests unless the target is pinned by env, so the
+    # service container must be named explicitly here.
+    env:
+      API_TEST_ADMIN_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+      API_TEST_URL: postgresql+psycopg://postgres:postgres@localhost:5432/app_test
     services:
       postgres:
         image: pgvector/pgvector:pg17
