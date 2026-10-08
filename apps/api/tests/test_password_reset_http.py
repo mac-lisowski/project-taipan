@@ -1,6 +1,7 @@
 """Password reset over HTTP: neutral forgot reply, pinned error map, login cookie."""
 
 from api.models import User
+from conftest import create_user
 from email_delivery import FakeEmailSender
 from sqlalchemy import select
 
@@ -110,3 +111,21 @@ def test_reset_with_live_token_sets_cookie_and_logs_in(client):
     me = client.get("/api/auth/me")
     assert me.status_code == 200
     assert me.json()["email"] == "r@x.com"
+
+
+def test_reset_for_deleted_user_answers_invalid_link(client):
+    assert (
+        client.post(
+            "/api/setup", json={"email": "owner@x.com", "password": "s3cret123"}
+        ).status_code
+        == 201
+    )
+    victim = create_user(client, "victim@x.com")
+    token = _request_reset_token(client, "victim@x.com")
+    assert client.delete(f"/api/users/{victim}").status_code == 204
+
+    bogus = client.post("/api/auth/reset", json={"token": "no-such-token", "new_password": NEW})
+    dead = client.post("/api/auth/reset", json={"token": token, "new_password": NEW})
+
+    assert dead.status_code == bogus.status_code == 400
+    assert dead.json() == bogus.json()

@@ -71,7 +71,7 @@ def test_profile_one_to_one(session_factory):
 def test_delete_user_cascades_profile(session_factory):
     with session_factory() as session:
         user = _user_with_profile(session)
-        users.remove(session, user.id)
+        users.remove(session, user.id, caller_id=user.id + 1)
         # The module flushes; the caller owns the commit now.
         session.commit()
     with session_factory() as session:

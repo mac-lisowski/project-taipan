@@ -239,3 +239,26 @@ def test_register_works_after_owner_flips_switch_over_http(client):
     assert resp.status_code == 204
     [mail] = fake.list_sent()
     assert mail.recipient == "late@x.com"
+
+
+def test_activate_for_deleted_user_answers_invalid_link(
+    client, session_factory, memory_token_store
+):
+    assert (
+        client.post(
+            "/api/setup", json={"email": "owner@x.com", "password": "s3cret123"}
+        ).status_code
+        == 201
+    )
+    _enable(session_factory)
+    fake = _pin_fake(client)
+    assert _register(client, "gone@x.com").status_code == 204
+    token = _sent_token(fake)
+    gone_id = next(u["id"] for u in client.get("/api/users").json() if u["email"] == "gone@x.com")
+    assert client.delete(f"/api/users/{gone_id}").status_code == 204
+
+    bogus = _activate(client, "not-a-token")
+    dead = _activate(client, token)
+
+    assert dead.status_code == bogus.status_code == 400
+    assert dead.json() == bogus.json()

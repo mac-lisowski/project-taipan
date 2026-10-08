@@ -10,7 +10,12 @@ from api.schemas.auth import (
 )
 from api.schemas.profile import ProfileCreate, ProfileRead, ProfileUpdate
 from api.schemas.system import RegistrationSwitchIn, RegistrationSwitchOut
-from api.schemas.user import UserCreate, UserOut
+from api.schemas.user import (
+    UserActivationUpdate,
+    UserCreate,
+    UserDetailOut,
+    UserOut,
+)
 
 __all__ = [
     "ActivateIn",
@@ -26,6 +31,8 @@ __all__ = [
     "RegistrationSwitchOut",
     "ResetIn",
     "SetupStatus",
+    "UserActivationUpdate",
     "UserCreate",
+    "UserDetailOut",
     "UserOut",
 ]

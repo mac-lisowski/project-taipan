@@ -3,7 +3,8 @@
 import pytest
 from api import users
 from api.credentials import verify_password
-from api.models import User
+from api.models import SystemRole, Tenant, TenantDek, User, UserSystemRole
+from crypto import tenant_scope
 
 
 def test_register_hashes_password(session_factory):
@@ -43,7 +44,7 @@ def test_remove_deletes_user(session_factory):
     with session_factory() as db:
         user = users.register(db, "gone@x.com", "s3cret123")
 
-        users.remove(db, user.id)
+        users.remove(db, user.id, caller_id=user.id + 1)
 
         with pytest.raises(users.NotFound):
             users.get(db, user.id)
@@ -51,7 +52,30 @@ def test_remove_deletes_user(session_factory):
 
 def test_remove_missing_raises_not_found(session_factory):
     with session_factory() as db, pytest.raises(users.NotFound):
-        users.remove(db, 424242)
+        users.remove(db, 424242, caller_id=1)
+
+
+def test_remove_refuses_self(session_factory):
+    with session_factory() as db:
+        user = users.register(db, "selfdel@x.com", "s3cret123")
+        db.commit()
+
+        with pytest.raises(users.SelfChange):
+            users.remove(db, user.id, caller_id=user.id)
+
+
+def test_remove_refuses_last_active_owner(session_factory):
+    with session_factory() as db:
+        first = users.register(db, "del-a@x.com", "s3cret123")
+        second = users.register(db, "del-b@x.com", "s3cret123")
+        db.add(UserSystemRole(user_id=first.id, role=SystemRole.SYSTEM_OWNER))
+        db.add(UserSystemRole(user_id=second.id, role=SystemRole.SYSTEM_OWNER))
+        db.commit()
+
+        users.set_active(db, second.id, False, caller_id=first.id)
+
+        with pytest.raises(users.LastActiveOwner):
+            users.remove(db, first.id, caller_id=second.id)
 
 
 def test_list_is_instance_wide_across_personal_tenants(session_factory):
@@ -85,3 +109,58 @@ def test_list_returns_users_by_id(session_factory):
         found = users.list(db)
 
         assert [u.email for u in found] == ["b@x.com", "a@x.com"]
+
+
+def test_set_active_flips_flag(session_factory):
+    with session_factory() as db:
+        user = users.register(db, "act@x.com", "s3cret123")
+        db.commit()
+
+        updated = users.set_active(db, user.id, False, caller_id=user.id + 1)
+
+        assert updated.is_active is False
+
+
+def test_set_active_missing_raises_not_found(session_factory):
+    with session_factory() as db, pytest.raises(users.NotFound):
+        users.set_active(db, 424242, False, caller_id=1)
+
+
+def test_set_active_self_raises(session_factory):
+    with session_factory() as db:
+        user = users.register(db, "selfact@x.com", "s3cret123")
+        db.commit()
+
+        with pytest.raises(users.SelfChange):
+            users.set_active(db, user.id, False, caller_id=user.id)
+
+
+def test_set_active_refuses_last_active_owner(session_factory):
+    with session_factory() as db:
+        first = users.register(db, "own-a@x.com", "s3cret123")
+        second = users.register(db, "own-b@x.com", "s3cret123")
+        db.add(UserSystemRole(user_id=first.id, role=SystemRole.SYSTEM_OWNER))
+        db.add(UserSystemRole(user_id=second.id, role=SystemRole.SYSTEM_OWNER))
+        db.commit()
+
+        users.set_active(db, second.id, False, caller_id=first.id)
+
+        with pytest.raises(users.LastActiveOwner):
+            users.set_active(db, first.id, False, caller_id=second.id)
+
+
+def test_remove_deletes_personal_tenant_and_dek(session_factory):
+    with session_factory() as db:
+        user = users.register(db, "dekt@x.com", "s3cret123")
+        db.commit()
+        tenant_id = users.tenant_id_for_user(db, user.id)
+        # Tenant-carrying writes must flush inside the scope they point at.
+        with tenant_scope(tenant_id):
+            db.add(TenantDek(tenant_id=tenant_id, key_id="k1", wrapped_dek="w" * 40))
+            db.flush()
+        db.commit()
+
+        users.remove(db, user.id, caller_id=user.id + 1)
+
+        assert db.get(Tenant, tenant_id) is None
+        assert db.get(TenantDek, tenant_id) is None
