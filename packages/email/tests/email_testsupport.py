@@ -18,7 +18,7 @@ TEST_DB_URL = os.environ.get(
 )
 
 # Mirrors the ticket 01 migration DDL; this suite owns its tables.
-_TABLES_DDL = """
+TABLES_DDL = """
 CREATE TABLE IF NOT EXISTS email_suppressions (
     address TEXT PRIMARY KEY,
     reason TEXT NOT NULL
@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS email_webhook_events (
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 """
+
+_TABLES = ("email_webhook_events", "email_send_counters", "email_suppressions")
 
 
 def _postgres_reachable() -> bool:
@@ -61,13 +63,32 @@ needs_postgres = pytest.mark.skipif(not POSTGRES_UP, reason="postgres not reacha
 
 
 # Reachable backends only; without Postgres the memory leg still proves behavior.
-_BACKENDS = ["memory", "postgres"] if POSTGRES_UP else ["memory"]
+BACKENDS = ["memory", "postgres"] if POSTGRES_UP else ["memory"]
 
 
-def _guarded(store: SuppressionStore) -> tuple[FakeEmailSender, GuardedEmailSender]:
+def init_tables(engine) -> None:
+    """Create the suite-owned tables empty."""
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        conn.execute(text(TABLES_DDL))
+        for table in _TABLES:
+            conn.execute(text(f"DELETE FROM {table}"))
+
+
+def reset_tables(engine) -> None:
+    """Delete every row in the suite-owned tables."""
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        for table in _TABLES:
+            conn.execute(text(f"DELETE FROM {table}"))
+
+
+def make_guarded(store: SuppressionStore) -> tuple[FakeEmailSender, GuardedEmailSender]:
     inner = FakeEmailSender()
     return inner, GuardedEmailSender(inner, store)
 
 
-def _address() -> str:
+def unique_address() -> str:
     return f"user-{uuid.uuid4().hex}@example.com"

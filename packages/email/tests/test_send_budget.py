@@ -14,14 +14,14 @@ from email_delivery.suppression import (
     GuardedEmailSender,
     SuppressionStore,
 )
-from email_testsupport import _address, _guarded
+from email_testsupport import make_guarded, unique_address
 
 
 def test_excess_sends_per_recipient_reject_with_retryable_reason(
     store: SuppressionStore,
 ) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
+    inner, guarded = make_guarded(store)
+    recipient = unique_address()
 
     sends = [guarded.send(f"template-{i % 4}", recipient, {"n": i}) for i in range(100)]
     assert all(r.status is SendStatus.SENT for r in sends)
@@ -35,8 +35,8 @@ def test_excess_sends_per_recipient_reject_with_retryable_reason(
 def test_excess_sends_per_recipient_template_reject_with_retryable_reason(
     store: SuppressionStore,
 ) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
+    inner, guarded = make_guarded(store)
+    recipient = unique_address()
 
     sends = [guarded.send("activation", recipient, {"n": i}) for i in range(50)]
     assert all(r.status is SendStatus.SENT for r in sends)
@@ -52,7 +52,7 @@ def test_failed_sends_do_not_consume_budget(store: SuppressionStore) -> None:
         def send(self, template: str, recipient: str, data: dict) -> SendResult:
             return SendResult(status=SendStatus.FAILED, reason="boom")
 
-    recipient = _address()
+    recipient = unique_address()
     guarded = GuardedEmailSender(FailingInner(), store)
 
     statuses = [

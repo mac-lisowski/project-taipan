@@ -13,7 +13,14 @@ from email_delivery.suppression import (
     PostgresSuppressionStore,
     SuppressionStore,
 )
-from email_testsupport import _TABLES_DDL, TEST_DB_URL, _address, _guarded, needs_postgres
+from email_testsupport import (
+    TEST_DB_URL,
+    init_tables,
+    make_guarded,
+    needs_postgres,
+    reset_tables,
+    unique_address,
+)
 
 
 def test_bounds_match_spec_values() -> None:
@@ -25,8 +32,8 @@ def test_bounds_match_spec_values() -> None:
 def test_suppress_short_circuits_send_with_no_vendor_call(
     store: SuppressionStore,
 ) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
+    inner, guarded = make_guarded(store)
+    recipient = unique_address()
     store.suppress(recipient)
 
     result = guarded.send("activation", recipient, {"link": "https://x/y"})
@@ -36,8 +43,8 @@ def test_suppress_short_circuits_send_with_no_vendor_call(
 
 
 def test_suppression_checked_before_render(store: SuppressionStore) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
+    inner, guarded = make_guarded(store)
+    recipient = unique_address()
     store.suppress(recipient)
 
     result = guarded.send("activation", recipient, {"bad": "data"})
@@ -53,8 +60,8 @@ def test_suppression_key_is_case_insensitive(store: SuppressionStore) -> None:
 
 
 def test_hard_bounce_suppresses_repeat_send(store: SuppressionStore) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
+    inner, guarded = make_guarded(store)
+    recipient = unique_address()
 
     suppressed_now = guarded.record_bounce(recipient, BounceKind.HARD)
     result = guarded.send("activation", recipient, {"link": "https://x/y"})
@@ -65,8 +72,8 @@ def test_hard_bounce_suppresses_repeat_send(store: SuppressionStore) -> None:
 
 
 def test_complaint_bounce_suppresses_repeat_send(store: SuppressionStore) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
+    inner, guarded = make_guarded(store)
+    recipient = unique_address()
 
     suppressed_now = guarded.record_bounce(recipient, BounceKind.COMPLAINT)
     result = guarded.send("activation", recipient, {"link": "https://x/y"})
@@ -77,8 +84,8 @@ def test_complaint_bounce_suppresses_repeat_send(store: SuppressionStore) -> Non
 
 
 def test_soft_bounces_below_bound_still_send(store: SuppressionStore) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
+    inner, guarded = make_guarded(store)
+    recipient = unique_address()
 
     early = [guarded.record_bounce(recipient, BounceKind.SOFT) for _ in range(MAX_SOFT_BOUNCES - 1)]
     assert early == [False] * (MAX_SOFT_BOUNCES - 1)
@@ -89,8 +96,8 @@ def test_soft_bounces_below_bound_still_send(store: SuppressionStore) -> None:
 
 
 def test_third_soft_bounce_suppresses(store: SuppressionStore) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
+    inner, guarded = make_guarded(store)
+    recipient = unique_address()
 
     early = [guarded.record_bounce(recipient, BounceKind.SOFT) for _ in range(MAX_SOFT_BOUNCES - 1)]
     assert early == [False] * (MAX_SOFT_BOUNCES - 1)
@@ -103,8 +110,8 @@ def test_third_soft_bounce_suppresses(store: SuppressionStore) -> None:
 
 
 def test_repeat_soft_bounce_event_id_counts_once(store: SuppressionStore) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
+    inner, guarded = make_guarded(store)
+    recipient = unique_address()
     # Fixed id: dedup is the behavior under test; a constant keeps failures reproducible.
     event_id = "evt-repeat-soft"
 
@@ -121,8 +128,8 @@ def test_repeat_soft_bounce_event_id_counts_once(store: SuppressionStore) -> Non
 def test_repeat_hard_bounce_event_id_returns_same_outcome(
     store: SuppressionStore,
 ) -> None:
-    _, guarded = _guarded(store)
-    recipient = _address()
+    _, guarded = make_guarded(store)
+    recipient = unique_address()
     event_id = "evt-repeat-hard"
 
     first = guarded.record_bounce(recipient, BounceKind.HARD, event_id=event_id)
@@ -139,13 +146,10 @@ def test_postgres_rows_carry_bounce_reasons() -> None:
     from sqlalchemy.orm import sessionmaker
 
     engine = create_engine(TEST_DB_URL)
-    with engine.begin() as conn:
-        conn.execute(text(_TABLES_DDL))
-        for table in ("email_webhook_events", "email_send_counters", "email_suppressions"):
-            conn.execute(text(f"DELETE FROM {table}"))
+    init_tables(engine)
     try:
         store = PostgresSuppressionStore(sessionmaker(bind=engine, expire_on_commit=False))
-        hard, complaint, soft = _address(), _address(), _address()
+        hard, complaint, soft = unique_address(), unique_address(), unique_address()
         store.record_bounce(hard, BounceKind.HARD)
         store.record_bounce(complaint, BounceKind.COMPLAINT)
         store.record_bounce(soft, BounceKind.SOFT)
@@ -154,13 +158,7 @@ def test_postgres_rows_carry_bounce_reasons() -> None:
             rows = conn.execute(text("SELECT address, reason FROM email_suppressions"))
             reasons = dict(rows.fetchall())
     finally:
-        with engine.begin() as conn:
-            for table in (
-                "email_webhook_events",
-                "email_send_counters",
-                "email_suppressions",
-            ):
-                conn.execute(text(f"DELETE FROM {table}"))
+        reset_tables(engine)
         engine.dispose()
 
     assert reasons[hard.strip().lower()] == "hard"
