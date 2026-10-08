@@ -127,6 +127,8 @@ def _seed_upgraded_instance(url):
 def test_upgrade_creates_grant_tables_with_pinned_ddl(scratch_url):
     cfg = Config(str(ALEMBIC_INI))
     command.upgrade(cfg, "head")
+    assert _table_exists(scratch_url, "user_tenant_roles") is True
+    assert _table_exists(scratch_url, "user_system_roles") is True
     _assert_grant_table_ddl(scratch_url, "user_tenant_roles", ["user_id", "tenant_id", "role"])
     _assert_grant_table_ddl(scratch_url, "user_system_roles", ["user_id", "role"])
 
@@ -223,8 +225,8 @@ def test_downgrade_drops_only_the_new_tables(scratch_url):
     command.upgrade(cfg, PRIOR_HEAD)
     _seed_upgraded_instance(scratch_url)
     command.upgrade(cfg, "head")
-    assert _table_exists(scratch_url, "user_tenant_roles")
-    assert _table_exists(scratch_url, "user_system_roles")
+    assert _table_exists(scratch_url, "user_tenant_roles") is True
+    assert _table_exists(scratch_url, "user_system_roles") is True
     command.downgrade(cfg, PRIOR_HEAD)
     assert not _table_exists(scratch_url, "user_tenant_roles")
     assert not _table_exists(scratch_url, "user_system_roles")

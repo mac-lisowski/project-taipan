@@ -14,7 +14,7 @@ def test_register_hashes_password(session_factory):
         assert isinstance(user, User)
         assert user.id is not None
         assert user.hashed_password != "s3cret123"
-        assert verify_password("s3cret123", user.hashed_password)
+        assert verify_password("s3cret123", user.hashed_password) is True
 
 
 def test_duplicate_email_raises_email_taken(session_factory):

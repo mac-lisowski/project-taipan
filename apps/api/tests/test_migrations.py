@@ -132,6 +132,7 @@ def _assert_tenancy_ddl(url):
 def test_upgrade_head_builds_expected_user_profiles_ddl(scratch_url):
     cfg = Config(str(ALEMBIC_INI))
     command.upgrade(cfg, "head")
+    assert _table_exists(scratch_url, "user_profiles") is True
     _assert_profiles_ddl(scratch_url)
 
 

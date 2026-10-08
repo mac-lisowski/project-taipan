@@ -59,4 +59,4 @@ def test_password_is_stored_hashed(admin_client, session_factory):
     with session_factory() as db:
         user = db.scalar(select(User).where(User.email == "h@x.com"))
         assert user.hashed_password != "plaintext"
-        assert verify_password("plaintext", user.hashed_password)
+        assert verify_password("plaintext", user.hashed_password) is True

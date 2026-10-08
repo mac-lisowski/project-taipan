@@ -24,7 +24,7 @@ REJECTED_PASSWORDS = ["", "p", "1234567"]
 def test_hash_verifies_correct_password():
     hashed = hash_password("correct horse battery staple")
 
-    assert verify_password("correct horse battery staple", hashed)
+    assert verify_password("correct horse battery staple", hashed) is True
 
 
 def test_hash_rejects_wrong_password():
@@ -63,7 +63,7 @@ def test_register_hashes_accepted_password(session_factory):
         user = users.register(db, "hash@x.com", "s3cret123")
 
         assert user.hashed_password != "s3cret123"
-        assert verify_password("s3cret123", user.hashed_password)
+        assert verify_password("s3cret123", user.hashed_password) is True
 
 
 def test_authenticate_accepts_active_user(session_factory):

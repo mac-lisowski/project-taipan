@@ -93,8 +93,8 @@ def test_upgrade_drops_the_old_grant_table(scratch_url):
     cfg = Config(str(ALEMBIC_INI))
     command.upgrade(cfg, "head")
     assert not _table_exists(scratch_url, "user_roles")
-    assert _table_exists(scratch_url, "user_tenant_roles")
-    assert _table_exists(scratch_url, "user_system_roles")
+    assert _table_exists(scratch_url, "user_tenant_roles") is True
+    assert _table_exists(scratch_url, "user_system_roles") is True
 
 
 def test_downgrade_recreates_old_table_with_grants_copied_back(scratch_url):
@@ -125,8 +125,8 @@ def test_downgrade_recreates_old_table_with_grants_copied_back(scratch_url):
     finally:
         eng.dispose()
     command.downgrade(cfg, LAST_REVISION_WITH_USER_ROLES)
-    assert _table_exists(scratch_url, "user_roles")
-    assert _table_exists(scratch_url, "user_tenant_roles")
+    assert _table_exists(scratch_url, "user_roles") is True
+    assert _table_exists(scratch_url, "user_tenant_roles") is True
     _assert_recreated_user_roles_ddl(scratch_url)
     eng = create_engine(scratch_url)
     try:

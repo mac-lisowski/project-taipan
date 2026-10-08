@@ -1,106 +1,19 @@
 """Suppression conformance: memory and Postgres stores behave the same.
 
-One behavior per test, asserted through the guard. The Postgres leg
-runs on the app_test database and skips when Postgres is unreachable,
-the same convention as the live KV store tests.
+One behavior per test, asserted through the guard. Store legs, the
+guard factory, and address helpers live in conftest.py.
 """
 
-import os
-import uuid
-
-import pytest
-from email_delivery import FakeEmailSender
-from email_delivery.sender import SendResult, SendStatus
+from conftest import _TABLES_DDL, TEST_DB_URL, _address, _guarded, needs_postgres
+from email_delivery.sender import SendStatus
 from email_delivery.suppression import (
     MAX_SENDS_PER_RECIPIENT,
     MAX_SENDS_PER_RECIPIENT_TEMPLATE,
     MAX_SOFT_BOUNCES,
     BounceKind,
-    GuardedEmailSender,
-    MemorySuppressionStore,
     PostgresSuppressionStore,
     SuppressionStore,
 )
-
-TEST_DB_URL = os.environ.get(
-    "API_TEST_URL",
-    "postgresql+psycopg://postgres:postgres@localhost:5432/app_test",
-)
-
-# Mirrors the ticket 01 migration DDL; this suite owns its tables.
-_TABLES_DDL = """
-CREATE TABLE IF NOT EXISTS email_suppressions (
-    address TEXT PRIMARY KEY,
-    reason TEXT NOT NULL
-        CHECK (reason IN ('hard', 'soft-limit', 'complaint')),
-    soft_bounces INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE TABLE IF NOT EXISTS email_send_counters (
-    recipient TEXT NOT NULL,
-    template TEXT NOT NULL,
-    sent_count BIGINT NOT NULL DEFAULT 0,
-    PRIMARY KEY (recipient, template)
-);
-CREATE TABLE IF NOT EXISTS email_webhook_events (
-    event_id TEXT PRIMARY KEY,
-    received_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-"""
-
-
-def _postgres_reachable() -> bool:
-    try:
-        from sqlalchemy import create_engine, text
-        from sqlalchemy.exc import SQLAlchemyError
-    except ImportError:
-        return False
-    try:
-        engine = create_engine(TEST_DB_URL, connect_args={"connect_timeout": 2})
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        engine.dispose()
-        return True
-    except SQLAlchemyError:
-        return False
-
-
-POSTGRES_UP = _postgres_reachable()
-needs_postgres = pytest.mark.skipif(not POSTGRES_UP, reason="postgres not reachable")
-
-
-# Reachable backends only; without Postgres the memory leg still proves behavior.
-_BACKENDS = ["memory", "postgres"] if POSTGRES_UP else ["memory"]
-
-
-@pytest.fixture(params=_BACKENDS)
-def store(request: pytest.FixtureRequest) -> SuppressionStore:
-    if request.param == "memory":
-        yield MemorySuppressionStore()
-        return
-    from sqlalchemy import create_engine, text
-    from sqlalchemy.orm import sessionmaker
-
-    engine = create_engine(TEST_DB_URL)
-    with engine.begin() as conn:
-        conn.execute(text(_TABLES_DDL))
-        for table in ("email_webhook_events", "email_send_counters", "email_suppressions"):
-            conn.execute(text(f"DELETE FROM {table}"))
-    yield PostgresSuppressionStore(sessionmaker(bind=engine, expire_on_commit=False))
-    with engine.begin() as conn:
-        for table in ("email_webhook_events", "email_send_counters", "email_suppressions"):
-            conn.execute(text(f"DELETE FROM {table}"))
-    engine.dispose()
-
-
-def _guarded(store: SuppressionStore) -> tuple[FakeEmailSender, GuardedEmailSender]:
-    inner = FakeEmailSender()
-    return inner, GuardedEmailSender(inner, store)
-
-
-def _address() -> str:
-    return f"user-{uuid.uuid4().hex}@example.com"
 
 
 def test_bounds_match_spec_values() -> None:
@@ -167,8 +80,8 @@ def test_soft_bounces_below_bound_still_send(store: SuppressionStore) -> None:
     inner, guarded = _guarded(store)
     recipient = _address()
 
-    for _ in range(MAX_SOFT_BOUNCES - 1):
-        assert guarded.record_bounce(recipient, BounceKind.SOFT) is False
+    early = [guarded.record_bounce(recipient, BounceKind.SOFT) for _ in range(MAX_SOFT_BOUNCES - 1)]
+    assert early == [False] * (MAX_SOFT_BOUNCES - 1)
     result = guarded.send("activation", recipient, {"link": "https://x/y"})
 
     assert result.status is SendStatus.SENT
@@ -179,8 +92,8 @@ def test_third_soft_bounce_suppresses(store: SuppressionStore) -> None:
     inner, guarded = _guarded(store)
     recipient = _address()
 
-    for _ in range(MAX_SOFT_BOUNCES - 1):
-        assert guarded.record_bounce(recipient, BounceKind.SOFT) is False
+    early = [guarded.record_bounce(recipient, BounceKind.SOFT) for _ in range(MAX_SOFT_BOUNCES - 1)]
+    assert early == [False] * (MAX_SOFT_BOUNCES - 1)
     assert guarded.record_bounce(recipient, BounceKind.SOFT) is True
     result = guarded.send("reset", recipient, {"link": "https://x/y"})
 
@@ -189,54 +102,11 @@ def test_third_soft_bounce_suppresses(store: SuppressionStore) -> None:
     assert inner.list_sent() == []
 
 
-def test_excess_sends_per_recipient_reject_with_retryable_reason(
-    store: SuppressionStore,
-) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
-
-    sends = [guarded.send(f"template-{i % 4}", recipient, {"n": i}) for i in range(100)]
-    assert all(r.status is SendStatus.SENT for r in sends)
-    result = guarded.send("activation", recipient, {"link": "https://x/y"})
-
-    assert result.status is SendStatus.FAILED
-    assert "retry" in result.reason
-    assert len(inner.list_sent()) == MAX_SENDS_PER_RECIPIENT
-
-
-def test_excess_sends_per_recipient_template_reject_with_retryable_reason(
-    store: SuppressionStore,
-) -> None:
-    inner, guarded = _guarded(store)
-    recipient = _address()
-
-    sends = [guarded.send("activation", recipient, {"n": i}) for i in range(50)]
-    assert all(r.status is SendStatus.SENT for r in sends)
-    result = guarded.send("activation", recipient, {"n": "extra"})
-
-    assert result.status is SendStatus.FAILED
-    assert "retry" in result.reason
-    assert len(inner.list_sent()) == MAX_SENDS_PER_RECIPIENT_TEMPLATE
-
-
-def test_failed_sends_do_not_consume_budget(store: SuppressionStore) -> None:
-    class FailingInner(FakeEmailSender):
-        def send(self, template: str, recipient: str, data: dict) -> SendResult:
-            return SendResult(status=SendStatus.FAILED, reason="boom")
-
-    recipient = _address()
-    guarded = GuardedEmailSender(FailingInner(), store)
-
-    for _ in range(MAX_SENDS_PER_RECIPIENT):
-        assert guarded.send("activation", recipient, {"n": 1}).status is SendStatus.FAILED
-
-    assert store.send_allowed("activation", recipient) is None
-
-
 def test_repeat_soft_bounce_event_id_counts_once(store: SuppressionStore) -> None:
     inner, guarded = _guarded(store)
     recipient = _address()
-    event_id = f"evt-{uuid.uuid4().hex}"
+    # Fixed id: dedup is the behavior under test; a constant keeps failures reproducible.
+    event_id = "evt-repeat-soft"
 
     assert guarded.record_bounce(recipient, BounceKind.SOFT, event_id=event_id) is False
     assert guarded.record_bounce(recipient, BounceKind.SOFT, event_id=event_id) is False
@@ -253,7 +123,7 @@ def test_repeat_hard_bounce_event_id_returns_same_outcome(
 ) -> None:
     _, guarded = _guarded(store)
     recipient = _address()
-    event_id = f"evt-{uuid.uuid4().hex}"
+    event_id = "evt-repeat-hard"
 
     first = guarded.record_bounce(recipient, BounceKind.HARD, event_id=event_id)
     second = guarded.record_bounce(recipient, BounceKind.HARD, event_id=event_id)

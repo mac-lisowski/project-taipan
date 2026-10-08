@@ -148,8 +148,8 @@ def test_can_answers_tenant_role_only_for_that_tenant(client, session_factory):
         crew_id = db.scalar(select(User.id).where(User.email == "crew@x.com"))
         owner_tenant = db.scalar(select(UserTenant.tenant_id).where(UserTenant.user_id == owner_id))
 
-        assert authz.can(db, owner_id, "admin", owner_tenant)
-        assert authz.can(db, owner_id, "member", owner_tenant)
+        assert authz.can(db, owner_id, "admin", owner_tenant) is True
+        assert authz.can(db, owner_id, "member", owner_tenant) is True
         assert not authz.can(db, owner_id, "admin", "tenant-nowhere")
         assert not authz.can(db, crew_id, "admin", owner_tenant)
 
@@ -161,7 +161,7 @@ def test_can_answers_system_role_without_tenant(client, session_factory):
         owner_id = db.scalar(select(User.id).where(User.email == "sysonly@x.com"))
         plain_id = db.scalar(select(User.id).where(User.email == "plain@x.com"))
 
-        assert authz.can(db, owner_id, "system_owner", None)
+        assert authz.can(db, owner_id, "system_owner", None) is True
         assert not authz.can(db, plain_id, "system_owner", None)
 
 

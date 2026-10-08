@@ -43,4 +43,4 @@ def test_clean_post_persists(admin_client, session_factory):
     with session_factory() as db:
         user = db.scalar(select(User).where(User.email == "clean@x.com"))
         assert user is not None
-        assert verify_password("s3cret123", user.hashed_password)
+        assert verify_password("s3cret123", user.hashed_password) is True
