@@ -1,7 +1,11 @@
 """Chat threads over HTTP: the five storage endpoints, owner scoped."""
 
+import base64
 import uuid
 
+import pytest
+from api.chat import threads
+from api.chat.threads import InvalidCursor
 from api.models import ChatMessage, ChatThread, UserTenant
 from api_testsupport import admit_user, create_thread, login, signin
 from sqlalchemy import func, select
@@ -79,6 +83,35 @@ def test_broken_cursor_answers_400(client):
     resp = client.get("/api/threads/get?cursor=garbage")
 
     assert resp.status_code == 400
+
+
+def test_naive_cursor_timestamp_answers_400(client):
+    signin(client, "cursor@x.com")
+    naive = base64.urlsafe_b64encode(
+        b'{"t": "2026-01-01T00:00:00", "id": "00000000-0000-0000-0000-000000000000"}'
+    ).decode()
+
+    resp = client.get(f"/api/threads/get?cursor={naive}")
+
+    assert resp.status_code == 400
+
+
+def test_create_rejects_history_over_the_cap(client):
+    signin(client, "capped@x.com")
+    flood = [{"role": "user", "content": "x"} for _ in range(201)]
+
+    resp = client.post("/api/threads/create", json={"messages": flood})
+
+    assert resp.status_code == 422
+
+
+def test_deeply_nested_cursor_decodes_invalid():
+    # The httpx test client caps URL length, so this reaches the decoder
+    # directly; a hand-rolled request would still have to answer 400.
+    deep = base64.urlsafe_b64encode(("[" * 10000 + "]" * 10000).encode()).decode()
+
+    with pytest.raises(InvalidCursor):
+        threads._decode_cursor(deep)
 
 
 def test_get_messages_returns_stored_order(client):

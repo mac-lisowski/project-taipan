@@ -1,9 +1,11 @@
 """Chat completion over HTTP: SSE passthrough, history rules, abort."""
 
 import uuid
+from types import SimpleNamespace
 
 import pytest
 from api import chat
+from api.chat import gateway
 from api.chat.gateway import GatewayError, get_gateway
 from api.main import app
 from api.models import User
@@ -154,11 +156,25 @@ async def test_abort_stores_partial_text_and_cancels_upstream(client, session_fa
     ]
 
 
-def test_gateway_failure_surfaces_error_event_and_keeps_history(client, fake_gateway):
+def test_prestream_gateway_failure_answers_502_and_keeps_history(client, fake_gateway):
     signin(client, "failer@x.com")
     thread_id = create_thread(client, {"role": "user", "content": "kept"})["id"]
+    # No chunk precedes the error: the handshake itself dies.
     fake_gateway.chunks = []
     fake_gateway.error = GatewayError("gateway unavailable")
+
+    resp = _complete(client, thread_id, {"role": "user", "content": "kept"})
+
+    assert resp.status_code == 502
+    stored = client.get(f"/api/threads/get/{thread_id}").json()
+    assert stored == [{"role": "user", "content": "kept"}]
+
+
+def test_midstream_gateway_failure_emits_error_event_and_keeps_history(client, fake_gateway):
+    signin(client, "midfailer@x.com")
+    thread_id = create_thread(client, {"role": "user", "content": "kept"})["id"]
+    fake_gateway.chunks = list(CANNED_PARTS)
+    fake_gateway.error = GatewayError("gateway died mid-stream")
 
     resp = _complete(client, thread_id, {"role": "user", "content": "kept"})
 
@@ -167,6 +183,21 @@ def test_gateway_failure_surfaces_error_event_and_keeps_history(client, fake_gat
     assert b'"error"' in resp.content
     stored = client.get(f"/api/threads/get/{thread_id}").json()
     assert stored == [{"role": "user", "content": "kept"}]
+
+
+def test_unconfigured_gateway_fails_fast_with_env_name(client, monkeypatch):
+    signin(client, "unconfig@x.com")
+    thread_id = create_thread(client, {"role": "user", "content": "hi"})["id"]
+    monkeypatch.setattr(
+        gateway,
+        "get_config",
+        lambda: SimpleNamespace(chat=SimpleNamespace(litellm_api_key="")),
+    )
+
+    resp = _complete(client, thread_id, {"role": "user", "content": "hi"})
+
+    assert resp.status_code == 500
+    assert "API_LITELLM_API_KEY" in resp.json()["detail"]
 
 
 def test_completion_requires_session(client):

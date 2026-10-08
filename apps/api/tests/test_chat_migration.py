@@ -9,7 +9,6 @@ from alembic.config import Config
 from api_testsupport import ALEMBIC_INI
 from sqlalchemy import create_engine, text
 
-CHAT_REV = "7f7c0b2d3a74"
 PARENT_REV = "e7b41c903f52"
 
 
@@ -80,6 +79,17 @@ def _assert_chat_ddl(url):
                 )
             ).scalar_one()
             assert content_type == "jsonb"
+
+            nullables = dict(
+                conn.execute(
+                    text(
+                        "SELECT column_name, is_nullable FROM information_schema.columns "
+                        "WHERE table_name IN ('chat_threads', 'chat_messages') "
+                        "AND column_name IN ('user_id', 'tenant_id', 'thread_id', 'seq')"
+                    )
+                ).all()
+            )
+            assert set(nullables.values()) == {"NO"}
     finally:
         eng.dispose()
 

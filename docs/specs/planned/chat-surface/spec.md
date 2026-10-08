@@ -135,8 +135,9 @@ is stored, resent, and forwarded to the gateway.
   error.
 - A system prompt derived from the chat component library is prepended, so
   the model can emit chat components (steps, callouts, follow ups).
-- Failure of the gateway surfaces as an SSE error event, which the UI shows
-  as a thread error. Stored history is left untouched.
+- Pre-stream gateway failure answers 502, which the chat surfaces as a
+  thread error. A mid-stream failure emits an SSE error event and closes
+  the stream. Stored history is left untouched in both cases.
 
 ### Schema
 
@@ -184,7 +185,9 @@ columns are added to `User`.
   test infrastructure. Tests assert: exact storage contract shapes, auth
   failures, owner isolation between users, tenant stamping, title
   derivation, cursor paging, history replacement per run, assistant row
-  after stream close, and partial storage on abort.
+  after stream close, partial storage on abort, pre-stream gateway failure
+  answered 502, mid-stream failure surfacing the SSE error event, and
+  stored history untouched in both failure cases.
 - Migration: the real-Alembic scratch database test pattern covers the new
   revision.
 - BFF seam: route tests with an injected fetch, as in the existing proxy
@@ -212,8 +215,8 @@ columns are added to `User`.
 
 - Visual map: `spec.html` beside this file shows the module shape, the depth
   before and after, and the test seams.
-- The threads contract and self-hosting pattern come from the OpenUI docs at
-  version 0.12.x of `@openuidev/react-ui`; pin the exact version at install.
+- The threads contract and self-hosting pattern come from the OpenUI docs
+  consulted at 0.12.x; the installed pin is 0.17.0 exact, contract unchanged.
 - The upstream proxy helper change (optional timeout) must stay backward
   compatible with the catch-all route.
 - Ops follow up: add the two new `API_LITELLM_*` env vars to the prod API

@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 
 import httpx2
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 
 from api.config import ChatConfig, get_config
 
@@ -60,6 +60,9 @@ class Gateway:
 def get_gateway() -> Gateway:
     """Build the gateway from config; the key never leaves the API process."""
     chat: ChatConfig = get_config().chat
+    if not chat.litellm_api_key:
+        # An unset key 401s mid-chat; refusing here names the missing env var.
+        raise HTTPException(status_code=500, detail="API_LITELLM_API_KEY is not set")
     return Gateway(chat.litellm_url, chat.litellm_api_key, chat.chat_model)
 
 

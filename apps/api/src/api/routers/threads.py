@@ -38,6 +38,11 @@ def get_threads(
 @router.post("/create", response_model=ThreadRead)
 def create_thread(payload: ThreadCreate, db: DbSession, principal: PrincipalSession) -> ThreadRead:
     stored = [message.model_dump() for message in payload.messages]
+    # The create write gets the same history caps as the completion path.
+    try:
+        chat.complete.validate(stored)
+    except chat.complete.MessageCapError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     thread = chat.threads.create(db, principal.user_id, principal.tenant_id, stored)
     return _thread_out(thread)
 

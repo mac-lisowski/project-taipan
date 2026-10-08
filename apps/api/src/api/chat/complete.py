@@ -74,12 +74,16 @@ async def stream_reply(
 ) -> AsyncIterator[bytes]:
     """Relay upstream bytes; store the reply only when bytes reached the client."""
     buffer = bytearray()
+    started = False
     try:
         async for chunk in upstream:
+            started = True
             buffer.extend(chunk)
             yield chunk
     except GatewayError as exc:
-        # Nothing is stored: the stored history keeps its pre-run shape.
+        # Before the first byte the route can 502; after it, only an in-stream event.
+        if not started:
+            raise
         yield error_event(str(exc))
         return
     except BaseException:

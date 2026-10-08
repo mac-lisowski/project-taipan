@@ -87,8 +87,12 @@ def _encode_cursor(thread: ChatThread) -> str:
 def _decode_cursor(cursor: str) -> tuple[datetime, UUID]:
     try:
         payload = json.loads(base64.urlsafe_b64decode(cursor.encode()))
-        return datetime.fromisoformat(payload["t"]), UUID(payload["id"])
-    except (ValueError, KeyError, TypeError) as exc:
+        stamp = datetime.fromisoformat(payload["t"])
+        # Naive stamps compare against timestamptz via session timezone; refuse them.
+        if stamp.tzinfo is None:
+            raise ValueError("cursor timestamp lacks a timezone")
+        return stamp, UUID(payload["id"])
+    except (ValueError, KeyError, TypeError, RecursionError) as exc:
         raise InvalidCursor from exc
 
 

@@ -10,15 +10,22 @@
   helpers public (make_guarded, unique_address) and dedupes table
   resets into init_tables/reset_tables.
 - docs/specs/planned/ holds nats-jetstream (PR #38 open) and
-  chat-surface (spec.md + spec.html written 2026-10-08, tickets not
-  yet cut).
-- chat-surface: full OpenUI AgentInterface adoption at /chat. BFF
-  chat + threads proxies; API threads router (restStorage contract)
-  and streaming completion router to LiteLLM; chat_threads +
-  chat_messages tables; light palette + toggle (web is dark-only
-  today); chat follows app theme. Message persistence is server side:
-  restStorage has no append op, the completion run replaces stored
-  history and appends the assistant row.
+  chat-surface (implemented on this branch; spec moves to
+  implemented/ at merge).
+- chat-surface IMPLEMENTED on feat/chat-surface (tickets 01-05 done,
+  reports in .scratch/chat-surface/issues/): full OpenUI
+  AgentInterface at /chat (pinned 0.17.0/0.3.1 exact); BFF chat
+  (300s stream relay) + threads proxies; API threads router
+  (restStorage contract) + /api/chat/complete streaming from
+  LiteLLM; chat_threads + chat_messages (migration 7f7c0b2d3a74);
+  server-side history replace per run + assistant append at close,
+  partial on abort; light palette + toggle, chat follows app mode.
+  Four two-axis review rounds. Round 2 key bug: the OpenUI adapter
+  silently drops SSE error payloads, so pre-stream gateway failure
+  answers 502 (SDK shows thread error); mid-stream keeps the SSE
+  event. Suites: 505 pytest (2 skipped), 216 vitest, build + all
+  gates green. Live smoke blocked: LiteLLM has zero models
+  registered (ops: register one, set API_CHAT_MODEL to match).
 - One platform KMS key decided, per-tenant keys dropped:
   decisions/platform-key-only.md.
 - Two new specs in docs/specs/planned/:
