@@ -10,7 +10,7 @@ export function AccountView(): ReactNode {
   const me = useShellAccount();
   return (
     <div className="flex w-full max-w-md flex-col gap-2">
-      <p className="font-mono text-[10px] tracking-[0.35em] text-muted-foreground">account</p>
+      <p className="font-mono text-[10px] tracking-[0.35em] text-muted-foreground">Account</p>
       <dl className="font-mono text-xs">
         <div className="flex justify-between border-b border-border py-2">
           <dt className="text-muted-foreground">id</dt>

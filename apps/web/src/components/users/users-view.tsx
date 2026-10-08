@@ -13,7 +13,7 @@ export function UsersView({
   return (
     <div className="flex w-full flex-col gap-4">
       <p className="font-mono text-[10px] tracking-[0.35em] text-muted-foreground">
-        registered users
+        Registered users
       </p>
       <UsersTable onSelectUser={onSelectUser} />
     </div>

@@ -9,7 +9,7 @@ export function SettingsView(): ReactNode {
   return (
     <div className="flex w-full max-w-md flex-col gap-2">
       <p className="font-mono text-[10px] tracking-[0.35em] text-muted-foreground">
-        system settings
+        System settings
       </p>
       <RegistrationSwitch />
     </div>

@@ -36,12 +36,11 @@ describe("chatNavLinks", () => {
     ]);
   });
 
-  it("appends the management links for system_owner", () => {
+  it("appends users for system_owner; settings stays in the dropdown", () => {
     expect(chatNavLinks(["system_owner"])).toEqual([
       { href: "/dashboard", label: "Overview" },
       { href: "/account", label: "Account", icon: "gear" },
       { href: "/users", label: "Users", icon: "users" },
-      { href: "/settings", label: "Settings", icon: "gear" },
     ]);
   });
 });

@@ -37,7 +37,7 @@ export function OverviewView({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline gap-3">
-        <h1 className="font-display text-2xl uppercase tracking-tight">dashboard</h1>
+        <h1 className="font-display text-2xl uppercase tracking-tight">overview</h1>
         <Link
           href="/account"
           className="font-mono text-[10px] tracking-[0.15em] text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"

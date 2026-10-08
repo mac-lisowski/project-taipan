@@ -86,7 +86,7 @@ export function UserDetailPanel({
     <div className="flex w-full max-w-2xl flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-          account
+          Account
         </p>
         <Button
           variant="ghost"

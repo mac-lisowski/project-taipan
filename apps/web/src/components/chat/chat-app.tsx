@@ -1,7 +1,7 @@
 "use client";
 
 import { AgentInterface, type Theme } from "@openuidev/react-ui";
-import { LayoutDashboard, Settings2, User, Users } from "lucide-react";
+import { LayoutDashboard, User, Users } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   ChatSidebarContents,
@@ -55,7 +55,6 @@ const LINK_ICONS: Record<string, ReactNode> = {
   "/dashboard": <LayoutDashboard className="h-4 w-4" />,
   "/account": <User className="h-4 w-4" />,
   "/users": <Users className="h-4 w-4" />,
-  "/settings": <Settings2 className="h-4 w-4" />,
 };
 
 // Detail route for one user; built here so the users view can deep link.

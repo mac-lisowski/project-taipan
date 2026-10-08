@@ -2,7 +2,7 @@
 
 import { AgentInterface } from "@openuidev/react-ui";
 import { Menu } from "@base-ui/react/menu";
-import { ChevronUp } from "lucide-react";
+import { ChevronUp, LogOut, Settings2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
@@ -16,11 +16,11 @@ export type ChatSidebarLink = {
   path: string;
 };
 
-// Shell brand mark for the header slot. The SDK classes carry the collapse
-// behavior: the name hides and the logo overlays the toggle when collapsed.
+// Shell brand mark for the header slot. The SDK class carries the collapse
+// behavior; no Tailwind display class here or utilities beat its display:none.
 function Brand(): ReactNode {
   return (
-    <span className="openui-agent-sidebar-header__agent-name block">
+    <span className="openui-agent-sidebar-header__agent-name">
       <span className="block font-mono text-[10px] tracking-[0.35em] text-muted-foreground">
         project
       </span>
@@ -67,7 +67,7 @@ export function ChatSidebarContents({
   }
 
   const menuItem =
-    "cursor-default rounded px-2 py-1.5 text-xs text-popover-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground";
+    "flex cursor-default items-center gap-2.5 rounded-md px-3 py-2 text-sm text-popover-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground";
 
   return (
     <>
@@ -113,13 +113,15 @@ export function ChatSidebarContents({
                 sideOffset={6}
                 className="z-[1100]"
               >
-                <Menu.Popup className="min-w-40 rounded-md border border-border bg-popover p-1 shadow-md">
+                <Menu.Popup className="min-w-48 rounded-lg border border-border bg-popover p-1.5 shadow-lg">
                   {systemRoles.includes(SYSTEM_OWNER_ROLE) && (
                     <Menu.Item className={menuItem} onClick={() => openPath("/settings")}>
+                      <Settings2 aria-hidden="true" className="h-4 w-4" />
                       System settings
                     </Menu.Item>
                   )}
                   <Menu.Item className={menuItem} onClick={logout}>
+                    <LogOut aria-hidden="true" className="h-4 w-4" />
                     Log out
                   </Menu.Item>
                 </Menu.Popup>
