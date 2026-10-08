@@ -19,6 +19,9 @@ from fastapi import Request
 
 from api.config import Config, get_config
 
+# One home for the app name in mail; a rename touches this line only.
+APP_NAME = "Taipan"
+
 
 def build_email_sender(
     config: Config | None = None,

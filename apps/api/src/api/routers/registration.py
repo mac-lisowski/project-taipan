@@ -6,7 +6,6 @@ from email_delivery import EmailSender
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from api import registration, sessions, tokens
-from api.config import get_config
 from api.db import DbSession
 from api.mail import get_email_sender
 from api.schemas import ActivateIn, RegisterIn
@@ -21,12 +20,7 @@ def register(
     sender: Annotated[EmailSender, Depends(get_email_sender)],
 ) -> None:
     try:
-        registration.request(
-            db,
-            email=payload.email,
-            sender=sender,
-            app_base_url=get_config().mail.app_base_url,
-        )
+        registration.request(db, email=payload.email, sender=sender)
     except registration.RegistrationClosed as exc:
         # A closed platform shows no sign up door, not even an error page shape.
         raise HTTPException(status_code=404, detail="Not Found") from exc
