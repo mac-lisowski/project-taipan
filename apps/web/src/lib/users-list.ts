@@ -1,6 +1,6 @@
 // The endpoint result is the only source of users list state.
 
-import { errorDetailOf } from "./api-detail";
+import { getJson, type ApiResult } from "./api-result";
 
 export const USERS_PATH = "/api/users";
 
@@ -11,20 +11,16 @@ export type UserRow = {
   created_at: string;
 };
 
-export type UsersLoadResult =
-  | { ok: true; users: UserRow[] }
-  | { ok: false; error: string };
+export type UsersLoadResult = ApiResult<UserRow[]>;
 
 export async function loadUsers(): Promise<UsersLoadResult> {
-  try {
-    const res = await fetch(USERS_PATH);
-    if (!res.ok) return { ok: false, error: await errorDetailOf(res) };
-    const body = (await res.json().catch(() => null)) as UserRow[] | null;
-    if (!Array.isArray(body)) return { ok: false, error: "unexpected users body" };
-    return { ok: true, users: body };
-  } catch {
-    return { ok: false, error: "network error" };
+  const res = await getJson<unknown>(USERS_PATH);
+  // The array guard stays here so the reducer only ever sees typed rows.
+  if (!res.ok) return res;
+  if (!Array.isArray(res.data)) {
+    return { ok: false, error: "unexpected users body" };
   }
+  return { ok: true, data: res.data };
 }
 
 export type StatusFilter = "all" | "active" | "inactive";
@@ -62,7 +58,7 @@ export function reduceUsersView(
       return action.result.ok
         ? {
             state: "ready",
-            users: action.result.users,
+            users: action.result.data,
             query: "",
             status: "all",
             page: 1,

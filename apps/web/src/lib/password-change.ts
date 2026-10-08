@@ -1,3 +1,4 @@
+import type { ApiResult } from "./api-result";
 import { submitAuth } from "./auth-submit";
 
 // Mirror of the API's one shared password rule (credentials.ensure_acceptable):
@@ -20,12 +21,10 @@ export function outcomeNote(otherDevicesSignedOut: boolean): string {
     : "password changed. this device stays signed in. other devices stay signed in.";
 }
 
-export type ChangePasswordResult =
-  | { ok: true; otherDevicesSignedOut: boolean }
-  | { ok: false; error: string };
+export type ChangePasswordResult = ApiResult<boolean>;
 
-// Double-entry guard, then the shared submit path. The response body's
-// outcome feeds the note; the error channel is submitAuth's verbatim.
+// Double-entry guard, then the shared submit path. The outcome rides the
+// shared data channel; the error channel is submitAuth's verbatim.
 export async function changePassword(formData: FormData): Promise<ChangePasswordResult> {
   const value = (name: string) => String(formData.get(name) ?? "");
   const mismatch = mismatchError(value("new_password"), value("confirm_new_password"));
@@ -33,5 +32,5 @@ export async function changePassword(formData: FormData): Promise<ChangePassword
   const result = await submitAuth("/api/account/password", formData);
   if (!result.ok) return result;
   const body = (result.data ?? {}) as { other_devices_signed_out?: unknown };
-  return { ok: true, otherDevicesSignedOut: body.other_devices_signed_out === true };
+  return { ok: true, data: body.other_devices_signed_out === true };
 }

@@ -43,7 +43,7 @@ describe("loadUsers", () => {
     const result = await loadUsers();
 
     expect(fetchMock).toHaveBeenCalledWith(USERS_PATH);
-    expect(result).toEqual({ ok: true, users: [ROW] });
+    expect(result).toEqual({ ok: true, data: [ROW] });
   });
 
   it("surfaces the upstream detail on failure", async () => {
@@ -75,7 +75,7 @@ describe("reduceUsersView", () => {
   it("lands a good load as ready with default controls", () => {
     const view = reduceUsersView(
       { state: "loading" },
-      { type: "loaded", result: { ok: true, users: ROWS } },
+      { type: "loaded", result: { ok: true, data: ROWS } },
     );
     expect(view).toEqual({
       state: "ready",
