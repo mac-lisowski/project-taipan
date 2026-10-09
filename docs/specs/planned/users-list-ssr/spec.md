@@ -61,8 +61,9 @@ flowchart LR
 ## API Contract
 
 - `GET /api/users` accepts `q`, `status`, `page`, `page_size`.
-- `q` is a case insensitive substring match on email. The value is
-  capped at 200 characters. Longer input answers 422.
+- `q` is a case insensitive substring match on email. Surrounding
+  whitespace is trimmed before matching. The value is capped at 200
+  characters. Longer input answers 422.
 - `status` is `all`, `active`, or `inactive`. Default `all`.
 - `page` is an integer of 1 or more. Default 1. Zero or negative
   answers 422.

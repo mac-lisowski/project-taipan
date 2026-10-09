@@ -4,6 +4,7 @@ import pytest
 from api import users
 from api.credentials import verify_password
 from api.models import SystemRole, Tenant, TenantDek, User, UserSystemRole
+from api.users import listing
 from crypto import tenant_scope
 
 
@@ -83,7 +84,7 @@ def test_list_is_instance_wide_across_personal_tenants(session_factory):
         users.register(db, "wide-a@x.com", "s3cret123")
         users.register(db, "wide-b@x.com", "s3cret123")
 
-        emails = {user.email for user in users.list(db)}
+        emails = {user.email for user in listing.list_page(db).items}
 
     # Each user sits in a personal tenant, yet the list shows both: the
     # instance owner administers the whole instance until invites land.
@@ -101,14 +102,14 @@ def test_tenant_id_for_user_without_tenant_raises_not_found(session_factory):
             users.tenant_id_for_user(db, orphan.id)
 
 
-def test_list_returns_users_by_id(session_factory):
+def test_listing_returns_users_by_id(session_factory):
     with session_factory() as db:
         users.register(db, "b@x.com", "s3cret123")
         users.register(db, "a@x.com", "s3cret123")
 
-        found = users.list(db)
+        page = listing.list_page(db)
 
-        assert [u.email for u in found] == ["b@x.com", "a@x.com"]
+        assert [u.email for u in page.items] == ["b@x.com", "a@x.com"]
 
 
 def test_set_active_flips_flag(session_factory):

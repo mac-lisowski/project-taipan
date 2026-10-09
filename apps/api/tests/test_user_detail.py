@@ -12,7 +12,6 @@ DETAIL_KEYS = {
     "system_roles",
     "tenants",
 }
-LIST_KEYS = {"id", "email", "is_active", "created_at", "updated_at"}
 
 
 def test_detail_joins_for_fresh_member(client):
@@ -61,16 +60,6 @@ def test_detail_shows_owner_role_and_profile(client):
 def test_detail_unknown_user_404(client):
     setup_admin(client, "admin@x.com")
     assert client.get("/api/users/424242").status_code == 404
-
-
-def test_list_shape_unchanged(client):
-    setup_admin(client, "admin@x.com")
-    create_user(client, "plain@x.com")
-
-    rows = client.get("/api/users").json()
-
-    assert len(rows) == 2
-    assert all(set(row.keys()) == LIST_KEYS for row in rows)
 
 
 def test_profile_reach_other_only_through_detail(client):

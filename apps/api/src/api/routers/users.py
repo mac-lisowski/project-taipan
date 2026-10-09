@@ -1,19 +1,29 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api import users
 from api.authz import Principal, require_system_owner
 from api.db import DbSession
 from api.models import User
-from api.schemas import UserActivationUpdate, UserCreate, UserDetailOut, UserOut
+from api.schemas import UserActivationUpdate, UserCreate, UserDetailOut, UserOut, UserPageOut
+from api.users import listing
 
 router = APIRouter(prefix="/users", tags=["users"], dependencies=[Depends(require_system_owner)])
 
 
-@router.get("", response_model=list[UserOut])
-def list_users(db: DbSession) -> list[User]:
-    return users.list(db)
+@router.get("", response_model=UserPageOut)
+def list_users(
+    db: DbSession,
+    q: Annotated[str, Query(max_length=200)] = "",
+    status: Annotated[Literal["all", "active", "inactive"], Query()] = "all",
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query()] = listing.DEFAULT_PAGE_SIZE,
+) -> listing.UsersPage:
+    # Query params arrive as strings, so int literals cannot validate them.
+    if page_size not in listing.PAGE_SIZES:
+        raise HTTPException(status_code=422, detail="page_size must be 10, 25, or 50")
+    return listing.list_page(db, q=q, status=status, page=page, page_size=page_size)
 
 
 @router.post("", response_model=UserOut, status_code=201)

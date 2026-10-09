@@ -8,13 +8,21 @@ import {
   reduceSwitchView,
   setRegistrationSwitch,
   switchValue,
+  type RegistrationSwitchView,
+  type SwitchRead,
 } from "@/lib/system-settings";
 
-// Flip saves at once; the endpoint result is the only source of switch state.
-export function RegistrationSwitch(): ReactNode {
-  const [view, dispatch] = useReducer(reduceSwitchView, { state: "loading" });
+// Flip saves at once; the server read seeds the first paint, a failed boot falls back to the fetch.
+export function RegistrationSwitch({ initial }: { initial?: SwitchRead }): ReactNode {
+  const boot = initial?.ok === true ? initial : undefined;
+  const initialView: RegistrationSwitchView =
+    boot === undefined
+      ? { state: "loading" }
+      : reduceSwitchView({ state: "loading" }, { type: "loaded", result: boot });
+  const [view, dispatch] = useReducer(reduceSwitchView, initialView);
 
   useEffect(() => {
+    if (boot !== undefined) return;
     let alive = true;
     void loadRegistrationSwitch().then((result) => {
       if (alive) dispatch({ type: "loaded", result });
@@ -22,7 +30,7 @@ export function RegistrationSwitch(): ReactNode {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [boot]);
 
   const enabled = switchValue(view);
   const busy = view.state === "loading" || view.state === "saving";

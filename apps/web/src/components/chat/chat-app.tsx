@@ -10,6 +10,7 @@ import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatModelSwitcher } from "@/components/chat/chat-model-switcher";
 import { QueueDispatch } from "@/components/chat/queue-dispatch";
 import { LayoutDashboard, User, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   Brand,
@@ -18,13 +19,15 @@ import {
   type ChatSidebarLink,
 } from "@/components/chat/chat-sidebar";
 import { AccountView } from "@/components/account/account-view";
-import { useShellAccount } from "@/components/shell/shell-context";
+import { useShellAccount, useShellThreads } from "@/components/shell/shell-context";
 import { OverviewView } from "@/components/dashboard/overview-view";
 import { SettingsView } from "@/components/settings/settings-view";
 import { UserDetailPanel } from "@/components/users/user-detail-panel";
 import { UsersView } from "@/components/users/users-view";
 import { chatLLM, chatStorage } from "@/lib/chat-config";
 import { chatNavLinks } from "@/lib/nav";
+import { usersPath, type UsersBoot } from "@/lib/users-list";
+import type { SwitchRead } from "@/lib/system-settings";
 import { useThemeMode } from "@/lib/use-theme";
 
 // Taipan green drives the OpenUI accents; dark mode takes a lighter shade.
@@ -112,22 +115,36 @@ function RouteView({
   );
 }
 
-// Keep the browser URL in step with the SDK's internal view state, so
-// /dashboard, /users and /system/settings deep links land on the same surface.
+// The URL stays in step with the SDK view; a same-path sync keeps the query.
 function syncUrl(path: string | undefined): void {
-  window.history.replaceState(null, "", path ?? "/chat");
+  const target = path ?? "/chat";
+  const keepQuery = window.location.pathname === target && window.location.search !== "";
+  window.history.replaceState(null, "", keepQuery ? target + window.location.search : target);
 }
 
 // The whole authenticated app: the OpenUI chat owns the viewport, and app
 // views render as SDK routes. Slot elements stay direct children of
 // <AgentInterface> because slots are extracted by direct child type.
-export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
+export function ChatApp({
+  initialPath,
+  usersBoot,
+  settingsBoot,
+}: {
+  initialPath?: string;
+  usersBoot?: UsersBoot;
+  settingsBoot?: SwitchRead;
+}): ReactNode {
   const mode = useThemeMode();
   const account = useShellAccount();
+  const router = useRouter();
   const [path, setPath] = useState<string | undefined>(initialPath);
-  const [detailId, setDetailId] = useState<number | null>(null);
+  // The users detail is the `user` URL param, so it deep links and shares.
+  const detailId = usersBoot?.filters.user ?? null;
   const llm = useMemo(() => chatLLM(), []);
-  const storage = useMemo(() => chatStorage(), []);
+  // The shell owns the seeded storage; pages without it get an unseeded one.
+  const shellStorage = useShellThreads();
+  const fallbackStorage = useMemo(() => chatStorage(null), []);
+  const storage = shellStorage ?? fallbackStorage;
   const links: ChatSidebarLink[] = chatNavLinks(account.systemRoles).map((link) => ({
     key: link.href,
     label: link.label,
@@ -138,8 +155,20 @@ export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
   function navigate(next: string | undefined): void {
     setPath(next);
     syncUrl(next);
-    // Leaving the users list drops the selected detail with it.
-    if (next !== "/users") setDetailId(null);
+  }
+
+  // Every path into /users lands here: the list is server-rendered.
+  function openSurfaceLink(next: string | undefined): void {
+    if (next === "/users") {
+      // The SDK view moves at once; the push brings a fresh server render.
+      setPath(next);
+      // Re-entering the list keeps its params: push the current URL when
+      // it already is /users, the bare path otherwise.
+      const here = window.location;
+      router.push(here.pathname === "/users" ? here.pathname + here.search : next);
+      return;
+    }
+    navigate(next);
   }
 
   return (
@@ -151,7 +180,7 @@ export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
       starters={starters}
       theme={{ mode, lightTheme: brandLight, darkTheme: brandDark }}
       path={path}
-      onNavigate={navigate}
+      onNavigate={openSurfaceLink}
     >
       <AgentInterface.MobileHeader logo={<TMark />} agentName={<Brand />} />
       <AgentInterface.ThreadHeader>
@@ -172,7 +201,7 @@ export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
           email={account.email}
           tenant={account.tenant}
           systemRoles={account.systemRoles}
-          openPath={navigate}
+          openPath={openSurfaceLink}
         />
       </AgentInterface.Sidebar>
       <AgentInterface.Route path="/dashboard">
@@ -182,19 +211,23 @@ export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
       </AgentInterface.Route>
       <AgentInterface.Route path="/users">
         <RouteView onExit={() => navigate(undefined)}>
-          {detailId === null ? (
+          {usersBoot === undefined ? null : detailId === null ? (
             <UsersView
+              boot={usersBoot}
               onSelectUser={(id) => {
-                setDetailId(id);
-                // The /users URL stays: the detail is chat-internal state, not a route.
+                // Row selection keeps filters and page in the URL.
+                router.replace(usersPath({ ...usersBoot.filters, user: id }), {
+                  scroll: false,
+                });
               }}
             />
           ) : (
             <UserDetailRoute
               id={detailId}
               onBack={() => {
-                setDetailId(null);
-                syncUrl("/users");
+                router.replace(usersPath({ ...usersBoot.filters, user: null }), {
+                  scroll: false,
+                });
               }}
             />
           )}
@@ -202,7 +235,7 @@ export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
       </AgentInterface.Route>
       <AgentInterface.Route path="/system/settings">
         <RouteView onExit={() => navigate(undefined)}>
-          <SettingsView />
+          <SettingsView initial={settingsBoot} />
         </RouteView>
       </AgentInterface.Route>
       <AgentInterface.Route path="/account">

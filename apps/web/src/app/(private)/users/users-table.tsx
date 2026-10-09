@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
-import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import {
   Badge,
   Button,
@@ -19,56 +19,91 @@ import {
   TableRow,
 } from "@/ui";
 import {
-  applyUsersQuery,
   countLine,
   formatDate,
-  loadUsers,
   pageCount,
   PAGE_SIZES,
-  pageSlice,
-  reduceUsersView,
+  usersPath,
   USERS_COPY,
   type PageSize,
   type StatusFilter,
+  type UsersBoot,
+  type UsersFilters,
 } from "@/lib/users-list";
 
-// The endpoint result is the only source of list state.
-export function UsersTable({
-  onSelectUser,
-}: {
-  /** When set, the view action routes inside the chat surface. */
-  onSelectUser?: (id: number) => void;
-} = {}): ReactNode {
-  const [view, dispatch] = useReducer(reduceUsersView, { state: "loading" });
-  // Retry bumps the attempt so the load effect runs again.
-  const [attempt, setAttempt] = useState(0);
+const SEARCH_DEBOUNCE_MS = 300;
+
+// The URL is the only source of list state. Props carry the server
+// render for the current URL; controls write params and let the next
+// server render replace the rows, so old data stays visible meanwhile.
+export function UsersTable({ boot, onSelectUser }: { boot: UsersBoot; onSelectUser?: (id: number) => void }): ReactNode {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const filters = boot.filters;
+  // The search field keeps local state and debounces its navigation.
+  const [query, setQuery] = useState(filters.q);
+  const flushRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Controls read the latest filters and text, not the render they were born in.
+  const filtersRef = useRef(filters);
+  const queryRef = useRef(query);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
+  // A pasted link reseeds the field, but only while nothing is in flight.
+  useEffect(() => {
+    if (flushRef.current === null && filters.q !== queryRef.current) {
+      setQuery(filters.q);
+      queryRef.current = filters.q;
+    }
+  }, [filters.q]);
 
   useEffect(() => {
-    let alive = true;
-    void loadUsers().then((result) => {
-      if (alive) dispatch({ type: "loaded", result });
-    });
     return () => {
-      alive = false;
+      if (flushRef.current !== null) clearTimeout(flushRef.current);
     };
-  }, [attempt]);
+  }, []);
 
-  if (view.state === "loading") {
-    return <p className="font-mono text-xs">{USERS_COPY.loading}</p>;
+  // Controls cancel a pending flush; the merge keeps the box and URL in agreement.
+  function go(patch: Partial<UsersFilters>): void {
+    if (flushRef.current !== null) {
+      clearTimeout(flushRef.current);
+      flushRef.current = null;
+    }
+    const next: UsersFilters = { ...filtersRef.current, q: queryRef.current.trim(), ...patch };
+    startTransition(() => router.replace(usersPath(next), { scroll: false }));
   }
-  if (view.state === "error") {
+
+  function onSearch(value: string): void {
+    setQuery(value);
+    queryRef.current = value;
+    if (flushRef.current !== null) clearTimeout(flushRef.current);
+    flushRef.current = setTimeout(() => {
+      flushRef.current = null;
+      // The merge in go supplies the trimmed text; passing q here would
+      // override it with a stale render's copy.
+      go({ page: 1 });
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  // Row actions navigate away; a queued flush must not fire over them.
+  function cancelFlush(): void {
+    if (flushRef.current !== null) {
+      clearTimeout(flushRef.current);
+      flushRef.current = null;
+    }
+  }
+
+  if (!boot.result.ok) {
     return (
       <div className="flex items-center gap-3">
         <p role="alert" className="font-mono text-xs text-red-400">
-          err: {view.message}
+          {USERS_COPY.error}: {boot.result.error}
         </p>
         <Button
           variant="outline"
           size="xs"
-          onClick={() => {
-            dispatch({ type: "retry" });
-            setAttempt((a) => a + 1);
-          }}
+          onClick={() => router.refresh()}
           className="font-mono text-[11px] uppercase tracking-[0.25em]"
         >
           {USERS_COPY.retry}
@@ -77,27 +112,22 @@ export function UsersTable({
     );
   }
 
-  const filtered = applyUsersQuery(view.users, view.query, view.status);
-  const pages = pageCount(filtered.length, view.pageSize);
-  const rows = pageSlice(filtered, view.page, view.pageSize);
+  const payload = boot.result.data;
+  const pages = pageCount(payload.total, payload.page_size);
 
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <Input
-          value={view.query}
-          onChange={(e) =>
-            dispatch({ type: "query_changed", query: e.target.value })
-          }
+          value={query}
+          onChange={(e) => onSearch(e.target.value)}
           placeholder="search email"
           aria-label="search users by email"
           className="h-8 w-56 font-mono text-xs"
         />
         <Select
-          value={view.status}
-          onValueChange={(value) =>
-            dispatch({ type: "status_changed", status: value as StatusFilter })
-          }
+          value={filters.status}
+          onValueChange={(value) => go({ status: value as StatusFilter, page: 1 })}
         >
           <SelectTrigger
             aria-label="filter users by status"
@@ -112,13 +142,8 @@ export function UsersTable({
           </SelectContent>
         </Select>
         <Select
-          value={String(view.pageSize)}
-          onValueChange={(value) =>
-            dispatch({
-              type: "page_size_changed",
-              pageSize: Number(value) as PageSize,
-            })
-          }
+          value={String(filters.pageSize)}
+          onValueChange={(value) => go({ pageSize: Number(value) as PageSize, page: 1 })}
         >
           <SelectTrigger
             aria-label="users per page"
@@ -135,10 +160,10 @@ export function UsersTable({
           </SelectContent>
         </Select>
         <p className="ml-auto font-mono text-[10px] tracking-[0.15em] text-muted-foreground">
-          {countLine(filtered.length, view.users.length)}
+          {pending ? "…" : countLine(payload.total, payload.total_all)}
         </p>
       </div>
-      {filtered.length === 0 ? (
+      {payload.items.length === 0 ? (
         <p className="font-mono text-xs text-muted-foreground">{USERS_COPY.empty}</p>
       ) : (
         <>
@@ -154,7 +179,7 @@ export function UsersTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((user) => (
+              {payload.items.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-mono text-xs">
                     {user.email}
@@ -170,7 +195,10 @@ export function UsersTable({
                   <TableCell>
                     <button
                       type="button"
-                      onClick={() => onSelectUser?.(user.id)}
+                      onClick={() => {
+                        cancelFlush();
+                        onSelectUser?.(user.id);
+                      }}
                       aria-label={`open details for ${user.email}`}
                       className="font-mono text-xs text-muted-foreground underline-offset-4 hover:underline"
                     >
@@ -185,8 +213,8 @@ export function UsersTable({
             <Button
               variant="outline"
               size="xs"
-              disabled={view.page === 1}
-              onClick={() => dispatch({ type: "page_changed", page: 1 })}
+              disabled={payload.page === 1}
+              onClick={() => go({ page: 1 })}
               aria-label="first page"
               className="font-mono text-[11px]"
             >
@@ -195,25 +223,21 @@ export function UsersTable({
             <Button
               variant="outline"
               size="xs"
-              disabled={view.page === 1}
-              onClick={() =>
-                dispatch({ type: "page_changed", page: view.page - 1 })
-              }
+              disabled={payload.page === 1}
+              onClick={() => go({ page: payload.page - 1 })}
               aria-label="previous page"
               className="font-mono text-[11px]"
             >
               prev
             </Button>
             <p className="font-mono text-[10px] tracking-[0.15em] text-muted-foreground">
-              page {view.page} of {pages}
+              page {payload.page} of {pages}
             </p>
             <Button
               variant="outline"
               size="xs"
-              disabled={view.page === pages}
-              onClick={() =>
-                dispatch({ type: "page_changed", page: view.page + 1 })
-              }
+              disabled={payload.page === pages}
+              onClick={() => go({ page: payload.page + 1 })}
               aria-label="next page"
               className="font-mono text-[11px]"
             >
@@ -222,8 +246,8 @@ export function UsersTable({
             <Button
               variant="outline"
               size="xs"
-              disabled={view.page === pages}
-              onClick={() => dispatch({ type: "page_changed", page: pages })}
+              disabled={payload.page === pages}
+              onClick={() => go({ page: pages })}
               aria-label="last page"
               className="font-mono text-[11px]"
             >

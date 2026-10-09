@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
 import { PrivateShell } from "@/components/shell/private-shell";
-import { requireAccount } from "@/lib/session";
+import { getSessionToken, requireAccount } from "@/lib/session";
+import { resolveThreadsSeed } from "@/app/api/upstream";
 
-// Guard plus shell: auth is checked server-side, then the toggleable
-// sidebar wraps every private page.
+// Auth is checked server-side; the first thread page rides along for the sidebar.
 export default async function PrivateLayout({
   children,
 }: {
   children: ReactNode;
 }): Promise<ReactNode> {
-  const me = await requireAccount();
+  const token = await getSessionToken();
+  const [me, threads] = await Promise.all([requireAccount(), resolveThreadsSeed(token)]);
   return (
     <PrivateShell
       id={me.id}
@@ -17,6 +18,7 @@ export default async function PrivateLayout({
       tenant={me.tenant_id}
       roles={me.roles}
       systemRoles={me.system_roles}
+      threads={threads}
     >
       {children}
     </PrivateShell>
