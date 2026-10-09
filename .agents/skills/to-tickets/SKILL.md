@@ -116,8 +116,7 @@ A fresh-context implementer must be able to start from pointers alone.
 
 Ordered steps naming the modules to create or modify and the wiring
 they need (dependencies, env vars, registrations). Sketch interfaces
-only where the spec pins them; otherwise name the shape. Pin
-control-flow-heavy logic as pseudocode per `write-pseudocode`.
+only where the spec pins them; otherwise name the shape.
 
 ## Tests (TDD)
 
@@ -164,4 +163,4 @@ against the diff.
 
 </ticket-template>
 
-Avoid specific file paths or code snippets in tickets: they go stale fast. Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo, just the important bits. Pseudocode per the `write-pseudocode` skill is likewise allowed wherever control flow is the decision.
+Avoid specific file paths or code snippets in tickets: they go stale fast. Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo, just the important bits.

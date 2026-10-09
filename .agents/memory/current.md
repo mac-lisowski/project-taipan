@@ -1,12 +1,5 @@
 # Current state
 
-- write-pseudocode skill added on feat/split-screen:
-  .agents/skills/write-pseudocode (uppercase control-word schema,
-  4-space indent, one action per line, language-neutral, adversarial
-  self-check). Wired into to-spec, to-tickets, implement-spec, plan,
-  code-review, and AGENTS.md rule 15; symlinked into
-  .devin/.claude/.grok/.zcode skills dirs. skills-cli learning
-  updated with the new local patches.
 - users-list-ssr MERGED to dev (PR #50 squash 9b748af); spec in
   docs/specs/implemented/users-list-ssr/ with Status flipped. Spec
   review commit e01d327; q-trim contract line added during review. API:
