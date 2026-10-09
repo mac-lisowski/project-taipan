@@ -1,5 +1,7 @@
 # Chat surface
 
+Status: implemented (PR #46).
+
 ## Problem Statement
 
 The authenticated app is a set of forms and tables. Users have no way to

@@ -126,7 +126,7 @@ data conversion rides the existing deploy path.
 
 ## Further Notes
 
-- Depends on Spec A (docs/specs/planned/platform-key-provisioning/):
+- Depends on Spec A (docs/specs/implemented/platform-key-provisioning/):
   the platform key must exist and be configured before the first
   encrypted write, or boot fails by design (the lifespan tripwire
   checks ORM metadata, so new-model code without env fails even on

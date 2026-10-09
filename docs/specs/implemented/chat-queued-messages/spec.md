@@ -1,5 +1,7 @@
 # Chat queued messages
 
+Status: implemented (PR #47).
+
 ## Problem Statement
 
 While the assistant is generating, the composer is locked. The user must

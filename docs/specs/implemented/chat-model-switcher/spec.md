@@ -1,5 +1,7 @@
 # Chat model switcher
 
+Status: implemented (PR #48).
+
 ## Problem Statement
 
 Every chat call is pinned to one model from `API_CHAT_MODEL`. Users cannot

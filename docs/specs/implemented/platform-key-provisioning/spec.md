@@ -1,6 +1,6 @@
 # Spec: Platform KMS key provisioning
 
-Status: planned.
+Status: implemented (PR #46).
 
 Seam: the Provisioning port in packages/kms gains find operations.
 One script in scripts/ owns idempotent provisioning. App code stays
