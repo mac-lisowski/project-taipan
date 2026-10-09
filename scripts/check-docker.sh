@@ -5,6 +5,8 @@
 # .dockerignore can still exclude an existing file, so the CI docker
 # build remains the authority. RUN lines using `pnpm -C/--dir` are
 # flagged: corepack resolves packageManager from cwd, not -C's dir.
+# Completeness: an app Dockerfile running uv sync must COPY every
+# [tool.uv.sources] workspace member of that app as a directory.
 # Enforced by pre-commit and the CI lint job.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -57,13 +59,60 @@ for df in apps/*/Dockerfile* docker/*/Dockerfile* .devcontainer/Dockerfile*; do
   done < "$df"
 done
 
-# Completeness: a Dockerfile that installs workspace deps must copy every
-# local package. New packages build locally (editable checkout) and break
-# only in CI without this.
-for df in apps/*/Dockerfile* docker/*/Dockerfile* .devcontainer/Dockerfile*; do
+# Completeness: an app Dockerfile running uv sync must copy every
+# [tool.uv.sources] member of that app as a DIRECTORY. A manifest-only
+# copy passes uv's resolution but the install fails in CI with
+# "Distribution not found at: file:///app/packages/<name>". Non-app
+# Dockerfiles sync the root workspace, so they need every package;
+# whole-tree copies (COPY packages) do not count as per-dep copies.
+normalize() { # $1=Dockerfile: join continuations, drop comment lines
+  sed -e ':a' -e '/\\$/N; s/\\\n/ /; ta' "$1" | grep -vE '^[[:space:]]*#'
+}
+
+# Context-source tokens of COPY/ADD lines: instruction and flags stripped,
+# --from stage copies excluded, dest token dropped. Consumes stdin.
+copy_sources() {
+  awk '
+    toupper($0) ~ /^[[:space:]]*(COPY|ADD)[[:space:]]/ {
+      if ($0 ~ /--[[:space:]]*from=/) next
+      line = $0
+      sub(/^[[:space:]]*[A-Za-z]+[[:space:]]+/, "", line)
+      while (line ~ /^[[:space:]]*--/) { sub(/^[[:space:]]*--[^[:space:]]+[[:space:]]*/, "", line) }
+      n = split(line, tok, /[[:space:]]+/)
+      if (n < 2) next
+      if (tok[1] ~ /^\[/) { for (i = 1; i < n; i++) { gsub(/[][]|"|,/, "", tok[i]); if (tok[i] != "") print tok[i] } }
+      else { for (i = 1; i < n; i++) print tok[i] }
+    }
+  '
+}
+
+workspace_deps() { # $1=pyproject.toml -> [tool.uv.sources] members, one per line
+  awk '
+    /^[[:space:]]*\[/ { in_src = ($0 ~ /^\[[[:space:]]*tool\.uv\.sources[[:space:]]*\]/); next }
+    in_src && /(^|[[:space:]])workspace[[:space:]]*=[[:space:]]*true/ {
+      name = $0; sub(/[[:space:]]*=.*/, "", name); gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
+      if (name != "") print name
+    }
+  ' "$1"
+}
+
+for df in apps/*/Dockerfile*; do
   [ -f "$df" ] || continue
-  # Normalize like the main loop: join continuations, drop comments.
-  norm=$(sed -e ':a' -e '/\\$/N; s/\\\n/ /; ta' "$df" | grep -vE '^[[:space:]]*#')
+  app=${df#apps/}; app=${app%%/*}
+  [ -f "apps/$app/pyproject.toml" ] || continue
+  norm=$(normalize "$df")
+  printf '%s' "$norm" | grep -qiE '^[[:space:]]*run[[:space:]].*uv sync' || continue
+  srcs=$(printf '%s' "$norm" | copy_sources)
+  for dep in $(workspace_deps "apps/$app/pyproject.toml"); do
+    printf '%s' "$srcs" \
+      | grep -qiE "(^|[[:space:]])packages/$dep([[:space:]]|$)" \
+      || report "$df missing COPY of workspace package directory 'packages/$dep' (apps/$app dependency)"
+  done
+done
+
+for df in docker/*/Dockerfile* .devcontainer/Dockerfile*; do
+  [ -f "$df" ] || continue
+  norm=$(normalize "$df")
   printf '%s' "$norm" | grep -qiE '^[[:space:]]*run[[:space:]].*uv sync' || continue
   for manifest in packages/*/pyproject.toml; do
     pkg=${manifest%/pyproject.toml}

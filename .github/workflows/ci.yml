@@ -120,6 +120,7 @@ jobs:
         run: |
           bash scripts/tests/test-commit-msg.sh
           bash scripts/tests/test-branch-name.sh
+          bash scripts/tests/test-check-docker.sh
 
   test-web:
     needs: changes
