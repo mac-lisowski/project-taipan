@@ -21,7 +21,12 @@ def test_list_users(admin_client):
     create_user(admin_client, "b@x.com", "s3cret123")
     resp = admin_client.get("/api/users")
     assert resp.status_code == 200
-    assert [u["email"] for u in resp.json()] == ["admin@x.com", "a@x.com", "b@x.com"]
+    body = resp.json()
+    assert [u["email"] for u in body["items"]] == ["admin@x.com", "a@x.com", "b@x.com"]
+    assert body["total"] == 3
+    assert body["total_all"] == 3
+    assert body["page"] == 1
+    assert body["page_size"] == 10
 
 
 def test_duplicate_email_returns_409(admin_client):

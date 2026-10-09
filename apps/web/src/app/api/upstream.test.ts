@@ -7,7 +7,6 @@ import {
   type Me,
 } from "./upstream";
 
-// Exact /me payload for the setup admin: tenant roles plus system_owner.
 const ME: Me = {
   id: 1,
   email: "op@x.com",

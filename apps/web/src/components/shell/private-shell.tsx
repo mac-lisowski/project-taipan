@@ -8,8 +8,10 @@ import { sidebarOpenStore, writeSidebarOpen } from "@/components/shell/sidebar-s
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import {
   ShellAccountProvider,
+  ShellThreadsProvider,
   type ShellAccount,
 } from "@/components/shell/shell-context";
+import type { ThreadSeed } from "@/lib/chat-config";
 import { CHAT_SURFACE_ROUTES, privateNav, type NavItem } from "@/lib/nav";
 
 function GearIcon(): ReactNode {
@@ -72,6 +74,7 @@ export function PrivateShell({
   tenant,
   roles,
   systemRoles,
+  threads,
   children,
 }: {
   id: number;
@@ -79,6 +82,7 @@ export function PrivateShell({
   tenant: string;
   roles: string[];
   systemRoles: string[];
+  threads: ThreadSeed | null;
   children: ReactNode;
 }): ReactNode {
   const pathname = usePathname() ?? "";
@@ -92,11 +96,13 @@ export function PrivateShell({
 
   // The chat app (chat + its route views) is a full-viewport OpenUI surface
   // with its own sidebar; the shell stays out of the way and only hands
-  // over the session identity.
+  // over the session identity plus the server-fetched thread seed.
   if (CHAT_SURFACE_ROUTES.includes(pathname)) {
     return (
       <ShellAccountProvider account={account}>
-        <div className="h-dvh w-full overflow-hidden bg-background">{children}</div>
+        <ShellThreadsProvider threads={threads}>
+          <div className="h-dvh w-full overflow-hidden bg-background">{children}</div>
+        </ShellThreadsProvider>
       </ShellAccountProvider>
     );
   }

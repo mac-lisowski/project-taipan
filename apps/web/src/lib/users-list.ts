@@ -1,8 +1,4 @@
-// The endpoint result is the only source of users list state.
-
-import { getJson, type ApiResult } from "./api-result";
-
-export const USERS_PATH = "/api/users";
+// Pure layer for the server-rendered users list: URL params, payload guard, page math.
 
 export type UserRow = {
   id: number;
@@ -11,17 +7,26 @@ export type UserRow = {
   created_at: string;
 };
 
-export type UsersLoadResult = ApiResult<UserRow[]>;
+export type UsersPagePayload = {
+  items: UserRow[];
+  total: number;
+  total_all: number;
+  page: number;
+  page_size: number;
+};
 
-export async function loadUsers(): Promise<UsersLoadResult> {
-  const res = await getJson<unknown>(USERS_PATH);
-  // The array guard stays here so the reducer only ever sees typed rows.
-  if (!res.ok) return res;
-  if (!Array.isArray(res.data)) {
-    return { ok: false, error: "unexpected users body" };
-  }
-  return { ok: true, data: res.data };
-}
+export type UsersRead = { ok: true; data: UsersPagePayload } | { ok: false; error: string };
+
+// Filters plus the detail id: the URL params are the only source.
+export type UsersFilters = {
+  q: string;
+  status: StatusFilter;
+  page: number;
+  pageSize: PageSize;
+  user: number | null;
+};
+
+export type UsersBoot = { filters: UsersFilters; result: UsersRead };
 
 export type StatusFilter = "all" | "active" | "inactive";
 
@@ -29,128 +34,111 @@ export type PageSize = 10 | 25 | 50;
 
 export const PAGE_SIZES: PageSize[] = [10, 25, 50];
 
-export type UsersAction =
-  | { type: "loaded"; result: UsersLoadResult }
-  | { type: "query_changed"; query: string }
-  | { type: "status_changed"; status: StatusFilter }
-  | { type: "page_changed"; page: number }
-  | { type: "page_size_changed"; pageSize: PageSize }
-  | { type: "retry" };
+export const DEFAULT_PAGE_SIZE: PageSize = 10;
 
-export type UsersView =
-  | { state: "loading" }
-  | {
-      state: "ready";
-      users: UserRow[];
-      query: string;
-      status: StatusFilter;
-      page: number;
-      pageSize: PageSize;
-    }
-  | { state: "error"; message: string };
+const Q_MAX = 200;
 
-export function reduceUsersView(
-  view: UsersView,
-  action: UsersAction,
-): UsersView {
-  switch (action.type) {
-    case "loaded":
-      return action.result.ok
-        ? {
-            state: "ready",
-            users: action.result.data,
-            query: "",
-            status: "all",
-            page: 1,
-            pageSize: 10,
-          }
-        : { state: "error", message: action.result.error };
-    case "query_changed":
-      // Any control change re-opens the list at page one.
-      return view.state === "ready"
-        ? { ...view, query: action.query, page: 1 }
-        : view;
-    case "status_changed":
-      return view.state === "ready"
-        ? { ...view, status: action.status, page: 1 }
-        : view;
-    case "page_changed":
-      return view.state === "ready"
-        ? {
-            ...view,
-            // The pager clamps to the last page of the filtered list.
-            page: clampPage(
-              action.page,
-              applyUsersQuery(view.users, view.query, view.status).length,
-              view.pageSize,
-            ),
-          }
-        : view;
-    case "page_size_changed":
-      return view.state === "ready"
-        ? { ...view, pageSize: action.pageSize, page: 1 }
-        : view;
-    case "retry":
-      return { state: "loading" };
+const STATUSES: readonly string[] = ["all", "active", "inactive"];
+
+function one(params: Record<string, string | string[] | undefined>, key: string): string {
+  const value = params[key];
+  return typeof value === "string" ? value : "";
+}
+
+// Shared links carry untrusted values, so every field falls back to
+// its default instead of surfacing an API 422.
+export function parseUsersFilters(
+  params: Record<string, string | string[] | undefined>,
+): UsersFilters {
+  const page = Number.parseInt(one(params, "page"), 10);
+  const size = Number.parseInt(one(params, "size"), 10);
+  const user = Number.parseInt(one(params, "user"), 10);
+  const status = one(params, "status");
+  return {
+    q: one(params, "q").slice(0, Q_MAX),
+    status: STATUSES.includes(status) ? (status as StatusFilter) : "all",
+    page: Number.isInteger(page) && page >= 1 ? page : 1,
+    pageSize: isPageSize(size) ? size : DEFAULT_PAGE_SIZE,
+    user: Number.isInteger(user) && user >= 1 ? user : null,
+  };
+}
+
+function isPageSize(size: number): size is PageSize {
+  return (PAGE_SIZES as readonly number[]).includes(size);
+}
+
+// Defaults stay out of the URL, so a clean /users is page one.
+export function filtersToParams(filters: UsersFilters): URLSearchParams {
+  const params = new URLSearchParams();
+  if (filters.q.trim() !== "") params.set("q", filters.q);
+  if (filters.status !== "all") params.set("status", filters.status);
+  if (filters.page !== 1) params.set("page", String(filters.page));
+  if (filters.pageSize !== DEFAULT_PAGE_SIZE) {
+    params.set("size", String(filters.pageSize));
   }
+  if (filters.user !== null) params.set("user", String(filters.user));
+  return params;
 }
 
-export function pageCount(itemCount: number, pageSize: number): number {
-  return Math.max(1, Math.ceil(itemCount / pageSize));
+export function usersPath(filters: UsersFilters): string {
+  const query = filtersToParams(filters).toString();
+  return query === "" ? "/users" : `/users?${query}`;
 }
 
-export function clampPage(
-  page: number,
-  itemCount: number,
-  pageSize: number,
-): number {
-  return Math.min(Math.max(1, page), pageCount(itemCount, pageSize));
+// The server guards the body shape before render; a wrong shape is an
+// error state, never a crashed table.
+export function guardUsersPage(body: unknown): UsersPagePayload | null {
+  if (typeof body !== "object" || body === null) return null;
+  const page = body as Record<string, unknown>;
+  const items = page.items;
+  if (!Array.isArray(items)) return null;
+  const rows: UserRow[] = [];
+  for (const item of items) {
+    if (typeof item !== "object" || item === null) return null;
+    const row = item as Record<string, unknown>;
+    if (
+      typeof row.id !== "number" ||
+      typeof row.email !== "string" ||
+      typeof row.is_active !== "boolean" ||
+      typeof row.created_at !== "string"
+    ) {
+      return null;
+    }
+    rows.push({ id: row.id, email: row.email, is_active: row.is_active, created_at: row.created_at });
+  }
+  if (
+    typeof page.total !== "number" ||
+    typeof page.total_all !== "number" ||
+    typeof page.page !== "number" ||
+    typeof page.page_size !== "number" ||
+    page.page < 1
+  ) {
+    return null;
+  }
+  return {
+    items: rows,
+    total: page.total,
+    total_all: page.total_all,
+    page: page.page,
+    page_size: page.page_size,
+  };
 }
 
-export function pageSlice(
-  users: UserRow[],
-  page: number,
-  pageSize: number,
-): UserRow[] {
-  const start = (clampPage(page, users.length, pageSize) - 1) * pageSize;
-  return users.slice(start, start + pageSize);
+export function pageCount(total: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(total / pageSize));
 }
 
-export function searchUsers(users: UserRow[], query: string): UserRow[] {
-  const needle = query.trim().toLowerCase();
-  if (!needle) return users;
-  return users.filter((user) => user.email.toLowerCase().includes(needle));
-}
-
-export function filterUsersByStatus(
-  users: UserRow[],
-  status: StatusFilter,
-): UserRow[] {
-  if (status === "all") return users;
-  return users.filter((user) =>
-    status === "active" ? user.is_active : !user.is_active,
-  );
-}
-
-export function applyUsersQuery(
-  users: UserRow[],
-  query: string,
-  status: StatusFilter,
-): UserRow[] {
-  return filterUsersByStatus(searchUsers(users, query), status);
-}
-
-export function formatDate(iso: string): string {
-  return iso.slice(0, 10);
-}
-
-// Screen copy pinned by the spec; tests hold the exact strings.
+// Tests hold the exact strings; change copy and tests together.
 export const USERS_COPY = {
-  loading: "loading…",
+  error: "err",
   empty: "no users match",
   retry: "retry",
 } as const;
 
-export function countLine(filtered: number, total: number): string {
-  return `${filtered} of ${total} users`;
+export function countLine(total: number, totalAll: number): string {
+  return `${total} of ${totalAll} users`;
+}
+
+export function formatDate(iso: string): string {
+  return iso.slice(0, 10);
 }

@@ -26,6 +26,7 @@ from api.schemas.user import (
     UserCreate,
     UserDetailOut,
     UserOut,
+    UserPageOut,
 )
 
 __all__ = [
@@ -55,4 +56,5 @@ __all__ = [
     "UserCreate",
     "UserDetailOut",
     "UserOut",
+    "UserPageOut",
 ]

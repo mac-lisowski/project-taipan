@@ -254,7 +254,9 @@ def test_activate_for_deleted_user_answers_invalid_link(
     fake = _pin_fake(client)
     assert _register(client, "gone@x.com").status_code == 204
     token = _sent_token(fake)
-    gone_id = next(u["id"] for u in client.get("/api/users").json() if u["email"] == "gone@x.com")
+    gone_id = next(
+        u["id"] for u in client.get("/api/users").json()["items"] if u["email"] == "gone@x.com"
+    )
     assert client.delete(f"/api/users/{gone_id}").status_code == 204
 
     bogus = _activate(client, "not-a-token")

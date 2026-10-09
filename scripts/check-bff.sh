@@ -14,7 +14,9 @@ untracked=$(git ls-files --others --exclude-standard -- apps/web || true)
 scan() {
   git grep -nE "$1" -- apps/web 2>/dev/null || true
   if [ -n "$untracked" ]; then
-    echo "$untracked" | tr '\n' '\0' | xargs -0 grep -nE "$1" 2>/dev/null || true
+    # -H keeps the filename prefix even for a single file, so the path
+    # exemptions below match what git grep prints for tracked files.
+    echo "$untracked" | tr '\n' '\0' | xargs -0 grep -nHE "$1" 2>/dev/null || true
   fi
 }
 

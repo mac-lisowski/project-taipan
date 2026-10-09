@@ -22,6 +22,16 @@ class UserOut(BaseModel):
     updated_at: datetime
 
 
+class UserPageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    items: list[UserOut]
+    total: int
+    total_all: int
+    page: int
+    page_size: int
+
+
 class UserProfileOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,4 +1,11 @@
 import { apiInternalUrl } from "./env";
+import type { ThreadSeed } from "@/lib/chat-config";
+import {
+  filtersToParams,
+  guardUsersPage,
+  type UsersFilters,
+  type UsersRead,
+} from "@/lib/users-list";
 import type { SwitchRead } from "../../lib/system-settings";
 
 export type Me = {
@@ -71,6 +78,76 @@ export async function revokeSession(session: string): Promise<void> {
   } catch {
     // Logged out locally regardless; the server row expires on its own.
   }
+}
+
+// One users page per render; a wrong body becomes an error read, never a crash.
+export async function resolveUsersPage(
+  session: string | undefined,
+  filters: UsersFilters,
+): Promise<UsersRead> {
+  if (!session) return { ok: false, error: "no session" };
+  // filtersToParams owns default omission; here names map to the API's and user drops.
+  const query = filtersToParams(filters);
+  query.delete("user");
+  const size = query.get("size");
+  if (size !== null) {
+    query.delete("size");
+    query.set("page_size", size);
+  }
+  const qs = query.toString();
+  const url = qs === "" ? `${apiInternalUrl()}/api/users` : `${apiInternalUrl()}/api/users?${qs}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { Cookie: `session=${session}` },
+      cache: "no-store",
+    });
+  } catch {
+    return { ok: false, error: "users list failed" };
+  }
+  if (!res.ok) return { ok: false, error: await errorDetail(res, "users list failed") };
+  const body: unknown = await res.json().catch(() => null);
+  const page = guardUsersPage(body);
+  if (page === null) return { ok: false, error: "unexpected users page body" };
+  return { ok: true, data: page };
+}
+
+// First threads cursor page; any failure answers null and the client fetch carries on.
+export async function resolveThreadsSeed(
+  session: string | undefined,
+): Promise<ThreadSeed | null> {
+  if (!session) return null;
+  let res: Response;
+  try {
+    res = await fetch(`${apiInternalUrl()}/api/threads/get`, {
+      headers: { Cookie: `session=${session}` },
+      cache: "no-store",
+    });
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+  const body: unknown = await res.json().catch(() => null);
+  if (typeof body !== "object" || body === null) return null;
+  const threads = (body as { threads?: unknown }).threads;
+  if (!Array.isArray(threads)) return null;
+  const cursor = (body as { nextCursor?: unknown }).nextCursor;
+  return {
+    threads: threads as ThreadSeed["threads"],
+    nextCursor: typeof cursor === "string" ? cursor : undefined,
+  };
+}
+
+async function errorDetail(res: Response, fallback: string): Promise<string> {
+  const body: unknown = await res.json().catch(() => null);
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    typeof (body as { detail?: unknown }).detail === "string"
+  ) {
+    return (body as { detail: string }).detail;
+  }
+  return `${fallback} (${res.status})`;
 }
 
 // Server-only account lookup: the inbound session cookie goes out as

@@ -14,7 +14,9 @@ def test_list_users_needs_admin(client):
     login(client, "admin@x.com")
     resp = client.get("/api/users")
     assert resp.status_code == 200
-    assert [u["email"] for u in resp.json()] == ["admin@x.com", "plain@x.com"]
+    body = resp.json()
+    assert [u["email"] for u in body["items"]] == ["admin@x.com", "plain@x.com"]
+    assert body["total"] == 2
 
 
 def test_create_user_needs_admin(client):

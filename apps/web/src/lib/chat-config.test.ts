@@ -10,11 +10,13 @@ import {
 const mocks = vi.hoisted(() => {
   const ADAPTER = { stream: true };
   const FORMAT = { wire: true };
+  const innerListThreads = vi.fn(async () => ({ threads: [], nextCursor: undefined }));
   return {
     ADAPTER,
     FORMAT,
     fetchLLM: vi.fn(() => ({ kind: "llm" })),
-    restStorage: vi.fn(() => ({ kind: "storage" })),
+    innerListThreads,
+    restStorage: vi.fn(() => ({ kind: "storage", thread: { listThreads: innerListThreads } })),
     openAIAdapter: vi.fn(() => ADAPTER),
   };
 });
@@ -33,6 +35,7 @@ describe("chat client config", () => {
     mocks.fetchLLM.mockClear();
     mocks.restStorage.mockClear();
     mocks.openAIAdapter.mockClear();
+    mocks.innerListThreads.mockClear();
   });
 
   it("wires the llm transport to the chat BFF route in OpenAI shape", () => {
@@ -51,6 +54,47 @@ describe("chat client config", () => {
       baseUrl: "/api/threads",
       messageFormat: mocks.FORMAT,
     });
+  });
+});
+
+// The server render hands over one thread page; the storage answers the
+// SDK's first list call from it so the sidebar paints with data.
+describe("chat storage seed wrapper", () => {
+  afterEach(() => {
+    mocks.innerListThreads.mockClear();
+  });
+
+  it("answers only the first cursorless call from the seed", async () => {
+    const storage = chatStorage({
+      threads: [{ id: "t1", title: "T", createdAt: 1 }],
+      nextCursor: "c1",
+    });
+
+    await expect(storage.thread.listThreads()).resolves.toEqual({
+      threads: [{ id: "t1", title: "T", createdAt: 1 }],
+      nextCursor: "c1",
+    });
+    await storage.thread.listThreads();
+    expect(mocks.innerListThreads).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes cursor calls through without consuming the seed", async () => {
+    const storage = chatStorage({ threads: [{ id: "t1", title: "T", createdAt: 1 }] });
+
+    await storage.thread.listThreads("c9");
+    expect(mocks.innerListThreads).toHaveBeenCalledWith("c9");
+
+    await expect(storage.thread.listThreads()).resolves.toEqual({
+      threads: [{ id: "t1", title: "T", createdAt: 1 }],
+    });
+    expect(mocks.innerListThreads).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls straight through when no seed exists", async () => {
+    const storage = chatStorage(null);
+
+    await storage.thread.listThreads();
+    expect(mocks.innerListThreads).toHaveBeenCalledTimes(1);
   });
 });
 

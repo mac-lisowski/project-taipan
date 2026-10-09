@@ -1,263 +1,139 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  applyUsersQuery,
-  clampPage,
   countLine,
-  filterUsersByStatus,
+  filtersToParams,
   formatDate,
-  loadUsers,
+  guardUsersPage,
   pageCount,
-  pageSlice,
-  reduceUsersView,
-  searchUsers,
+  PAGE_SIZES,
+  parseUsersFilters,
+  usersPath,
   USERS_COPY,
-  USERS_PATH,
+  type UsersFilters,
 } from "./users-list";
 
-const OWNER_DENIED = JSON.stringify({ detail: "system owner role required" });
 const ROW = {
   id: 1,
   email: "ada@example.com",
   is_active: true,
   created_at: "2026-10-01T09:15:00Z",
 };
-const INACTIVE_ROW = {
-  id: 2,
-  email: "grace@example.org",
-  is_active: false,
-  created_at: "2026-10-02T10:00:00Z",
+
+const PAGE = {
+  items: [ROW],
+  total: 41,
+  total_all: 60,
+  page: 2,
+  page_size: 10,
 };
-const ROWS = [ROW, INACTIVE_ROW];
 
-describe("loadUsers", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
+const FILTERS: UsersFilters = {
+  q: "ada",
+  status: "active",
+  page: 3,
+  pageSize: 25,
+  user: null,
+};
 
-  it("GETs the same-origin users path and maps the body", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify([ROW]), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await loadUsers();
-
-    expect(fetchMock).toHaveBeenCalledWith(USERS_PATH);
-    expect(result).toEqual({ ok: true, data: [ROW] });
-  });
-
-  it("surfaces the upstream detail on failure", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(new Response(OWNER_DENIED, { status: 403 })),
-    );
-    expect(await loadUsers()).toEqual({
-      ok: false,
-      error: "system owner role required",
-    });
-  });
-
-  it("maps a non-list body to an error instead of throwing", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(new Response("{}", { status: 200 })),
-    );
-    expect(await loadUsers()).toEqual({ ok: false, error: "unexpected users body" });
-  });
-
-  it("maps a thrown fetch to a network error instead of rejecting", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("down")));
-    expect(await loadUsers()).toEqual({ ok: false, error: "network error" });
-  });
-});
-
-describe("reduceUsersView", () => {
-  it("lands a good load as ready with default controls", () => {
-    const view = reduceUsersView(
-      { state: "loading" },
-      { type: "loaded", result: { ok: true, data: ROWS } },
-    );
-    expect(view).toEqual({
-      state: "ready",
-      users: ROWS,
-      query: "",
+describe("parseUsersFilters", () => {
+  it("falls back to defaults on an empty param set", () => {
+    expect(parseUsersFilters({})).toEqual({
+      q: "",
       status: "all",
       page: 1,
       pageSize: 10,
+      user: null,
     });
   });
 
-  it("carries a load failure into the error state", () => {
-    const view = reduceUsersView(
-      { state: "loading" },
-      { type: "loaded", result: { ok: false, error: "network error" } },
+  it("normalizes garbage to defaults instead of leaking a 422", () => {
+    expect(
+      parseUsersFilters({
+        status: "bogus",
+        size: "7",
+        page: "0",
+        user: "abc",
+        q: ["array"],
+      }),
+    ).toEqual({ q: "", status: "all", page: 1, pageSize: 10, user: null });
+    expect(parseUsersFilters({ page: "-3" }).page).toBe(1);
+    expect(parseUsersFilters({ page: "NaN" }).page).toBe(1);
+    expect(parseUsersFilters({ user: "0" }).user).toBe(null);
+  });
+
+  it("accepts every valid value", () => {
+    expect(parseUsersFilters({ q: "ada", status: "inactive", page: "4", size: "50", user: "9" })).toEqual(
+      { q: "ada", status: "inactive", page: 4, pageSize: 50, user: 9 },
     );
-    expect(view).toEqual({ state: "error", message: "network error" });
   });
 
-  it("stores a query and resets the page", () => {
-    const view = reduceUsersView(ready(ROWS, { query: "ada", page: 3 }), {
-      type: "query_changed",
-      query: "grace",
-    });
-    expect(view).toEqual({ ...ready(ROWS), query: "grace" });
-  });
-
-  it("stores a status and resets the page", () => {
-    const view = reduceUsersView(ready(ROWS, { status: "active", page: 2 }), {
-      type: "status_changed",
-      status: "inactive",
-    });
-    expect(view).toEqual({ ...ready(ROWS), status: "inactive" });
-  });
-
-  it("ignores control changes before the list is ready", () => {
-    const view = reduceUsersView({ state: "loading" }, {
-      type: "query_changed",
-      query: "ada",
-    });
-    expect(view).toEqual({ state: "loading" });
-  });
-
-  it("stores a page size and resets the page", () => {
-    // Thirty rows on page 3 of size 10 still fit page 2 of size 25, so a
-    // clamp-only implementation would fail this; reset must land on one.
-    const users = Array.from({ length: 30 }, (_, i) => ({
-      ...ROW,
-      id: i + 1,
-    }));
-    const view = reduceUsersView(ready(users, { pageSize: 10, page: 3 }), {
-      type: "page_size_changed",
-      pageSize: 25,
-    });
-    expect(view).toEqual({ ...ready(users), pageSize: 25 });
-  });
-
-  it("clamps a page change into the list bounds", () => {
-    const view = reduceUsersView(ready(ROWS, { pageSize: 10, page: 1 }), {
-      type: "page_changed",
-      page: 99,
-    });
-    expect(view).toEqual({ ...ready(ROWS), page: 1 });
-  });
-
-  it("clamps a page change against the filtered count", () => {
-    // Ten active rows of twenty five: the filtered list has one page of
-    // ten, so a clamp against the unfiltered total would answer three.
-    const users = [
-      ...Array.from({ length: 10 }, (_, i) => ({ ...ROW, id: i + 1 })),
-      ...Array.from({ length: 15 }, (_, i) => ({ ...INACTIVE_ROW, id: i + 11 })),
-    ];
-    const view = reduceUsersView(
-      ready(users, { status: "active", pageSize: 10, page: 1 }),
-      { type: "page_changed", page: 99 },
-    );
-    expect(view).toEqual({ ...ready(users, { status: "active" }), page: 1 });
-  });
-
-  it("sends the view back to loading on retry", () => {
-    const view = reduceUsersView(
-      { state: "error", message: "network error" },
-      { type: "retry" },
-    );
-    expect(view).toEqual({ state: "loading" });
+  it("caps q at 200 characters", () => {
+    expect(parseUsersFilters({ q: "x".repeat(500) }).q).toHaveLength(200);
   });
 });
 
-function ready(
-  users: typeof ROWS,
-  over: Partial<{
-    query: string;
-    status: "all" | "active" | "inactive";
-    page: number;
-    pageSize: 10 | 25 | 50;
-  }> = {},
-) {
-  return {
-    state: "ready" as const,
-    users,
-    query: "",
-    status: "all" as const,
-    page: 1,
-    pageSize: 10 as const,
-    ...over,
-  };
-}
-
-describe("paging helpers", () => {
-  it("counts pages with an exact division edge", () => {
-    expect(pageCount(0, 10)).toBe(1);
-    expect(pageCount(20, 10)).toBe(2);
-    expect(pageCount(21, 10)).toBe(3);
+describe("filtersToParams and usersPath", () => {
+  it("omits defaults so a clean /users means page one", () => {
+    const clean: UsersFilters = { q: "", status: "all", page: 1, pageSize: 10, user: null };
+    expect(filtersToParams(clean).size).toBe(0);
+    expect(usersPath(clean)).toBe("/users");
   });
 
-  it("clamps a page index into bounds", () => {
-    expect(clampPage(0, 25, 10)).toBe(1);
-    expect(clampPage(99, 25, 10)).toBe(3);
-    expect(clampPage(2, 0, 10)).toBe(1);
-  });
-
-  it("slices the middle page", () => {
-    const users = Array.from({ length: 25 }, (_, i) => ({
-      ...ROW,
-      id: i + 1,
-    }));
-    expect(pageSlice(users, 2, 10).map((u) => u.id)).toEqual([
-      11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+  it("keeps every non-default", () => {
+    expect([...filtersToParams({ ...FILTERS, user: 7 }).entries()]).toEqual([
+      ["q", "ada"],
+      ["status", "active"],
+      ["page", "3"],
+      ["size", "25"],
+      ["user", "7"],
     ]);
+    expect(usersPath(FILTERS)).toBe("/users?q=ada&status=active&page=3&size=25");
   });
 
-  it("clamps the slice for a past-end page", () => {
-    expect(pageSlice(ROWS, 99, 10)).toEqual(ROWS);
-  });
-});
-
-describe("searchUsers", () => {
-  it("matches substrings ignoring letter case", () => {
-    expect(searchUsers(ROWS, "GRACE")).toEqual([INACTIVE_ROW]);
-    expect(searchUsers(ROWS, "example.org")).toEqual([INACTIVE_ROW]);
-  });
-
-  it("returns everything for a blank query", () => {
-    expect(searchUsers(ROWS, "   ")).toEqual(ROWS);
+  it("round trips through parsing", () => {
+    const filters = { ...FILTERS, user: 5 };
+    const params = Object.fromEntries(filtersToParams(filters).entries());
+    expect(parseUsersFilters(params)).toEqual(filters);
   });
 });
 
-describe("filterUsersByStatus", () => {
-  it("keeps only active users", () => {
-    expect(filterUsersByStatus(ROWS, "active")).toEqual([ROW]);
+describe("guardUsersPage", () => {
+  it("accepts a well formed page", () => {
+    expect(guardUsersPage(PAGE)).toEqual(PAGE);
   });
 
-  it("keeps only inactive users", () => {
-    expect(filterUsersByStatus(ROWS, "inactive")).toEqual([INACTIVE_ROW]);
-  });
-
-  it("passes everything through for all", () => {
-    expect(filterUsersByStatus(ROWS, "all")).toEqual(ROWS);
-  });
-});
-
-describe("applyUsersQuery", () => {
-  it("chains search and status", () => {
-    expect(applyUsersQuery(ROWS, "ada", "inactive")).toEqual([]);
-    expect(applyUsersQuery(ROWS, "", "active")).toEqual([ROW]);
+  it("rejects wrong shapes instead of crashing the table", () => {
+    expect(guardUsersPage(null)).toBe(null);
+    expect(guardUsersPage("nope")).toBe(null);
+    expect(guardUsersPage({})).toBe(null);
+    expect(guardUsersPage({ ...PAGE, items: "nope" })).toBe(null);
+    expect(guardUsersPage({ ...PAGE, items: [{ ...ROW, email: 5 }] })).toBe(null);
+    expect(guardUsersPage({ ...PAGE, total: "41" })).toBe(null);
+    expect(guardUsersPage({ ...PAGE, page: 0 })).toBe(null);
   });
 });
 
-describe("formatDate", () => {
-  it("renders date only ISO", () => {
-    expect(formatDate("2026-10-01T09:15:00Z")).toBe("2026-10-01");
+describe("pageCount", () => {
+  it("reports one page for an empty total", () => {
+    expect(pageCount(0, 10)).toBe(1);
+  });
+
+  it("rounds up across every page size", () => {
+    for (const size of PAGE_SIZES) {
+      expect(pageCount(1, size)).toBe(1);
+      expect(pageCount(size, size)).toBe(1);
+      expect(pageCount(size + 1, size)).toBe(2);
+    }
+    expect(pageCount(101, 50)).toBe(3);
   });
 });
 
 describe("pinned copy", () => {
-  it("keeps the screen strings exact", () => {
-    expect(USERS_COPY.loading).toBe("loading…");
+  it("holds the exact screen strings", () => {
+    expect(USERS_COPY.error).toBe("err");
     expect(USERS_COPY.empty).toBe("no users match");
     expect(USERS_COPY.retry).toBe("retry");
-  });
-
-  it("formats the count line", () => {
-    expect(countLine(42, 60)).toBe("42 of 60 users");
+    expect(countLine(41, 60)).toBe("41 of 60 users");
+    expect(formatDate("2026-10-01T09:15:00Z")).toBe("2026-10-01");
   });
 });

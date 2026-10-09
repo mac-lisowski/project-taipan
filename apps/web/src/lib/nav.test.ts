@@ -78,7 +78,13 @@ describe("chat surface routes", () => {
 
   it("is consumed by the private shell, not re-declared there", () => {
     const shell = readSource("../components/shell/private-shell.tsx");
-    expect(shell).toContain("CHAT_SURFACE_ROUTES");
-    expect(shell).not.toMatch(/new Set\(\["\/chat"/);
+    // The import line is the contract: the shell reads the one shared
+    // list. Any inline route collection there would fork the source of
+    // truth, so both shapes are forbidden outright.
+    expect(shell).toMatch(
+      /import\s*\{[^}]*CHAT_SURFACE_ROUTES[^}]*\}\s*from\s*"@\/lib\/nav"/,
+    );
+    expect(shell).not.toMatch(/new Set\(\[/);
+    expect(shell).not.toMatch(/\[\s*"\/chat"/);
   });
 });
