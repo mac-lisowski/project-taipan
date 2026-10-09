@@ -101,18 +101,33 @@ products handle small screens.
 - The content kind and view path serialize into the `pane` query
   parameter. Thread selection inside a pane chat stays client state;
   the URL carries `pane=chat`, not a thread id.
+- An open-in-pane affordance always opens its own target. The stored
+  last-used content seeds only a generic open action that names no
+  content. Opening new content while the pane is already open replaces
+  it.
+- In-pane view navigation keeps a small back stack; the header back
+  control walks it. Switching content kind or closing the pane resets
+  it.
+- A clamped ratio applies to the layout only. The stored ratio stays
+  untouched, so a wider screen restores the user's pick.
 
 ### URL contract
 
 - `?pane=view:/users` opens the pane on the users view. `?pane=chat`
   opens a second chat. No parameter means closed. Closing the pane
   removes the parameter.
+- The view segment accepts only bare view paths from the pane router
+  table. Detail ids and filter state live in pane state and never
+  serialize; a `view:` value outside the known set, or one carrying
+  extra segments, drops the parameter.
 - An unknown or role-forbidden pane path drops the parameter; the pane
   stays closed rather than showing an error surface.
-- The parameter is meaningful only on chat-surface paths. Other routes
-  ignore it.
-- The existing URL sync writes the main view path with `replaceState`.
-  It must merge the query string instead of replacing the whole URL.
+- The parameter is meaningful only on the chat-surface route list.
+  Other routes ignore it. A shared link that hits the login redirect
+  keeps the full URL, so the pane restores after auth.
+- The existing URL sync writes the main view path with `replaceState`
+  and already preserves the query on same-path writes. It must keep
+  the `pane` parameter on cross-path navigations too.
 - On mount, the shell reads the parameter and restores the pane.
   Browser history is not touched by pane actions; the back button keeps
   its chronological whole-screen semantics.
@@ -126,25 +141,45 @@ products handle small screens.
 ### Pane contents
 
 - View kind: a small router maps the pane path to the existing view
-  components (overview, users, settings, account, user detail). They
-  are plain components with no SDK dependency, so they mount as-is
-  inside a pane-owned scroll frame.
+  components (overview, users, settings, account, user detail). Pane
+  paths are real route paths, so the settings view serializes as
+  `view:/system/settings`. The components are free of SDK
+  dependencies but two do not mount as-is. The users view requires a
+  server-fetched boot payload, so a pane adapter fetches the first
+  page through the existing BFF users route and hands it the boot
+  prop. The account view reads the shell account context, which the
+  pane provides. The rest mount directly inside a pane-owned scroll
+  frame.
 - Chat kind: a nested `AgentInterface` with its own provider, built
   from the same LLM and storage adapters, the same theme object, and
   the same message components, starters, and agent name as the main
   chat. All SDK stores are per instance, so threads, streams, and
-  selection are fully independent. Below 768px of pane width the
-  nested instance renders the SDK's mobile chrome: a hidden sidebar
-  behind a menu and a mobile header, which supplies a compact thread
-  picker for free. At pane widths of 768px and above the nested
-  instance shows full desktop chrome, including its own sidebar thread
-  list. That sidebar is the intended thread picker on wide panes.
+  selection are fully independent. The app-level chat stores are not:
+  the message queue and the picked model are module singletons bound
+  to one thread. The queue already has a store factory; the pane
+  creates its own queue store and model selection through providers
+  instead of importing the singletons, and the main chat switches to
+  the same provided instances so both sides share the code path. The
+  pane chat also builds an unseeded storage adapter: the shell's
+  seeded storage is a single-consumer seed and cannot feed a second
+  instance. Below 768px of pane width the nested instance renders the
+  SDK's mobile chrome: a hidden sidebar behind a menu and a mobile
+  header, which supplies a compact thread picker for free. At pane
+  widths of 768px and above the nested instance shows full desktop
+  chrome, including its own sidebar thread list. That sidebar is the
+  intended thread picker on wide panes. In the small-screen overlay
+  the pane is wider than 768px, so the nested chat shows desktop
+  chrome with its sidebar; accepted, since the overlay acts like a
+  second full page.
 - Both sides stream concurrently. The BFF relays are stateless per
   request with no per-session locks, so two streams need no backend
   change.
 - The nested chat mounts lazily on first use and stays mounted for the
   life of the surface. Closing the pane hides it without unmounting, so
-  a running reply survives and reopening resumes the same thread.
+  a running reply survives and reopening resumes the same thread. The
+  first mount is an additive sibling subtree: the main instance keeps
+  its React identity, so mounting the pane chat does not disturb a
+  running main reply.
 - The SDK hardcodes viewport height on its root element; the pane
   overrides that to the pane height.
 - Both instances share one theme object, so no theme-style collision
@@ -176,17 +211,23 @@ products handle small screens.
   and the pane instead call an app-owned shell-navigation abstraction,
   provided per surface. On the main surface it delegates to the SDK
   hook; inside the pane it writes pane state.
-- Two existing views use real navigation for internal moves and must be
-  converted to that abstraction before they can live in a pane: the
-  overview link to account and the user-detail fallback. The
-  user-detail view already accepts a back callback; only its no-prop
-  fallback navigates for real.
+- Three places use real navigation for internal moves and convert to
+  that abstraction: the overview link to account, the user-detail
+  fallback (it already accepts a back callback; only its no-prop
+  fallback navigates for real), and the users table, where row
+  selection and every filter control call `router.replace`. The
+  shell's surface-link helper also pushes for real and routes through
+  the same abstraction. Inside the pane, a users-table write becomes
+  pane-internal state, so filtering the list does not fight the main
+  URL.
 
 ### Role gating
 
-- The pane router applies the same role check as the sidebar nav source:
-  owner-only paths are refused or hidden for non-owners. Page-level
-  guards stay in place for direct URL loads.
+- Owner-only paths sit in more than one nav source today: the sidebar
+  nav links, the account menu, and the private nav list. One exported
+  check collects them; the sidebar, the account menu, and the pane
+  router all consume it. Page-level guards stay in place for direct
+  URL loads.
 
 ### Entry points
 
@@ -200,15 +241,16 @@ products handle small screens.
 
 - Below roughly 1024px viewport the split is not offered: the open
   affordances hide. An open pane degrades to a full-width overlay over
-  the main region, closable, rather than a cramped split.
+  the main region rather than a cramped split. Escape or the close
+  button dismisses the overlay. Opening the pane moves focus into it;
+  closing returns focus to the invoking control.
 
 ### SDK guards
 
 - `artifactAutoOpen` is disabled on the main interface so that no
   future artifact renderer can commandeer the detailed-view slot that
   this design avoids but the SDK still manages.
-- The SDK pin stays exact; a smoke test of pane rendering covers the
-  undocumented rest-slot mechanism against upgrades.
+- The SDK pin stays exact.
 
 ### File budget
 
@@ -219,8 +261,7 @@ products handle small screens.
 
 ## Testing Decisions
 
-- Good tests assert external behavior at existing seams. The repo has
-  no DOM component tests, so none are added.
+- Good tests assert external behavior at existing seams.
 - The pane state module gets Vitest unit tests, following the
   sidebar-state test pattern (stubbed window and local storage,
   module reload for state isolation). Tests assert: open and close
@@ -228,8 +269,17 @@ products handle small screens.
   clamping at both bounds, `pane` parameter round trips both ways,
   local storage persistence, and that non-owner roles cannot reach
   owner view paths.
-- The `syncUrl` merge gets a unit test: pane parameter survives main
-  navigation and is dropped when the pane closes.
+- The `syncUrl` merge gets a unit test: the pane parameter survives
+  same-path and cross-path main navigation and is dropped when the
+  pane closes.
+- One DOM render smoke test is added deliberately, as the repo's
+  single component test (Vitest plus Testing Library, installed for
+  this test only). It guards the undocumented rest-slot mechanism
+  against SDK upgrades: the pane child renders inside the interface
+  root, the height override applies, and mounting the pane leaves the
+  main chat subtree mounted.
+- App-store isolation gets unit tests: two queue-store instances and
+  two model-selection instances hold independent state.
 - BFF and API are untouched; no HTTP tests are added.
 - New tests run through `uvx falsegreen` and the test smell review
   before commit.

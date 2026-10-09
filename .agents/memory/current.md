@@ -29,7 +29,17 @@
   nats-jetstream (PR #38 open), chat-thread-sharing (PR #49 open),
   chat-artifacts, chat-attachments, email-at-rest, split-screen
   (to-tickets is the next step before implementation).
-- Next: to-tickets for split-screen, Spec B (email-at-rest). feat/users-list-ssr deleted locally and on origin.
+- split-screen spec amended post-review (per-instance queue/model
+  stores, users-view BFF adapter, /system/settings path, third
+  nav-conversion site, DOM smoke test resolves the no-DOM-test
+  contradiction) and ticketed: .scratch/split-screen/issues/01-06
+  (pane-state -> nav + stores -> shell -> contents -> entry points).
+  Ticket review caught + fixed: missing singleton consumers
+  (use-chat-queue/model, inflight, shared taipan-chat-model key),
+  unassigned mount-restore and affordance-hiding, 04/05 header dup,
+  login needs a new next= return flow. UNCOMMITTED spec edits on dev.
+- Next: implement split-screen (or commit spec first), Spec B
+  (email-at-rest). feat/users-list-ssr deleted locally and on origin.
 - Open ops: API_APP_BASE_URL still missing in prod API env;
   project-taipan-db-1 zombie container; registration,
   typed-system-settings and password-reset worktrees deletable;
