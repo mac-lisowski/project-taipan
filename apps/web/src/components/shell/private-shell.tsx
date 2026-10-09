@@ -10,7 +10,7 @@ import {
   ShellAccountProvider,
   type ShellAccount,
 } from "@/components/shell/shell-context";
-import { privateNav, type NavItem } from "@/lib/nav";
+import { CHAT_SURFACE_ROUTES, privateNav, type NavItem } from "@/lib/nav";
 
 function GearIcon(): ReactNode {
   return (
@@ -93,8 +93,7 @@ export function PrivateShell({
   // The chat app (chat + its route views) is a full-viewport OpenUI surface
   // with its own sidebar; the shell stays out of the way and only hands
   // over the session identity.
-  const chatRoutes = new Set(["/chat", "/dashboard", "/users", "/system/settings", "/account"]);
-  if (chatRoutes.has(pathname)) {
+  if (CHAT_SURFACE_ROUTES.includes(pathname)) {
     return (
       <ShellAccountProvider account={account}>
         <div className="h-dvh w-full overflow-hidden bg-background">{children}</div>

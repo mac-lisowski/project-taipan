@@ -12,6 +12,17 @@ export type NavSection = {
   items: NavItem[];
 };
 
+// Full-viewport ChatApp paths: the private shell hands these to the chat
+// surface instead of wrapping them in its own sidebar chrome. /chat plus
+// every AgentInterface.Route path registered in chat-app.tsx.
+export const CHAT_SURFACE_ROUTES: readonly string[] = [
+  "/chat",
+  "/dashboard",
+  "/users",
+  "/system/settings",
+  "/account",
+];
+
 // Sidebar sections for non-chat private routes. The chat surface carries no
 // shell nav of its own; the system section exists only for system_owner.
 export function privateNav(systemRoles: string[]): NavSection[] {
