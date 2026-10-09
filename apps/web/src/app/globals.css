@@ -230,12 +230,12 @@
   display: none;
 }
 /* Below ~1024px (class set from JS) the pane covers the SDK root, which
- * is position:relative; 1001 sits over its 999/1000 sidebar layers. */
+ * is position:relative; 1200 sits over its 999/1000 sidebar layers and
+ * the 1100 account-menu popup. */
 .taipan-pane--overlay {
   position: absolute;
   inset: 0;
-  width: 100%;
-  z-index: 1001;
+  z-index: 1200;
 }
 /* A nested AgentInterface (ticket 05) fills the pane, not the viewport:
  * the SDK hardcodes 100dvh/100dvw on its root element. */

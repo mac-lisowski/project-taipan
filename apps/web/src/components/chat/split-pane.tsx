@@ -27,7 +27,6 @@ import {
   paneAriaValues,
   paneRatioAfterStep,
   paneRatioFromPointer,
-  type PaneAriaValues,
 } from "@/lib/pane-layout";
 import { cn } from "@/ui";
 
@@ -79,18 +78,18 @@ function PaneSeparator({
   onRatio: (ratio: number) => void;
   controlsId: string;
 }): ReactNode {
-  const [aria, setAria] = useState<PaneAriaValues | null>(null);
-  const syncAria = useCallback(
-    () => setAria(paneAriaValues(ratio, containerWidth)),
-    [ratio, containerWidth],
-  );
+  // Recomputed per render so a resize or keypress can never lag a step.
+  const aria = paneAriaValues(ratio, containerWidth);
+  // Body styles set on drag start must clear even if the separator
+  // unmounts mid-drag (overlay flip, programmatic close).
+  const clearDragStyles = useRef<(() => void) | null>(null);
+  useEffect(() => () => clearDragStyles.current?.(), []);
 
   const endDrag = (e: PointerEvent<HTMLDivElement>): void => {
     if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
     e.currentTarget.releasePointerCapture(e.pointerId);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-    syncAria();
+    clearDragStyles.current?.();
+    clearDragStyles.current = null;
   };
 
   return (
@@ -110,6 +109,10 @@ function PaneSeparator({
         e.currentTarget.setPointerCapture(e.pointerId);
         document.body.style.cursor = "col-resize";
         document.body.style.userSelect = "none";
+        clearDragStyles.current = () => {
+          document.body.style.cursor = "";
+          document.body.style.userSelect = "";
+        };
       }}
       onPointerMove={(e) => {
         if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
@@ -142,9 +145,7 @@ function PaneSeparator({
         }
         e.preventDefault();
         onRatio(paneRatioAfterStep(ratio, delta, containerWidth));
-        syncAria();
       }}
-      onFocus={syncAria}
     >
       <div className="taipan-pane-separator__handle" />
     </div>
@@ -178,7 +179,11 @@ export function SplitPane(): ReactNode {
   useEffect(() => {
     const wasOpen = wasOpenRef.current;
     wasOpenRef.current = state.open;
-    if (state.open && overlay && paneEl !== null && !paneEl.contains(document.activeElement)) {
+    if (!overlay) {
+      invokerRef.current = null;
+      return;
+    }
+    if (state.open && paneEl !== null && !paneEl.contains(document.activeElement)) {
       invokerRef.current =
         document.activeElement instanceof HTMLElement
           ? document.activeElement
@@ -190,6 +195,16 @@ export function SplitPane(): ReactNode {
       invokerRef.current?.focus();
       invokerRef.current = null;
     }
+  }, [state.open, overlay, paneEl]);
+
+  // The overlay behaves as a modal: siblings under it take no input.
+  useEffect(() => {
+    if (!state.open || !overlay || paneEl === null) return;
+    const parent = paneEl.parentElement;
+    if (parent === null) return;
+    const siblings = [...parent.children].filter((el) => el !== paneEl);
+    siblings.forEach((el) => el.setAttribute("inert", ""));
+    return () => siblings.forEach((el) => el.removeAttribute("inert"));
   }, [state.open, overlay, paneEl]);
 
   // Lazy mount: nothing renders before the first open, and after it the
@@ -215,6 +230,8 @@ export function SplitPane(): ReactNode {
       <aside
         id={PANE_ID}
         ref={setPaneEl}
+        role={overlay ? "dialog" : undefined}
+        aria-modal={overlay || undefined}
         aria-label="Pane"
         tabIndex={-1}
         hidden={!state.open}

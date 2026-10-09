@@ -28,7 +28,7 @@ import {
   type PaneContent,
   type PaneState,
 } from "@/lib/pane-state";
-import { restorePaneState } from "@/lib/pane-url";
+import { PANE_PARAM, restorePaneState, serializePaneParam } from "@/lib/pane-url";
 
 // Named writes for header controls and entry points; each maps to one
 // pure pane-state transition with the roles bound in.
@@ -73,6 +73,21 @@ export function PaneStateProvider({
       ),
     );
   }, [systemRoles]);
+
+  // URL owns pane state; write it back on every change after mount.
+  useEffect(() => {
+    if (!restored.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const value = serializePaneParam(state);
+    if (value === null) params.delete(PANE_PARAM);
+    else params.set(PANE_PARAM, value);
+    const query = params.toString();
+    const target =
+      window.location.pathname + (query === "" ? "" : `?${query}`);
+    if (target !== window.location.pathname + window.location.search) {
+      window.history.replaceState(null, "", target);
+    }
+  }, [state]);
 
   const actions = useMemo<PaneActions>(
     () => ({
