@@ -1,6 +1,6 @@
 # Spec: Users List SSR Paging
 
-Status: planned.
+Status: implemented (PR #50).
 
 Seam: the API owns search, filter, count, and paging. The web page is
 a server component that loads exactly one page of rows per render.
