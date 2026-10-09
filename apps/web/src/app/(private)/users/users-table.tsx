@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/ui";
+import { useShellNavigate } from "@/lib/shell-nav-context";
 import {
   countLine,
   formatDate,
@@ -38,6 +39,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 // server render replace the rows, so old data stays visible meanwhile.
 export function UsersTable({ boot, onSelectUser }: { boot: UsersBoot; onSelectUser?: (id: number) => void }): ReactNode {
   const router = useRouter();
+  const nav = useShellNavigate();
   const [pending, startTransition] = useTransition();
   const filters = boot.filters;
   // The search field keeps local state and debounces its navigation.
@@ -71,7 +73,9 @@ export function UsersTable({ boot, onSelectUser }: { boot: UsersBoot; onSelectUs
       flushRef.current = null;
     }
     const next: UsersFilters = { ...filtersRef.current, q: queryRef.current.trim(), ...patch };
-    startTransition(() => router.replace(usersPath(next), { scroll: false }));
+    startTransition(() =>
+      nav({ path: usersPath(next), detailId: next.user, replace: true }),
+    );
   }
 
   function onSearch(value: string): void {

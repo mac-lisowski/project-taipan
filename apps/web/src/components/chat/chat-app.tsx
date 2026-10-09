@@ -11,7 +11,7 @@ import { ChatModelSwitcher } from "@/components/chat/chat-model-switcher";
 import { QueueDispatch } from "@/components/chat/queue-dispatch";
 import { LayoutDashboard, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   Brand,
   ChatSidebarContents,
@@ -27,6 +27,8 @@ import { UserDetailPanel } from "@/components/users/user-detail-panel";
 import { UsersView } from "@/components/users/users-view";
 import { chatLLM, chatStorage } from "@/lib/chat-config";
 import { chatNavLinks } from "@/lib/nav";
+import { splitTargetPath, type ShellNavigate } from "@/lib/shell-nav";
+import { ShellNavProvider } from "@/lib/shell-nav-context";
 import { usersPath, type UsersBoot } from "@/lib/users-list";
 import type { SwitchRead } from "@/lib/system-settings";
 import { useThemeMode } from "@/lib/use-theme";
@@ -83,11 +85,6 @@ const LINK_ICONS: Record<string, ReactNode> = {
   "/account": <User className="h-4 w-4" />,
   "/users": <Users className="h-4 w-4" />,
 };
-
-// Detail route for one user; built here so the users view can deep link.
-function UserDetailRoute({ id, onBack }: { id: number; onBack: () => void }): ReactNode {
-  return <UserDetailPanel id={id} onBack={onBack} />;
-}
 
 // App views share the chat's own scroll frame so they read as one design.
 // The mobile row is the only way out of a route on small screens: the SDK
@@ -153,104 +150,130 @@ export function ChatApp({
     path: link.href,
   }));
 
-  function navigate(next: string | undefined): void {
+  const navigate = useCallback((next: string | undefined): void => {
     setPath(next);
     syncUrl(next);
-  }
+  }, []);
 
-  // Every path into /users lands here: the list is server-rendered.
+  // The one surface-nav entry the shell hook resolves to. /users is
+  // server-rendered so it takes a real navigation; other route views
+  // switch in place (a push would remount the chat and kill streams).
+  const surfaceNav = useCallback<ShellNavigate>(
+    (target) => {
+      const { pathname } = splitTargetPath(target.path);
+      if (target.replace === true) {
+        // List writes only ever target /users; replace keeps history clean.
+        router.replace(target.path, { scroll: false });
+        return;
+      }
+      if (pathname === "/users") {
+        // The SDK view moves at once; the push brings a fresh server render.
+        setPath("/users");
+        // A named detail id folds into the `user` param the list reads.
+        const url =
+          typeof target.detailId === "number" && !target.path.includes("?")
+            ? `${target.path}?user=${target.detailId}`
+            : target.path;
+        router.push(url);
+        return;
+      }
+      // SDK routes match the bare path; a stray query would blank the view.
+      navigate(pathname);
+    },
+    [router, navigate],
+  );
+
+  // SDK nav entries (sidebar items, onNavigate) reuse the same contract.
   function openSurfaceLink(next: string | undefined): void {
-    if (next === "/users") {
-      // The SDK view moves at once; the push brings a fresh server render.
-      setPath(next);
-      // Re-entering the list keeps its params: push the current URL when
-      // it already is /users, the bare path otherwise.
-      const here = window.location;
-      router.push(here.pathname === "/users" ? here.pathname + here.search : next);
-      return;
-    }
-    navigate(next);
+    if (next === undefined) navigate(undefined);
+    else surfaceNav({ path: next });
   }
 
   const shareControls = <ThreadShareControls />;
 
   return (
-    <AgentInterface
-      llm={llm}
-      storage={storage}
-      agentName="taipan"
-      components={{ AssistantMessage }}
-      starters={starters}
-      theme={{ mode, lightTheme: brandLight, darkTheme: brandDark }}
-      path={path}
-      onNavigate={openSurfaceLink}
-    >
-      <AgentInterface.MobileHeader
-        logo={<TMark />}
-        agentName={<Brand />}
-        actions={shareControls}
-      />
-      <AgentInterface.ThreadHeader>
-        <ChatModelSwitcher />
-        {shareControls}
-      </AgentInterface.ThreadHeader>
-      <AgentInterface.Welcome glowAnimation promptTemplates={promptTemplates} />
-      {/* Mode C: custom composer owns the queue UI; starters are hand-rolled
-          inside it because the SDK starter chip is not exported. */}
-      <AgentInterface.Composer>
-        <ChatComposer starters={starters} />
-      </AgentInterface.Composer>
-      {/* Non-slot child: stays mounted on route views so the queue keeps
-          dispatching while the composer is unmounted. */}
-      <QueueDispatch />
-      <AgentInterface.Sidebar>
-        <ChatSidebarContents
-          links={links}
-          email={account.email}
-          tenant={account.tenant}
-          systemRoles={account.systemRoles}
-          openPath={openSurfaceLink}
+    <ShellNavProvider navigate={surfaceNav}>
+      <AgentInterface
+        llm={llm}
+        storage={storage}
+        agentName="taipan"
+        components={{ AssistantMessage }}
+        starters={starters}
+        theme={{ mode, lightTheme: brandLight, darkTheme: brandDark }}
+        path={path}
+        onNavigate={openSurfaceLink}
+      >
+        <AgentInterface.MobileHeader
+          logo={<TMark />}
+          agentName={<Brand />}
+          actions={shareControls}
         />
-      </AgentInterface.Sidebar>
-      <AgentInterface.Route path="/dashboard">
-        <RouteView onExit={() => navigate(undefined)}>
-          <OverviewView />
-        </RouteView>
-      </AgentInterface.Route>
-      <AgentInterface.Route path="/users">
-        <RouteView onExit={() => navigate(undefined)}>
-          {usersBoot === undefined ? null : detailId === null ? (
-            <UsersView
-              boot={usersBoot}
-              onSelectUser={(id) => {
-                // Row selection keeps filters and page in the URL.
-                router.replace(usersPath({ ...usersBoot.filters, user: id }), {
-                  scroll: false,
-                });
-              }}
-            />
-          ) : (
-            <UserDetailRoute
-              id={detailId}
-              onBack={() => {
-                router.replace(usersPath({ ...usersBoot.filters, user: null }), {
-                  scroll: false,
-                });
-              }}
-            />
-          )}
-        </RouteView>
-      </AgentInterface.Route>
-      <AgentInterface.Route path="/system/settings">
-        <RouteView onExit={() => navigate(undefined)}>
-          <SettingsView initial={settingsBoot} />
-        </RouteView>
-      </AgentInterface.Route>
-      <AgentInterface.Route path="/account">
-        <RouteView onExit={() => navigate(undefined)}>
-          <AccountView />
-        </RouteView>
-      </AgentInterface.Route>
-    </AgentInterface>
+        <AgentInterface.ThreadHeader>
+          <ChatModelSwitcher />
+          {shareControls}
+        </AgentInterface.ThreadHeader>
+        <AgentInterface.Welcome glowAnimation promptTemplates={promptTemplates} />
+        {/* Mode C: custom composer owns the queue UI; starters are hand-rolled
+            inside it because the SDK starter chip is not exported. */}
+        <AgentInterface.Composer>
+          <ChatComposer starters={starters} />
+        </AgentInterface.Composer>
+        {/* Non-slot child: stays mounted on route views so the queue keeps
+            dispatching while the composer is unmounted. */}
+        <QueueDispatch />
+        <AgentInterface.Sidebar>
+          <ChatSidebarContents
+            links={links}
+            email={account.email}
+            tenant={account.tenant}
+            systemRoles={account.systemRoles}
+            openPath={openSurfaceLink}
+          />
+        </AgentInterface.Sidebar>
+        <AgentInterface.Route path="/dashboard">
+          <RouteView onExit={() => navigate(undefined)}>
+            <OverviewView />
+          </RouteView>
+        </AgentInterface.Route>
+        <AgentInterface.Route path="/users">
+          <RouteView onExit={() => navigate(undefined)}>
+            {usersBoot === undefined ? null : detailId === null ? (
+              <UsersView
+                boot={usersBoot}
+                onSelectUser={(id) => {
+                  // Row selection keeps filters and page in the URL.
+                  surfaceNav({
+                    path: usersPath({ ...usersBoot.filters, user: id }),
+                    detailId: id,
+                    replace: true,
+                  });
+                }}
+              />
+            ) : (
+              <UserDetailPanel
+                id={detailId}
+                onBack={() =>
+                  surfaceNav({
+                    path: usersPath({ ...usersBoot.filters, user: null }),
+                    detailId: null,
+                    replace: true,
+                  })
+                }
+              />
+            )}
+          </RouteView>
+        </AgentInterface.Route>
+        <AgentInterface.Route path="/system/settings">
+          <RouteView onExit={() => navigate(undefined)}>
+            <SettingsView initial={settingsBoot} />
+          </RouteView>
+        </AgentInterface.Route>
+        <AgentInterface.Route path="/account">
+          <RouteView onExit={() => navigate(undefined)}>
+            <AccountView />
+          </RouteView>
+        </AgentInterface.Route>
+      </AgentInterface>
+    </ShellNavProvider>
   );
 }

@@ -6,7 +6,16 @@
 // imports; storage access is guarded so the module runs without a
 // window.
 
-import { CHAT_SURFACE_ROUTES, SYSTEM_OWNER_ROLE } from "@/lib/nav";
+import {
+  canSeeNavPath,
+  CHAT_SURFACE_ROUTES,
+  isOwnerOnlyPath,
+  PANE_USER_DETAIL_PATH,
+} from "@/lib/nav";
+
+// The owner-path set lives in nav.ts (one definition for every nav
+// source); pane consumers keep importing it from here.
+export { isOwnerOnlyPath, PANE_USER_DETAIL_PATH };
 
 export type PaneContentKind = "chat" | "view";
 
@@ -46,30 +55,12 @@ export const PANE_MIN_WIDTH = 360;
 export const THREAD_MIN_WIDTH = 360;
 export const SHELL_SIDEBAR_WIDTH = 272;
 
-// User detail has no real route (/users?user=N only), so the pane gets
-// its own bare path for the router table.
-export const PANE_USER_DETAIL_PATH = "/users/detail";
-
 // Chat-surface routes minus /chat (that content is the chat kind) plus
 // the detail view. Unknown or extra-segment paths drop the param.
 export const PANE_VIEW_PATHS: readonly string[] = [
   ...CHAT_SURFACE_ROUTES.filter((path) => path !== "/chat"),
   PANE_USER_DETAIL_PATH,
 ];
-
-// The single owner-path set the sidebar nav, account menu, private nav
-// list, and pane router consume; user detail inherits the /users gate.
-const OWNER_ONLY_PATHS: readonly string[] = [
-  "/users",
-  "/system/settings",
-  PANE_USER_DETAIL_PATH,
-];
-
-// Pure owner gate on a path alone; nav sources consume this while
-// canOpenPanePath composes it with pane membership.
-export function isOwnerOnlyPath(path: string): boolean {
-  return OWNER_ONLY_PATHS.includes(path);
-}
 
 const RATIO_KEY = "taipan-pane-ratio";
 const LAST_CONTENT_KEY = "taipan-pane-last";
@@ -112,12 +103,9 @@ export function supportsPaneDetail(path: string): boolean {
 }
 
 // The one role gate: unknown pane paths refuse for everyone, and
-// owner-only paths need system_owner from the same systemRoles list
-// the shell account carries.
+// owner-only paths need system_owner via the shared nav check.
 export function canOpenPanePath(systemRoles: string[], path: string): boolean {
-  if (!isPaneViewPath(path)) return false;
-  if (!isOwnerOnlyPath(path)) return true;
-  return systemRoles.includes(SYSTEM_OWNER_ROLE);
+  return isPaneViewPath(path) && canSeeNavPath(systemRoles, path);
 }
 
 function readStored(key: string): string | null {
