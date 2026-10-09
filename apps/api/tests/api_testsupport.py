@@ -177,6 +177,13 @@ def create_thread(client, *messages) -> dict:
     return resp.json()
 
 
+def create_share(client, thread_id: str) -> dict:
+    """POST threads/shares/create; returns the boundary share body."""
+    resp = client.post(f"/api/threads/shares/create/{thread_id}")
+    assert resp.status_code == 200
+    return resp.json()
+
+
 def model_catalog(handler, *, ttl_seconds=60, clock=None, default=DEFAULT_CHAT_MODEL):
     """A ModelCatalog on a MockTransport, shared by listing and completion tests."""
     return ModelCatalog(

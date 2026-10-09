@@ -77,6 +77,9 @@ class ChatConfig:
     litellm_api_key: str = ""
     chat_model: str = DEFAULT_CHAT_MODEL
     chat_models_ttl_seconds: int = DEFAULT_CHAT_MODELS_TTL_SECONDS
+    # No random default: from_env must stay deterministic (equality-pinned).
+    # api.chat.shares supplies the per-process fallback instead.
+    share_token_secret: str = ""
 
 
 @dataclass(frozen=True)
@@ -197,6 +200,7 @@ class Config:
                 litellm_api_key=e.get("API_LITELLM_API_KEY", ""),
                 chat_model=e.get("API_CHAT_MODEL") or DEFAULT_CHAT_MODEL,
                 chat_models_ttl_seconds=chat_models_ttl,
+                share_token_secret=e.get("API_SHARE_TOKEN_SECRET", ""),
             ),
         )
 

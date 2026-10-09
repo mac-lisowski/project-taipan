@@ -60,10 +60,14 @@ existing core tables):
   `snapshot` JSONB (frozen OpenAI-shaped messages), `title` text,
   `created_by_user_id` FK to users, `created_at`, `expires_at` nullable,
   `revoked_at` nullable.
-- Token: `secrets.token_urlsafe(32)`. Only the hash is stored. The URL is
-  `{public web origin}/share/{token}`. The token rides in the URL path;
-  it can appear in access logs and browser history. Accepted risk for an
-  authenticated-product share link.
+- Token: `secrets.token_urlsafe(32)` is not implementable here: only the
+  hash is stored and create must keep the token while the row lives, so a
+  random token cannot be re-served. Resolution: the token is
+  `base64url(HMAC_SHA256(API_SHARE_TOKEN_SECRET, share_id))`; only the
+  hash is stored. Revoke + recreate gets a fresh token via a new row id.
+  The URL is `{public web origin}/share/{token}`. The token rides in the
+  URL path; it can appear in access logs and browser history. Accepted
+  risk for an authenticated-product share link.
 
 ### API endpoints
 
@@ -72,6 +76,7 @@ Paths follow the existing verb-suffixed threads convention:
 | Operation      | Method and path                          | Auth     | Notes                          |
 | -------------- | ---------------------------------------- | -------- | ------------------------------ |
 | Create share   | `POST /api/threads/shares/create/{thread_id}` | session | owner check, refresh snapshot |
+| Share status   | `GET /api/threads/shares/get/{thread_id}`  | session  | `{shared: bool}`; added so the revoke control works across sessions |
 | Revoke share   | `DELETE /api/threads/shares/delete/{thread_id}` | session | sets `revoked_at`          |
 | Read snapshot  | `GET /api/public/threads/{token}`        | none     | token is the credential        |
 

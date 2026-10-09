@@ -34,4 +34,25 @@
   project-taipan-db-1 zombie container; registration,
   typed-system-settings and password-reset worktrees deletable;
   merged feat/* branches (users-table, users-admin,
-  typed-system-settings) still on origin.
+  typed-system-settings) still on origin; magic-link HTML reports and
+  ticket flips exist only in its worktree.
+- chat-thread-sharing IMPLEMENTED on feat/chat-thread-sharing
+  (worktree project-taipan-chat-thread-sharing, tickets 01-03 done,
+  reports in .scratch/chat-thread-sharing/issues/): chat_thread_shares
+  extension table + migration 706345e37b27 (partial unique index on
+  live share per thread); POST/DELETE/GET-status under
+  /api/threads/shares/* (session, owner+tenant scoped) + public
+  GET /api/public/threads/{token} returning title+messages only.
+  Token = base64url(HMAC_SHA256(API_SHARE_TOKEN_SECRET, share_id)) -
+  spec's random token + hash-only contradicts same-URL-on-repeat-create;
+  deterministic derivation resolves it; only sha256 stored. Per-process
+  random fallback warns once; prod must set the env var. Web: ShareThread
+  + confirm-gated revoke IconButton in ThreadHeader + MobileHeader
+  actions; /share/[token] public server page (noindex header + meta);
+  snapshot drops system rows and message extra keys. Spec extension:
+  shares/get status endpoint so revoke is reachable cross-session
+  (spec.md amended). REBASED onto origin/dev 0966916 (queued messages +
+  model switcher landed); migration parent re-pointed to queue rev
+  1e8aa4dfa422; controls now share one module store
+  (lib/share-state.ts) since both header slots mount a copy. 473 pytest
+  + 280 vitest green post-rebase.

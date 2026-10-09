@@ -1,7 +1,12 @@
 # Import every model module here. Base.metadata only sees tables
 # whose module was imported; create_all silently skips the rest.
 from api.models.auth_session import AuthSession
-from api.models.chat import ChatMessage, ChatQueuedMessage, ChatThread
+from api.models.chat import (
+    ChatMessage,
+    ChatQueuedMessage,
+    ChatThread,
+    ChatThreadShare,
+)
 from api.models.dek import TenantDek
 from api.models.email_suppression import (
     EmailSendCounter,
@@ -23,6 +28,7 @@ __all__ = [
     "ChatMessage",
     "ChatQueuedMessage",
     "ChatThread",
+    "ChatThreadShare",
     "EmailSendCounter",
     "EmailSuppression",
     "EmailWebhookEvent",
