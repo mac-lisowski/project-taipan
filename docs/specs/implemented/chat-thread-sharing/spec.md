@@ -1,5 +1,7 @@
 # Chat thread sharing
 
+Status: implemented (PR #49).
+
 ## Problem Statement
 
 Chat threads are private to one user. A user who gets a good answer cannot
