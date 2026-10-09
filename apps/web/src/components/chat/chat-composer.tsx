@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { QueueChips } from "@/components/chat/queue-chips";
-import { chatQueue } from "@/lib/chat-queue";
+import { useChatQueueStore } from "@/lib/chat-queue-context";
 import { useChatQueue } from "@/lib/use-chat-queue";
 
 // Matches the SDK composer: Enter submits, Shift+Enter and IME composition do not.
@@ -35,6 +35,7 @@ export function ChatComposer({
   const isLoadingMessages = useThread((s) => s.isLoadingMessages);
   const messages = useThread((s) => s.messages);
   const queue = useChatQueue();
+  const queueStore = useChatQueueStore();
 
   function send(textValue: string): Promise<void> {
     return processMessage({ role: "user", content: textValue });
@@ -45,7 +46,7 @@ export function ChatComposer({
     if (!value || isLoadingMessages) return;
     if (isRunning) {
       // Keep the draft when the enqueue fails (e.g. the 422 depth cap).
-      void chatQueue.enqueue(value).then((ok) => {
+      void queueStore.enqueue(value).then((ok) => {
         if (ok) setText("");
       });
       return;
@@ -105,9 +106,9 @@ export function ChatComposer({
         <QueueChips
           queue={queue}
           canSendHead={!isRunning && !isLoadingMessages}
-          onEdit={(id, next) => void chatQueue.update(id, next)}
-          onRemove={(id) => void chatQueue.remove(id)}
-          onSendHead={() => chatQueue.dispatchHead({ send })}
+          onEdit={(id, next) => void queueStore.update(id, next)}
+          onRemove={(id) => void queueStore.remove(id)}
+          onSendHead={() => queueStore.dispatchHead({ send })}
         />
         <div className="openui-agent-thread-composer__input-wrapper">
           <textarea
