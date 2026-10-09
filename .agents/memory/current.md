@@ -41,8 +41,9 @@
   feat/split-screen. Tickets 01-06 all implemented and committed on
   that branch (latest: 0cc6783 entry points, ?pane= cross-path carry,
   proxy-stamped next= login flow verified via curl on the built
-  server, happy-dom smoke test for the rest slot). Branch pushed and
-  PR to dev opened.
+  server, happy-dom smoke test for the rest slot). PR #51 OPEN to
+  dev. b33057e had bundled a write-pseudocode skill; excised in
+  0536844 (skill files + AGENTS.md rule 15 + skill wirings reverted).
 - Next: Spec B (email-at-rest). After merge: move split-screen spec
   to implemented/. feat/users-list-ssr deleted locally and on origin.
 - Open ops: API_APP_BASE_URL still missing in prod API env;
