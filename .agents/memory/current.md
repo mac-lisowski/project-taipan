@@ -27,8 +27,7 @@
   (PR #48), chat-thread-sharing (PR #49). Status lines flipped;
   email-at-rest link to platform-key-provisioning repointed.
   docs/specs/planned/ now holds nats-jetstream (PR #38 open),
-  chat-artifacts, chat-attachments, email-at-rest, split-screen
-  (to-tickets is the next step before implementation).
+  chat-artifacts, chat-attachments, email-at-rest.
 - split-screen spec amended post-review (per-instance queue/model
   stores, users-view BFF adapter, /system/settings path, third
   nav-conversion site, DOM smoke test resolves the no-DOM-test
@@ -41,11 +40,12 @@
   feat/split-screen. Tickets 01-06 all implemented and committed on
   that branch (latest: 0cc6783 entry points, ?pane= cross-path carry,
   proxy-stamped next= login flow verified via curl on the built
-  server, happy-dom smoke test for the rest slot). PR #51 OPEN to
-  dev. b33057e had bundled a write-pseudocode skill; excised in
-  0536844 (skill files + AGENTS.md rule 15 + skill wirings reverted).
-- Next: Spec B (email-at-rest). After merge: move split-screen spec
-  to implemented/. feat/users-list-ssr deleted locally and on origin.
+  server, happy-dom smoke test for the rest slot). PR #51 MERGED
+  (squash af65709); spec moved to implemented/. b33057e had bundled
+  a write-pseudocode skill; excised in 0536844 (skill files +
+  AGENTS.md rule 15 + skill wirings reverted).
+- Next: Spec B (email-at-rest). feat/users-list-ssr and
+  feat/split-screen deletable locally and on origin.
 - Open ops: API_APP_BASE_URL still missing in prod API env;
   project-taipan-db-1 zombie container; registration,
   typed-system-settings and password-reset worktrees deletable;

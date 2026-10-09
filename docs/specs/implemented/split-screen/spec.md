@@ -1,5 +1,7 @@
 # Split screen
 
+Status: implemented (PR #51).
+
 ## Problem Statement
 
 The authenticated app is one full-viewport chat surface. App views render
