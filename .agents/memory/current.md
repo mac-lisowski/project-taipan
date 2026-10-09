@@ -44,8 +44,13 @@
   Ticket review caught + fixed: missing singleton consumers
   (use-chat-queue/model, inflight, shared taipan-chat-model key),
   unassigned mount-restore and affordance-hiding, 04/05 header dup,
-  login needs a new next= return flow. UNCOMMITTED spec edits on dev.
-- Next: implement split-screen (or commit spec first), Spec B
+  login needs a new next= return flow. Spec committed 6d5dccd on
+  feat/split-screen. Tickets 01-05 implemented and committed on that
+  branch (latest: 81383e9 pane contents: view router, users adapter
+  fetching through /api/users, nested AgentInterface with own
+  queue/model/storage, sticky chatMounted host). Remaining: 06 entry
+  points, ?pane= write + login next= flow, DOM smoke test env.
+- Next: split-screen ticket 06, then PR to dev; Spec B
   (email-at-rest). feat/users-list-ssr deleted locally and on origin.
 - Open ops: API_APP_BASE_URL still missing in prod API env;
   project-taipan-db-1 zombie container; registration,

@@ -8,6 +8,8 @@ import {
   PANE_USER_DETAIL_PATH,
 } from "@/lib/pane-state";
 import {
+  appendPaneParam,
+  carryPaneQuery,
   parsePaneParam,
   restorePaneState,
   serializePaneParam,
@@ -119,5 +121,49 @@ describe("param round trips", () => {
   it("still reads the stored ratio on restore", () => {
     stubStorage({ "taipan-pane-ratio": "0.7" });
     expect(restorePaneState("?pane=chat", "/chat", []).ratio).toBe(0.7);
+  });
+});
+
+// syncUrl's query merge: same-path keeps everything, cross-path keeps
+// only `pane`, and a closed pane contributes nothing.
+describe("carryPaneQuery", () => {
+  it("keeps the whole query on a same-path write", () => {
+    expect(
+      carryPaneQuery("/users", "/users", "?user=3&pane=chat"),
+    ).toBe("?user=3&pane=chat");
+  });
+
+  it("carries only pane across paths", () => {
+    expect(
+      carryPaneQuery("/chat", "/users", "?user=3&pane=chat"),
+    ).toBe("?pane=chat");
+  });
+
+  it("encodes a view param value", () => {
+    expect(
+      carryPaneQuery("/chat", "/users", "?pane=view%3A%2Fusers"),
+    ).toBe("?pane=view%3A%2Fusers");
+  });
+
+  it("drops everything cross-path when the pane is closed", () => {
+    expect(carryPaneQuery("/chat", "/users", "?user=3")).toBe("");
+  });
+});
+
+// Real router pushes (users list writes) rebuild their own query; the
+// pane param rides along without touching it.
+describe("appendPaneParam", () => {
+  it("appends pane to a bare path", () => {
+    expect(appendPaneParam("/users", "?pane=chat")).toBe("/users?pane=chat");
+  });
+
+  it("appends pane alongside existing params", () => {
+    expect(appendPaneParam("/users?user=3", "?pane=chat")).toBe(
+      "/users?user=3&pane=chat",
+    );
+  });
+
+  it("leaves the url alone when the pane is closed", () => {
+    expect(appendPaneParam("/users?user=3", "")).toBe("/users?user=3");
   });
 });

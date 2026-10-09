@@ -58,3 +58,30 @@ export function restorePaneState(
     ? base
     : openPane(base, content, systemRoles, { persist: false });
 }
+
+function readPaneParam(search: string): string | null {
+  return new URLSearchParams(search).get(PANE_PARAM);
+}
+
+// A nav target carries only its own page params (like users' `user`);
+// the live `pane` param is pane state and gets re-appended here so real
+// router pushes do not silently close the pane.
+export function appendPaneParam(url: string, currentSearch: string): string {
+  const pane = readPaneParam(currentSearch);
+  if (pane === null) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}${PANE_PARAM}=${encodeURIComponent(pane)}`;
+}
+
+// syncUrl merge: a same-path write keeps the live query whole (the
+// users list params ride it); a cross-path write keeps only `pane`
+// because page params belong to their own path.
+export function carryPaneQuery(
+  targetPath: string,
+  currentPathname: string,
+  currentSearch: string,
+): string {
+  if (currentPathname === targetPath) return currentSearch;
+  const pane = readPaneParam(currentSearch);
+  return pane === null ? "" : `?${PANE_PARAM}=${encodeURIComponent(pane)}`;
+}

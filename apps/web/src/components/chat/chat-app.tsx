@@ -6,7 +6,7 @@ import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatModelSwitcher } from "@/components/chat/chat-model-switcher";
 import { QueueDispatch } from "@/components/chat/queue-dispatch";
 import { RouteView } from "@/components/chat/route-view";
-import { LayoutDashboard, User, Users } from "lucide-react";
+import { LayoutDashboard, PanelRight, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
@@ -35,7 +35,8 @@ import { ChatModelProvider } from "@/lib/chat-model-context";
 import { chatQueue } from "@/lib/chat-queue";
 import { ChatQueueProvider } from "@/lib/chat-queue-context";
 import { chatNavLinks } from "@/lib/nav";
-import { PaneStateProvider } from "@/lib/pane-state-context";
+import { PaneStateProvider, usePaneActions } from "@/lib/pane-state-context";
+import { appendPaneParam, carryPaneQuery } from "@/lib/pane-url";
 import { splitTargetPath, type ShellNavigate } from "@/lib/shell-nav";
 import { ShellNavProvider } from "@/lib/shell-nav-context";
 import { usersPath, type UsersBoot } from "@/lib/users-list";
@@ -48,11 +49,34 @@ const LINK_ICONS: Record<string, ReactNode> = {
   "/users": <Users className="h-4 w-4" />,
 };
 
-// The URL stays in step with the SDK view; a same-path sync keeps the query.
+// The URL stays in step with the SDK view; same-path writes keep the
+// whole query, cross-path writes keep only `pane` (page params stay on
+// their own path).
 function syncUrl(path: string | undefined): void {
   const target = path ?? "/chat";
-  const keepQuery = window.location.pathname === target && window.location.search !== "";
-  window.history.replaceState(null, "", keepQuery ? target + window.location.search : target);
+  const query = carryPaneQuery(
+    target,
+    window.location.pathname,
+    window.location.search,
+  );
+  window.history.replaceState(null, "", target + query);
+}
+
+// Thread-header affordance: opens the second chat in the pane. Hidden
+// under 1024px like every open-in-pane affordance.
+function SplitChatButton(): ReactNode {
+  const { open } = usePaneActions();
+  return (
+    <button
+      type="button"
+      aria-label="open a second chat in the pane"
+      title="Split: second chat"
+      onClick={() => open({ kind: "chat" })}
+      className="hidden rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground lg:inline-flex"
+    >
+      <PanelRight className="h-4 w-4" />
+    </button>
+  );
 }
 
 // The whole authenticated app: the OpenUI chat owns the viewport, and app
@@ -98,7 +122,9 @@ export function ChatApp({
       const { pathname } = splitTargetPath(target.path);
       if (target.replace === true) {
         // List writes only ever target /users; replace keeps history clean.
-        router.replace(target.path, { scroll: false });
+        router.replace(appendPaneParam(target.path, window.location.search), {
+          scroll: false,
+        });
         return;
       }
       if (pathname === "/users") {
@@ -109,7 +135,7 @@ export function ChatApp({
           typeof target.detailId === "number" && !target.path.includes("?")
             ? `${target.path}?user=${target.detailId}`
             : target.path;
-        router.push(url);
+        router.push(appendPaneParam(url, window.location.search));
         return;
       }
       // SDK routes match the bare path; a stray query would blank the view.
@@ -153,6 +179,7 @@ export function ChatApp({
               <AgentInterface.ThreadHeader>
                 <ChatModelSwitcher />
                 {shareControls}
+                <SplitChatButton />
               </AgentInterface.ThreadHeader>
               <AgentInterface.Welcome glowAnimation promptTemplates={promptTemplates} />
               {/* Mode C: custom composer owns the queue UI; starters are hand-rolled

@@ -12,9 +12,13 @@ import {
 } from "./session";
 
 const mockGet = vi.fn();
+const mockHeaderGet = vi.fn();
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
     get: mockGet,
+  })),
+  headers: vi.fn(async () => ({
+    get: mockHeaderGet,
   })),
 }));
 
@@ -35,6 +39,8 @@ vi.mock("../app/api/upstream", () => ({
 describe("session helpers", () => {
   afterEach(() => {
     mockGet.mockReset();
+    mockHeaderGet.mockReset();
+    mockHeaderGet.mockReturnValue(null);
     mockRedirect.mockClear();
     mockResolveAccount.mockReset();
     mockRevokeSession.mockReset();
@@ -110,6 +116,17 @@ describe("session helpers", () => {
     await expect(requireAccount()).rejects.toThrow("NEXT_REDIRECT:/");
     expect(mockResolveAccount).toHaveBeenCalledWith("expired-tok");
     expect(mockRedirect).toHaveBeenCalledWith("/");
+  });
+
+  it("requireAccount carries the attempted URL as next on redirect", async () => {
+    mockGet.mockReturnValue(undefined);
+    mockHeaderGet.mockReturnValue("/users?pane=view%3A%2Fusers");
+    mockResolveAccount.mockResolvedValue({ redirect: "/" });
+
+    await expect(requireAccount()).rejects.toThrow("NEXT_REDIRECT:");
+    expect(mockRedirect).toHaveBeenCalledWith(
+      `/?next=${encodeURIComponent("/users?pane=view%3A%2Fusers")}`,
+    );
   });
 
   it("redirectIfAuthenticated redirects when session exists", async () => {
