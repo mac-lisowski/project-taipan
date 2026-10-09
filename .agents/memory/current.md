@@ -45,13 +45,13 @@
   (use-chat-queue/model, inflight, shared taipan-chat-model key),
   unassigned mount-restore and affordance-hiding, 04/05 header dup,
   login needs a new next= return flow. Spec committed 6d5dccd on
-  feat/split-screen. Tickets 01-05 implemented and committed on that
-  branch (latest: 81383e9 pane contents: view router, users adapter
-  fetching through /api/users, nested AgentInterface with own
-  queue/model/storage, sticky chatMounted host). Remaining: 06 entry
-  points, ?pane= write + login next= flow, DOM smoke test env.
-- Next: split-screen ticket 06, then PR to dev; Spec B
-  (email-at-rest). feat/users-list-ssr deleted locally and on origin.
+  feat/split-screen. Tickets 01-06 all implemented and committed on
+  that branch (latest: 0cc6783 entry points, ?pane= cross-path carry,
+  proxy-stamped next= login flow verified via curl on the built
+  server, happy-dom smoke test for the rest slot). Branch pushed and
+  PR to dev opened.
+- Next: Spec B (email-at-rest). After merge: move split-screen spec
+  to implemented/. feat/users-list-ssr deleted locally and on origin.
 - Open ops: API_APP_BASE_URL still missing in prod API env;
   project-taipan-db-1 zombie container; registration,
   typed-system-settings and password-reset worktrees deletable;
