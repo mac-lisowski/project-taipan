@@ -212,3 +212,147 @@
     @apply font-sans;
   }
 }
+
+/* Split pane: a rest-slot flex sibling docked right of the SDK thread
+ * region inside .openui-agent-container. */
+.taipan-pane {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-width: 0;
+  height: 100%;
+  background: var(--background);
+  border-left: 1px solid var(--border);
+  outline: none;
+}
+/* The display:flex above would beat the UA [hidden] rule. */
+.taipan-pane[hidden] {
+  display: none;
+}
+/* Below ~1024px (class set from JS) the pane covers the SDK root, which
+ * is position:relative; 1200 sits over its 999/1000 sidebar layers and
+ * the 1100 account-menu popup. */
+.taipan-pane--overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+}
+/* A nested AgentInterface (ticket 05) fills the pane, not the viewport:
+ * the SDK hardcodes 100dvh/100dvw on its root element. */
+.taipan-pane .openui-agent-container {
+  height: 100%;
+  width: 100%;
+}
+.taipan-pane__header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.taipan-pane__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.taipan-pane__header-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+}
+.taipan-pane__header-button:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.taipan-pane__header-button:disabled {
+  opacity: 0.4;
+}
+.taipan-pane__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+/* Chat kind fills the pane edge to edge; the nested SDK owns its own
+ * scroll areas, so padding and outer scrolling only get in the way. */
+.taipan-pane__body--flush {
+  padding: 0;
+  overflow: hidden;
+}
+/* Sticky host for the lazy-mounted pane chat; hidden beats display:flex
+ * the same way .taipan-pane[hidden] does above. */
+.taipan-pane__chat {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.taipan-pane__chat[hidden] {
+  display: none;
+}
+/* View kind column: same max width the SDK gives route views so a wide
+ * overlay pane keeps a readable measure. */
+.taipan-pane__view {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+/* Window-splitter look copied from the SDK's internal, unexported
+ * resizable separator onto app-owned class names. */
+.taipan-pane-separator {
+  width: 1px;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--border);
+  cursor: col-resize;
+  user-select: none;
+}
+/* Wider invisible hit area around the 1px rule. */
+.taipan-pane-separator::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -8px;
+  right: -8px;
+  cursor: col-resize;
+}
+.taipan-pane-separator:hover {
+  background: var(--signal);
+}
+.taipan-pane-separator:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 1px;
+}
+.taipan-pane-separator__handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 40px;
+  border-radius: 9999px;
+  background: var(--signal);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  pointer-events: none;
+}
+.taipan-pane-separator:hover .taipan-pane-separator__handle,
+.taipan-pane-separator:focus-visible .taipan-pane-separator__handle {
+  opacity: 1;
+}

@@ -2,11 +2,12 @@
 
 import { AgentInterface } from "@openuidev/react-ui";
 import { Menu } from "@base-ui/react/menu";
-import { ChevronUp, LogOut, Settings2 } from "lucide-react";
+import { ChevronUp, LogOut, PanelRight, Settings2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
-import { SYSTEM_OWNER_ROLE } from "@/lib/nav";
+import { canSeeNavPath } from "@/lib/nav";
+import { usePaneActions } from "@/lib/pane-state-context";
 
 export type ChatSidebarLink = {
   key: string;
@@ -57,6 +58,7 @@ export function ChatSidebarContents({
   openPath: (path: string) => void;
 }): ReactNode {
   const router = useRouter();
+  const { open } = usePaneActions();
 
   // POST, not GET: a GET /logout fires on prefetch and kills the session.
   function logout(): void {
@@ -82,9 +84,24 @@ export function ChatSidebarContents({
             className="flex flex-col gap-0.5 md:[margin-top:calc(-1*var(--openui-space-2xl)+var(--openui-space-2xs))]"
           >
             {links.map((link) => (
-              <AgentInterface.SidebarItem key={link.key} icon={link.icon} path={link.path}>
-                {link.label}
-              </AgentInterface.SidebarItem>
+              // The affordance is a sibling overlay, not a child: a
+              // <button> inside SidebarItem's own <button> is invalid HTML.
+              <div key={link.key} className="group relative">
+                <AgentInterface.SidebarItem icon={link.icon} path={link.path}>
+                  {link.label}
+                </AgentInterface.SidebarItem>
+                <button
+                  type="button"
+                  aria-label={`open ${link.label} in the pane`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    open({ kind: "view", viewPath: link.path });
+                  }}
+                  className="absolute right-1.5 top-1/2 hidden -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:opacity-100 lg:flex lg:opacity-0 lg:group-hover:opacity-100"
+                >
+                  <PanelRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </nav>
         )}
@@ -114,7 +131,7 @@ export function ChatSidebarContents({
                 className="z-[1100]"
               >
                 <Menu.Popup className="min-w-48 rounded-lg border border-border bg-popover p-1.5 shadow-lg">
-                  {systemRoles.includes(SYSTEM_OWNER_ROLE) && (
+                  {canSeeNavPath(systemRoles, "/system/settings") && (
                     <Menu.Item className={menuItem} onClick={() => openPath("/system/settings")}>
                       <Settings2 aria-hidden="true" className="h-4 w-4" />
                       System settings

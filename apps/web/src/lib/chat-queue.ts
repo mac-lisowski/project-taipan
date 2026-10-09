@@ -219,4 +219,6 @@ export function createChatQueueStore(fetchImpl: typeof fetch = fetch) {
 
 export type ChatQueueStore = ReturnType<typeof createChatQueueStore>;
 
+// The main surface's store: also the default context value in
+// chat-queue-context, so an unwrapped tree behaves as before.
 export const chatQueue = createChatQueueStore();

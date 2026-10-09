@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useReducer, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Badge, Button } from "@/ui";
+import { useShellNavigate } from "@/lib/shell-nav-context";
 import { formatDate } from "@/lib/users-list";
 import {
   deleteUser,
@@ -25,11 +25,12 @@ export function UserDetailPanel({
   const [view, dispatch] = useReducer(reduceDetailView, { state: "loading" });
   // Retry and target changes bump the attempt so the load effect runs again.
   const [attempt, setAttempt] = useState(0);
-  const router = useRouter();
+  const nav = useShellNavigate();
 
   function back(): void {
     if (onBack) onBack();
-    else router.push("/users");
+    // detailId null targets the bare list, not the current URL's copy.
+    else nav({ path: "/users", detailId: null });
   }
 
   useEffect(() => {

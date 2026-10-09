@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Panel, PanelHeader, Sparkline, Stat } from "@/ui";
+import { useShellNavigate } from "@/lib/shell-nav-context";
 
 const THROUGHPUT: readonly number[] = [12, 18, 15, 24, 31, 27, 34];
 
@@ -34,12 +35,19 @@ export function OverviewView({
   throughput?: readonly number[];
   jobs?: readonly OverviewJob[];
 }): ReactNode {
+  const nav = useShellNavigate();
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline gap-3">
         <h1 className="font-display text-2xl uppercase tracking-tight">overview</h1>
         <Link
           href="/account"
+          onClick={(event) => {
+            // Modified clicks still open a real tab.
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            nav({ path: "/account" });
+          }}
           className="font-mono text-[10px] tracking-[0.15em] text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           profile →

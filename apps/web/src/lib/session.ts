@@ -1,7 +1,8 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { NextResponse } from "next/server";
+import { NEXT_HEADER } from "@/lib/return-path";
 import { resolveAccount, revokeSession, type Me } from "../app/api/upstream";
 
 export const SESSION_COOKIE_NAME = "session";
@@ -24,11 +25,18 @@ export function clearSessionCookie(response: NextResponse): void {
 }
 
 // Guard protected server components by redirecting unauthenticated visitors.
+// The proxy stamps the attempted URL on NEXT_HEADER so the login page can
+// send the user back (pane param included); without it the redirect stays bare.
 export const requireAccount = cache(async (): Promise<Me> => {
   const token = await getSessionToken();
   const decision = await resolveAccount(token);
   if ("redirect" in decision) {
-    redirect(decision.redirect);
+    const next = (await headers()).get(NEXT_HEADER);
+    redirect(
+      next === null
+        ? decision.redirect
+        : `${decision.redirect}?next=${encodeURIComponent(next)}`,
+    );
   }
   return decision.me;
 });

@@ -45,3 +45,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [OpenUI composer unmounts on Route views; slots.rest stays mounted](learnings/openui-composer-route-slots.md)
 - [git-grep gates need git add -N on new files](learnings/git-grep-gates-need-add-n.md)
 - [OpenUI SDK pane hooks](learnings/openui-sdk-pane-hooks.md)
+- [Review stamp binds to the session checkout, not a worktree](learnings/worktree-commit-stamp.md)

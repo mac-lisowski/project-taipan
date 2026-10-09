@@ -1,6 +1,7 @@
-// Chat model store: the allowed list comes from the API once per page
-// load, the pick persists under a taipan-* key, and completion requests
-// read the current id from here so a switch never rebuilds the ChatLLM.
+// Chat model store: the allowed list comes from the API once per chat
+// surface, the pick persists under a taipan-* key when the store was
+// created with one, and completion requests read the current id live so
+// a switch never rebuilds the ChatLLM.
 export interface ChatModel {
   id: string;
   name: string;
@@ -23,33 +24,6 @@ const SERVER_STATE: ChatModelState = {
   models: [],
   currentId: null,
 };
-
-let state: ChatModelState = SERVER_STATE;
-let inflight: Promise<void> | null = null;
-const listeners = new Set<() => void>();
-
-function emit(next: ChatModelState): void {
-  state = next;
-  listeners.forEach((notify) => notify());
-}
-
-export function readChatModelState(): ChatModelState {
-  return state;
-}
-
-// The fetch wrapper in chat-config reads the id here, so the ChatLLM
-// instance never has to be rebuilt for a model switch.
-export function currentChatModelId(): string | null {
-  return state.currentId;
-}
-
-function readStored(): string | null {
-  try {
-    return window.localStorage.getItem(CHAT_MODEL_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
 
 // A stored id wins only while the fetched list still contains it. The API
 // marks its configured default; the first entry is the last resort.
@@ -76,61 +50,109 @@ function isChatModelList(data: unknown): data is ChatModel[] {
   );
 }
 
-export function selectChatModel(id: string): void {
-  try {
-    window.localStorage.setItem(CHAT_MODEL_STORAGE_KEY, id);
-  } catch {
-    // Storage blocked: the pick still holds for this session.
+export type ChatModelStore = {
+  subscribe: (notify: () => void) => () => void;
+  getSnapshot: () => ChatModelState;
+  getServerSnapshot: () => ChatModelState;
+  currentId: () => string | null;
+  select: (id: string) => void;
+  load: () => Promise<void>;
+};
+
+export function createChatModelStore(
+  options: { storageKey?: string | null } = {},
+): ChatModelStore {
+  // Only a store built with a key persists and cross-tab syncs; a pane
+  // store passes none so its pick can never reach the shared
+  // taipan-chat-model entry or another tab's main chat.
+  const storageKey = options.storageKey ?? null;
+  let state: ChatModelState = SERVER_STATE;
+  let inflight: Promise<void> | null = null;
+  const listeners = new Set<() => void>();
+
+  function emit(next: ChatModelState): void {
+    state = next;
+    listeners.forEach((notify) => notify());
   }
-  emit({ ...state, currentId: id });
-}
 
-// Fetches once per page load: repeat calls join the same flight, and an
-// error keeps the picker hidden until reload.
-export function loadChatModels(): Promise<void> {
-  if (inflight !== null) return inflight;
-  if (typeof window === "undefined") return Promise.resolve();
-  emit({ ...state, status: "loading" });
-  inflight = (async () => {
+  function readStored(): string | null {
+    if (storageKey === null) return null;
     try {
-      const res = await fetch(CHAT_MODELS_URL);
-      if (!res.ok) throw new Error(`models list answered ${res.status}`);
-      const data: unknown = await res.json();
-      if (!isChatModelList(data)) throw new Error("malformed models list");
-      emit({
-        status: "ready",
-        models: data,
-        currentId: resolveModelId(data, readStored()),
-      });
+      return window.localStorage.getItem(storageKey);
     } catch {
-      emit({ ...state, status: "error", models: [], currentId: null });
+      return null;
     }
-  })();
-  return inflight;
-}
+  }
 
-// Cross-tab sync mirrors the theme store: a foreign write re-reads
-// storage and re-resolves against the loaded list.
-function subscribe(notify: () => void): () => void {
-  listeners.add(notify);
-  if (typeof window === "undefined") {
+  function select(id: string): void {
+    if (storageKey !== null) {
+      try {
+        window.localStorage.setItem(storageKey, id);
+      } catch {
+        // Storage blocked: the pick still holds for this session.
+      }
+    }
+    emit({ ...state, currentId: id });
+  }
+
+  // Fetches once per store: repeat calls join the same flight, and an
+  // error keeps the picker hidden until reload.
+  function load(): Promise<void> {
+    if (inflight !== null) return inflight;
+    if (typeof window === "undefined") return Promise.resolve();
+    emit({ ...state, status: "loading" });
+    inflight = (async () => {
+      try {
+        const res = await fetch(CHAT_MODELS_URL);
+        if (!res.ok) throw new Error(`models list answered ${res.status}`);
+        const data: unknown = await res.json();
+        if (!isChatModelList(data)) throw new Error("malformed models list");
+        emit({
+          status: "ready",
+          models: data,
+          currentId: resolveModelId(data, readStored()),
+        });
+      } catch {
+        emit({ ...state, status: "error", models: [], currentId: null });
+      }
+    })();
+    return inflight;
+  }
+
+  // Cross-tab sync mirrors the theme store: a foreign write re-reads
+  // storage and re-resolves against the loaded list. Unkeyed stores
+  // skip the listener because they never write storage.
+  function subscribe(notify: () => void): () => void {
+    listeners.add(notify);
+    if (typeof window === "undefined" || storageKey === null) {
+      return () => {
+        listeners.delete(notify);
+      };
+    }
+    function onStorage(event: StorageEvent): void {
+      if (event.key !== storageKey) return;
+      emit({ ...state, currentId: resolveModelId(state.models, readStored()) });
+    }
+    window.addEventListener("storage", onStorage);
     return () => {
       listeners.delete(notify);
+      window.removeEventListener("storage", onStorage);
     };
   }
-  function onStorage(event: StorageEvent): void {
-    if (event.key !== CHAT_MODEL_STORAGE_KEY) return;
-    emit({ ...state, currentId: resolveModelId(state.models, readStored()) });
-  }
-  window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(notify);
-    window.removeEventListener("storage", onStorage);
+
+  return {
+    subscribe,
+    getSnapshot: () => state,
+    getServerSnapshot: () => SERVER_STATE,
+    currentId: () => state.currentId,
+    select,
+    load,
   };
 }
 
-export const chatModelStore = {
-  subscribe,
-  getSnapshot: readChatModelState,
-  getServerSnapshot: (): ChatModelState => SERVER_STATE,
-};
+// The main surface's store: the only instance holding the shared key.
+// Non-React callers use it directly; React consumers read the store
+// through chat-model-context.
+export const chatModelStore = createChatModelStore({
+  storageKey: CHAT_MODEL_STORAGE_KEY,
+});

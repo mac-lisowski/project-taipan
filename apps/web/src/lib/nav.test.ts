@@ -4,7 +4,13 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { CHAT_SURFACE_ROUTES, chatNavLinks, privateNav } from "@/lib/nav";
+import {
+  canSeeNavPath,
+  CHAT_SURFACE_ROUTES,
+  chatNavLinks,
+  isOwnerOnlyPath,
+  privateNav,
+} from "@/lib/nav";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const readSource = (fromHere: string): string =>
@@ -50,6 +56,47 @@ describe("chatNavLinks", () => {
       { href: "/account", label: "Account", icon: "gear" },
       { href: "/users", label: "Users", icon: "users" },
     ]);
+  });
+});
+
+describe("canSeeNavPath", () => {
+  it("hides owner paths from members and shows them to owners", () => {
+    expect(canSeeNavPath([], "/users")).toBe(false);
+    expect(canSeeNavPath(["member"], "/system/settings")).toBe(false);
+    expect(canSeeNavPath(["system_owner"], "/users")).toBe(true);
+    expect(canSeeNavPath(["system_owner"], "/system/settings")).toBe(true);
+  });
+
+  it("lets any role reach member paths", () => {
+    expect(canSeeNavPath([], "/dashboard")).toBe(true);
+    expect(canSeeNavPath([], "/account")).toBe(true);
+  });
+});
+
+// Every nav source must consume the one gate in nav.ts; a second
+// membership check anywhere forks the owner rule.
+describe("single owner-path check", () => {
+  const membershipChecks = (source: string): number =>
+    (source.match(/includes\(SYSTEM_OWNER_ROLE\)/g) ?? []).length;
+
+  it("isOwnerOnlyPath owns the path list", () => {
+    expect(isOwnerOnlyPath("/users")).toBe(true);
+    expect(isOwnerOnlyPath("/system/settings")).toBe(true);
+    expect(isOwnerOnlyPath("/dashboard")).toBe(false);
+    expect(isOwnerOnlyPath("/bogus")).toBe(false);
+  });
+
+  it("counts one membership check across nav sources", () => {
+    const sources = [
+      "./nav.ts",
+      "./pane-state.ts",
+      "../components/chat/chat-sidebar.tsx",
+    ];
+    const total = sources.reduce(
+      (sum, fromHere) => sum + membershipChecks(readSource(fromHere)),
+      0,
+    );
+    expect(total).toBe(1);
   });
 });
 

@@ -27,7 +27,7 @@ flowchart LR
     PANE["SplitPane (rest slot child)"]
   end
   PANE --> PV["view kind: UsersView, SettingsView, ..."]
-  PANE --> PC["chat kind: nested AgentInterface, own ChatProvider"]
+  PANE --> PC["chat kind: nested AgentInterface,<br>own provider, queue + model stores"]
   ST["lib/pane-state: open, kind, viewPath, ratio"] --> PANE
   URL["?pane=view:/users or ?pane=chat"] <--> ST
     </pre>
@@ -91,13 +91,15 @@ flowchart LR
 
 <section class="space-y-3">
   <h2 class="text-xl font-semibold">Test seam</h2>
-  <p class="text-neutral-600">All logic sits in one pure module. Vitest covers it with stubbed window and local storage, matching the sidebar-state suite. No DOM tests, no HTTP tests.</p>
+  <p class="text-neutral-600">All logic sits in one pure module. Vitest covers it with stubbed window and local storage, matching the sidebar-state suite. One deliberate DOM smoke test guards the undocumented rest slot. No HTTP tests.</p>
   <div class="bg-white rounded-xl border border-neutral-200 p-4">
     <pre class="mermaid">
 flowchart LR
   T["vitest"] --> PS["pane-state reducer:<br>transitions, clamps, role gate"]
   T --> SER["?pane= serialize/parse:<br>round trip, close clears"]
   T --> SYN["syncUrl merge:<br>param survives main nav"]
+  T --> SMK["DOM smoke:<br>rest-slot render"]
+  T --> ISO["store isolation:<br>queue + model x2"]
     </pre>
   </div>
 </section>

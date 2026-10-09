@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { ChatApp } from "@/components/chat/chat-app";
 import { resolveUsersPage } from "@/app/api/upstream";
-import { SYSTEM_OWNER_ROLE } from "@/lib/nav";
+import { canSeeNavPath } from "@/lib/nav";
 import { getSessionToken, requireAccount } from "@/lib/session";
 import { parseUsersFilters } from "@/lib/users-list";
 
@@ -13,7 +13,7 @@ export default async function UsersPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<ReactNode> {
   const me = await requireAccount();
-  if (!me.system_roles.includes(SYSTEM_OWNER_ROLE)) {
+  if (!canSeeNavPath(me.system_roles, "/users")) {
     redirect("/chat");
   }
   const filters = parseUsersFilters(await searchParams);

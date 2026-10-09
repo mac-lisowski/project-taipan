@@ -1,8 +1,8 @@
 import { apiInternalUrl } from "./env";
 import type { ThreadSeed } from "@/lib/chat-config";
 import {
-  filtersToParams,
   guardUsersPage,
+  usersApiQuery,
   type UsersFilters,
   type UsersRead,
 } from "@/lib/users-list";
@@ -86,15 +86,8 @@ export async function resolveUsersPage(
   filters: UsersFilters,
 ): Promise<UsersRead> {
   if (!session) return { ok: false, error: "no session" };
-  // filtersToParams owns default omission; here names map to the API's and user drops.
-  const query = filtersToParams(filters);
-  query.delete("user");
-  const size = query.get("size");
-  if (size !== null) {
-    query.delete("size");
-    query.set("page_size", size);
-  }
-  const qs = query.toString();
+  // filtersToParams owns default omission; names map to the API's and user drops.
+  const qs = usersApiQuery(filters).toString();
   const url = qs === "" ? `${apiInternalUrl()}/api/users` : `${apiInternalUrl()}/api/users?${qs}`;
   let res: Response;
   try {

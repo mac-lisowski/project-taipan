@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { stubStorage } from "@/lib/storage-stub.testsupport";
 import {
   recordingFetch,
   type RecordedCall,
@@ -105,23 +106,8 @@ describe("completion fetch wrapper", () => {
     vi.unstubAllGlobals();
   });
 
-  function stubWindow(): void {
-    vi.stubGlobal("window", {
-      localStorage: {
-        getItem: (): string | null => null,
-        setItem: (): void => {},
-      },
-      addEventListener: (): void => {},
-      removeEventListener: (): void => {},
-    });
-  }
-
-  // Fresh modules per test: the model id store is a singleton that must
-  // not leak a pick between cases.
-  async function wiredFetch(): Promise<typeof fetch> {
-    vi.resetModules();
-    const { chatLLM } = await import("./chat-config");
-    chatLLM();
+  // The fetch handed to the most recent fetchLLM call.
+  function lastFetchArg(): typeof fetch {
     const call = mocks.fetchLLM.mock.calls.at(-1) as unknown as
       | [{ fetch?: typeof fetch }]
       | undefined;
@@ -130,6 +116,15 @@ describe("completion fetch wrapper", () => {
       throw new Error("fetchLLM was not given a fetch");
     }
     return fetchImpl;
+  }
+
+  // Fresh modules per test: the model id store is a singleton that must
+  // not leak a pick between cases.
+  async function wiredFetch(): Promise<typeof fetch> {
+    vi.resetModules();
+    const { chatLLM } = await import("./chat-config");
+    chatLLM();
+    return lastFetchArg();
   }
 
   function sentBody(calls: RecordedCall[], index: number): Record<string, unknown> {
@@ -141,13 +136,13 @@ describe("completion fetch wrapper", () => {
   }
 
   it("sends the current model id inside the request body", async () => {
-    stubWindow();
+    stubStorage();
     const wrapper = await wiredFetch();
-    const { selectChatModel } = await import("./chat-model");
+    const { chatModelStore } = await import("./chat-model");
     const { fetchImpl, calls } = recordingFetch();
     vi.stubGlobal("fetch", fetchImpl);
 
-    selectChatModel("smart");
+    chatModelStore.select("smart");
     await wrapper("/api/chat", {
       method: "POST",
       body: JSON.stringify({ threadId: "t" }),
@@ -157,15 +152,15 @@ describe("completion fetch wrapper", () => {
   });
 
   it("reads the live model id on each request", async () => {
-    stubWindow();
+    stubStorage();
     const wrapper = await wiredFetch();
-    const { selectChatModel } = await import("./chat-model");
+    const { chatModelStore } = await import("./chat-model");
     const { fetchImpl, calls } = recordingFetch();
     vi.stubGlobal("fetch", fetchImpl);
 
-    selectChatModel("fast");
+    chatModelStore.select("fast");
     await wrapper("/api/chat", { body: JSON.stringify({ n: 1 }) });
-    selectChatModel("smart");
+    chatModelStore.select("smart");
     await wrapper("/api/chat", { body: JSON.stringify({ n: 2 }) });
 
     expect(sentBody(calls, 0)).toEqual({ n: 1, model: "fast" });
@@ -173,7 +168,7 @@ describe("completion fetch wrapper", () => {
   });
 
   it("leaves the body untouched until a model is resolved", async () => {
-    stubWindow();
+    stubStorage();
     const wrapper = await wiredFetch();
     const { fetchImpl, calls } = recordingFetch();
     vi.stubGlobal("fetch", fetchImpl);
@@ -181,5 +176,29 @@ describe("completion fetch wrapper", () => {
     await wrapper("/api/chat", { body: JSON.stringify({ threadId: "t" }) });
 
     expect(sentBody(calls, 0)).toEqual({ threadId: "t" });
+  });
+
+  it("reads the pick from the model store handed to chatLLM", async () => {
+    stubStorage();
+    vi.resetModules();
+    const { createChatModelStore, chatModelStore } = await import("./chat-model");
+    const { chatLLM } = await import("./chat-config");
+    const { fetchImpl, calls } = recordingFetch();
+    vi.stubGlobal("fetch", fetchImpl);
+
+    const pane = createChatModelStore();
+    chatModelStore.select("main-pick");
+    pane.select("pane-pick");
+
+    chatLLM();
+    const mainFetch = lastFetchArg();
+    chatLLM(pane);
+    const paneFetch = lastFetchArg();
+
+    await mainFetch("/api/chat", { body: JSON.stringify({ n: 1 }) });
+    await paneFetch("/api/chat", { body: JSON.stringify({ n: 2 }) });
+
+    expect(sentBody(calls, 0)).toEqual({ n: 1, model: "main-pick" });
+    expect(sentBody(calls, 1)).toEqual({ n: 2, model: "pane-pick" });
   });
 });

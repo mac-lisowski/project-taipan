@@ -24,21 +24,37 @@
   (new upstream-users.test.ts).
 - Spec moves to implemented/: chat-surface + platform-key-provisioning
   (PR #46), chat-queued-messages (PR #47), chat-model-switcher
-  (PR #48). Status lines flipped; email-at-rest link to
-  platform-key-provisioning repointed. docs/specs/planned/ now holds
-  nats-jetstream (PR #38 open), chat-thread-sharing (PR #49 open),
+  (PR #48), chat-thread-sharing (PR #49). Status lines flipped;
+  email-at-rest link to platform-key-provisioning repointed.
+  docs/specs/planned/ now holds nats-jetstream (PR #38 open),
   chat-artifacts, chat-attachments, email-at-rest, split-screen
   (to-tickets is the next step before implementation).
-- Next: to-tickets for split-screen, Spec B (email-at-rest). feat/users-list-ssr deleted locally and on origin.
+- split-screen spec amended post-review (per-instance queue/model
+  stores, users-view BFF adapter, /system/settings path, third
+  nav-conversion site, DOM smoke test resolves the no-DOM-test
+  contradiction) and ticketed: .scratch/split-screen/issues/01-06
+  (pane-state -> nav + stores -> shell -> contents -> entry points).
+  Ticket review caught + fixed: missing singleton consumers
+  (use-chat-queue/model, inflight, shared taipan-chat-model key),
+  unassigned mount-restore and affordance-hiding, 04/05 header dup,
+  login needs a new next= return flow. Spec committed 6d5dccd on
+  feat/split-screen. Tickets 01-06 all implemented and committed on
+  that branch (latest: 0cc6783 entry points, ?pane= cross-path carry,
+  proxy-stamped next= login flow verified via curl on the built
+  server, happy-dom smoke test for the rest slot). PR #51 OPEN to
+  dev. b33057e had bundled a write-pseudocode skill; excised in
+  0536844 (skill files + AGENTS.md rule 15 + skill wirings reverted).
+- Next: Spec B (email-at-rest). After merge: move split-screen spec
+  to implemented/. feat/users-list-ssr deleted locally and on origin.
 - Open ops: API_APP_BASE_URL still missing in prod API env;
   project-taipan-db-1 zombie container; registration,
   typed-system-settings and password-reset worktrees deletable;
   merged feat/* branches (users-table, users-admin,
-  typed-system-settings) still on origin; magic-link HTML reports and
+  typed-system-settings, chat-thread-sharing) still on origin; magic-link HTML reports and
   ticket flips exist only in its worktree.
-- chat-thread-sharing IMPLEMENTED on feat/chat-thread-sharing
-  (worktree project-taipan-chat-thread-sharing, tickets 01-03 done,
-  reports in .scratch/chat-thread-sharing/issues/): chat_thread_shares
+- chat-thread-sharing MERGED to dev (PR #49 squash f91699d); spec
+  moved to docs/specs/implemented/chat-thread-sharing/ with Status
+  flipped (dev commits 26977c4 + memory 9c4baed). chat_thread_shares
   extension table + migration 706345e37b27 (partial unique index on
   live share per thread); POST/DELETE/GET-status under
   /api/threads/shares/* (session, owner+tenant scoped) + public
@@ -49,10 +65,8 @@
   random fallback warns once; prod must set the env var. Web: ShareThread
   + confirm-gated revoke IconButton in ThreadHeader + MobileHeader
   actions; /share/[token] public server page (noindex header + meta);
-  snapshot drops system rows and message extra keys. Spec extension:
-  shares/get status endpoint so revoke is reachable cross-session
-  (spec.md amended). REBASED onto origin/dev 0966916 (queued messages +
-  model switcher landed); migration parent re-pointed to queue rev
-  1e8aa4dfa422; controls now share one module store
-  (lib/share-state.ts) since both header slots mount a copy. 473 pytest
-  + 280 vitest green post-rebase.
+  snapshot drops system rows and message extra keys. shares/get status
+  endpoint added so revoke is reachable cross-session. Controls share
+  one module store (lib/share-state.ts) since both header slots mount a
+  copy. Worktree pruned: .scratch tickets + HTML reports went with it.
+  473 pytest + 280 vitest green at merge time.

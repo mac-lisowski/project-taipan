@@ -1,12 +1,17 @@
+"use client";
+
 import { useSyncExternalStore } from "react";
 
-import { chatQueue, type ChatQueueSnapshot } from "@/lib/chat-queue";
+import { useChatQueueStore } from "@/lib/chat-queue-context";
+import type { ChatQueueSnapshot } from "@/lib/chat-queue";
 
-// The queue store is a module singleton: there is one composer per app.
+// Queue snapshot for React consumers: the store comes from context, so
+// each chat surface reads its own instance.
 export function useChatQueue(): ChatQueueSnapshot {
+  const store = useChatQueueStore();
   return useSyncExternalStore(
-    chatQueue.subscribe,
-    chatQueue.getSnapshot,
-    chatQueue.getServerSnapshot,
+    store.subscribe,
+    store.getSnapshot,
+    store.getServerSnapshot,
   );
 }

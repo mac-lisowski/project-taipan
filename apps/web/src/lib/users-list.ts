@@ -85,6 +85,20 @@ export function usersPath(filters: UsersFilters): string {
   return query === "" ? "/users" : `/users?${query}`;
 }
 
+// The API page endpoint takes page_size, not size, and never the `user`
+// detail param. Server fetch (upstream.ts) and pane fetch (pane-users.ts)
+// share this mapping so both sides build the same query.
+export function usersApiQuery(filters: UsersFilters): URLSearchParams {
+  const query = filtersToParams(filters);
+  query.delete("user");
+  const size = query.get("size");
+  if (size !== null) {
+    query.delete("size");
+    query.set("page_size", size);
+  }
+  return query;
+}
+
 // The server guards the body shape before render; a wrong shape is an
 // error state, never a crashed table.
 export function guardUsersPage(body: unknown): UsersPagePayload | null {
