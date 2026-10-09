@@ -26,8 +26,7 @@
   (implemented, move pending), email-at-rest, platform-key-provisioning
   (done on feat/chat-surface, move pending), split-screen (to-tickets
   is the next step before implementation).
-- Next: to-tickets for split-screen, Spec B (email-at-rest). Local
-  branch feat/users-list-ssr and origin copy now deletable.
+- Next: to-tickets for split-screen, Spec B (email-at-rest). feat/users-list-ssr deleted locally and on origin.
 - Open ops: API_APP_BASE_URL still missing in prod API env;
   project-taipan-db-1 zombie container; registration,
   typed-system-settings and password-reset worktrees deletable;
