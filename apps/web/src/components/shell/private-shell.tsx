@@ -93,7 +93,7 @@ export function PrivateShell({
   // The chat app (chat + its route views) is a full-viewport OpenUI surface
   // with its own sidebar; the shell stays out of the way and only hands
   // over the session identity.
-  const chatRoutes = new Set(["/chat", "/dashboard", "/users", "/settings", "/account"]);
+  const chatRoutes = new Set(["/chat", "/dashboard", "/users", "/system/settings", "/account"]);
   if (chatRoutes.has(pathname)) {
     return (
       <ShellAccountProvider account={account}>

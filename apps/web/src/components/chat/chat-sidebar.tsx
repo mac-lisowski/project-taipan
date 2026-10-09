@@ -115,7 +115,7 @@ export function ChatSidebarContents({
               >
                 <Menu.Popup className="min-w-48 rounded-lg border border-border bg-popover p-1.5 shadow-lg">
                   {systemRoles.includes(SYSTEM_OWNER_ROLE) && (
-                    <Menu.Item className={menuItem} onClick={() => openPath("/settings")}>
+                    <Menu.Item className={menuItem} onClick={() => openPath("/system/settings")}>
                       <Settings2 aria-hidden="true" className="h-4 w-4" />
                       System settings
                     </Menu.Item>

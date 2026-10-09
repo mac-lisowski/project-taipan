@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 // Route folder owns the switch for now; chat surface will rehome it later.
-import { RegistrationSwitch } from "@/app/(private)/settings/registration-switch";
+import { RegistrationSwitch } from "@/app/(private)/system/settings/registration-switch";
 
 // Full system settings body; the server page adds the owner gate around it.
 export function SettingsView(): ReactNode {

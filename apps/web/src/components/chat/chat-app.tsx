@@ -113,7 +113,7 @@ function RouteView({
 }
 
 // Keep the browser URL in step with the SDK's internal view state, so
-// /dashboard, /users and /settings deep links land on the same surface.
+// /dashboard, /users and /system/settings deep links land on the same surface.
 function syncUrl(path: string | undefined): void {
   window.history.replaceState(null, "", path ?? "/chat");
 }
@@ -200,7 +200,7 @@ export function ChatApp({ initialPath }: { initialPath?: string }): ReactNode {
           )}
         </RouteView>
       </AgentInterface.Route>
-      <AgentInterface.Route path="/settings">
+      <AgentInterface.Route path="/system/settings">
         <RouteView onExit={() => navigate(undefined)}>
           <SettingsView />
         </RouteView>

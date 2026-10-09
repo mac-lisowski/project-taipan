@@ -13,7 +13,7 @@ describe("privateNav", () => {
         heading: "system",
         items: [
           { href: "/users", label: "users", icon: "users" },
-          { href: "/settings", label: "settings", icon: "gear" },
+          { href: "/system/settings", label: "settings", icon: "gear" },
         ],
       },
     ]);
