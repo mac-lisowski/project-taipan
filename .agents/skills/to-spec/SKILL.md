@@ -78,6 +78,8 @@ Do NOT include specific file paths or code snippets. They may end up being outda
 
 Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it within the relevant decision and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo, just the important bits.
 
+For control-flow decisions (state machines, branching, reducers, retries, ordering), prefer pseudocode over real code and follow the `write-pseudocode` skill (AGENTS.md rule 15).
+
 ## Testing Decisions
 
 A list of testing decisions that were made. Include:

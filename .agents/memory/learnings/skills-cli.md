@@ -14,6 +14,10 @@ Gotchas:
   references out of `test-smell-review` (their `agent_config.py`,
   CES rules, issue links). Reapply the trim if updated.
 - Local patches also live on `to-tickets` (`.scratch/` ticket
-  location, report DoD checkbox, .scratch-write note) and
-  `implement-spec` (per-file intent list, merger writes the HTML
-  report, step-8 ordering, report template). Reapply after update.
+  location, report DoD checkbox, .scratch-write note,
+  write-pseudocode refs), `to-spec` (spec.html artifact,
+  write-pseudocode ref), `implement-spec` (per-file intent list,
+  merger writes the HTML report, step-8 ordering, report template,
+  write-pseudocode contract bullet), and `code-review` (pre-commit
+  fixed-point paragraph, falsegreen step, stamp section,
+  write-pseudocode Standards check). Reapply after update.

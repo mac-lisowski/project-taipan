@@ -58,6 +58,10 @@
     Never add feature-specific columns directly to core entity
     models. Features attach through separate 1:1 or 1:N extension
     tables referencing entity IDs.
+15. Pseudocode in specs and tickets follows the `write-pseudocode`
+    skill: uppercase control words, 4-space indent, one action per
+    line, language-neutral. Use it only where control flow is the
+    decision; prefer it to real code in docs.
 
 ## Project map
 

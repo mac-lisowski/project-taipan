@@ -34,6 +34,7 @@ Communication to and from subagents should be sparse. Communicate primarily thro
 4. Use **implementer subagents** to implement each ticket, each in its own worktree on its own branch. Each implementer subagent:
    - confirms its worktree is based on the integration branch before starting, and resets onto it if not;
    - works the ticket's own Implementation plan and Context pointers - the ticket is the contract, not a hint;
+   - treats pseudocode blocks in specs and tickets as logic contracts: preserve control flow and branch coverage, translate names to the codebase's real types (see `write-pseudocode`);
    - writes the ticket's named tests failing-first via `tdd`, then implements;
    - leaves the ticket's Gates section green (`uv run pytest`, ruff, `uvx falsegreen`, file-size cap);
    - reviews the test files it wrote or edited with `test-smell-review` before reporting done;

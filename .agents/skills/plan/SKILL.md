@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Plan a feature before building it. Use when the user describes a feature to build and wants guided planning, or types /plan. Asks clarifying questions, then routes through the installed skills (grilling, domain-modeling, codebase-design, postgresql-table-design, to-spec, implement-spec, tdd, test-smell-review) to produce a module map and a first test slice.
+description: Plan a feature before building it. Use when the user describes a feature to build and wants guided planning, or types /plan. Asks clarifying questions, then routes through the installed skills (grilling, domain-modeling, codebase-design, postgresql-table-design, to-spec, implement-spec, tdd, test-smell-review, write-pseudocode) to produce a module map and a first test slice.
 ---
 
 # Plan
@@ -32,7 +32,8 @@ skills; do not re-explain them.
    `postgresql-table-design` and check whether a migration is needed
    (`uv run db-revision`).
 5. **Spec.** For anything beyond a small change, offer `to-spec` to
-   write a spec file; `implement-spec` can execute it later.
+   write a spec file; `implement-spec` can execute it later. Pin
+   logic-heavy decisions inside it with `write-pseudocode`.
 6. **Slice.** Propose the first TDD slice with `tdd`: the smallest
    test that proves the core behavior. Implementation reviews new or
    edited tests with `test-smell-review` before calling them done.

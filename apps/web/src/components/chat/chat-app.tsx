@@ -25,8 +25,14 @@ import { OverviewView } from "@/components/dashboard/overview-view";
 import { SettingsView } from "@/components/settings/settings-view";
 import { UserDetailPanel } from "@/components/users/user-detail-panel";
 import { UsersView } from "@/components/users/users-view";
+import { SplitPane } from "@/components/chat/split-pane";
 import { chatLLM, chatStorage } from "@/lib/chat-config";
+import { chatModelStore } from "@/lib/chat-model";
+import { ChatModelProvider } from "@/lib/chat-model-context";
+import { chatQueue } from "@/lib/chat-queue";
+import { ChatQueueProvider } from "@/lib/chat-queue-context";
 import { chatNavLinks } from "@/lib/nav";
+import { PaneStateProvider } from "@/lib/pane-state-context";
 import { splitTargetPath, type ShellNavigate } from "@/lib/shell-nav";
 import { ShellNavProvider } from "@/lib/shell-nav-context";
 import { usersPath, type UsersBoot } from "@/lib/users-list";
@@ -138,7 +144,7 @@ export function ChatApp({
   const [path, setPath] = useState<string | undefined>(initialPath);
   // The users detail is the `user` URL param, so it deep links and shares.
   const detailId = usersBoot?.filters.user ?? null;
-  const llm = useMemo(() => chatLLM(), []);
+  const llm = useMemo(() => chatLLM(chatModelStore), []);
   // The shell owns the seeded storage; pages without it get an unseeded one.
   const shellStorage = useShellThreads();
   const fallbackStorage = useMemo(() => chatStorage(null), []);
@@ -193,87 +199,99 @@ export function ChatApp({
 
   return (
     <ShellNavProvider navigate={surfaceNav}>
-      <AgentInterface
-        llm={llm}
-        storage={storage}
-        agentName="taipan"
-        components={{ AssistantMessage }}
-        starters={starters}
-        theme={{ mode, lightTheme: brandLight, darkTheme: brandDark }}
-        path={path}
-        onNavigate={openSurfaceLink}
-      >
-        <AgentInterface.MobileHeader
-          logo={<TMark />}
-          agentName={<Brand />}
-          actions={shareControls}
-        />
-        <AgentInterface.ThreadHeader>
-          <ChatModelSwitcher />
-          {shareControls}
-        </AgentInterface.ThreadHeader>
-        <AgentInterface.Welcome glowAnimation promptTemplates={promptTemplates} />
-        {/* Mode C: custom composer owns the queue UI; starters are hand-rolled
-            inside it because the SDK starter chip is not exported. */}
-        <AgentInterface.Composer>
-          <ChatComposer starters={starters} />
-        </AgentInterface.Composer>
-        {/* Non-slot child: stays mounted on route views so the queue keeps
-            dispatching while the composer is unmounted. */}
-        <QueueDispatch />
-        <AgentInterface.Sidebar>
-          <ChatSidebarContents
-            links={links}
-            email={account.email}
-            tenant={account.tenant}
-            systemRoles={account.systemRoles}
-            openPath={openSurfaceLink}
-          />
-        </AgentInterface.Sidebar>
-        <AgentInterface.Route path="/dashboard">
-          <RouteView onExit={() => navigate(undefined)}>
-            <OverviewView />
-          </RouteView>
-        </AgentInterface.Route>
-        <AgentInterface.Route path="/users">
-          <RouteView onExit={() => navigate(undefined)}>
-            {usersBoot === undefined ? null : detailId === null ? (
-              <UsersView
-                boot={usersBoot}
-                onSelectUser={(id) => {
-                  // Row selection keeps filters and page in the URL.
-                  surfaceNav({
-                    path: usersPath({ ...usersBoot.filters, user: id }),
-                    detailId: id,
-                    replace: true,
-                  });
-                }}
+      {/* Explicit stores so a future pane mounts the same providers with
+          its own instances; pane state wraps both sides' entry points. */}
+      <PaneStateProvider systemRoles={account.systemRoles}>
+        <ChatQueueProvider store={chatQueue}>
+          <ChatModelProvider store={chatModelStore}>
+            <AgentInterface
+              llm={llm}
+              storage={storage}
+              agentName="taipan"
+              components={{ AssistantMessage }}
+              starters={starters}
+              theme={{ mode, lightTheme: brandLight, darkTheme: brandDark }}
+              path={path}
+              onNavigate={openSurfaceLink}
+              // No artifact renderer may claim the detailed-view slot.
+              artifactAutoOpen={false}
+            >
+              <AgentInterface.MobileHeader
+                logo={<TMark />}
+                agentName={<Brand />}
+                actions={shareControls}
               />
-            ) : (
-              <UserDetailPanel
-                id={detailId}
-                onBack={() =>
-                  surfaceNav({
-                    path: usersPath({ ...usersBoot.filters, user: null }),
-                    detailId: null,
-                    replace: true,
-                  })
-                }
-              />
-            )}
-          </RouteView>
-        </AgentInterface.Route>
-        <AgentInterface.Route path="/system/settings">
-          <RouteView onExit={() => navigate(undefined)}>
-            <SettingsView initial={settingsBoot} />
-          </RouteView>
-        </AgentInterface.Route>
-        <AgentInterface.Route path="/account">
-          <RouteView onExit={() => navigate(undefined)}>
-            <AccountView />
-          </RouteView>
-        </AgentInterface.Route>
-      </AgentInterface>
+              <AgentInterface.ThreadHeader>
+                <ChatModelSwitcher />
+                {shareControls}
+              </AgentInterface.ThreadHeader>
+              <AgentInterface.Welcome glowAnimation promptTemplates={promptTemplates} />
+              {/* Mode C: custom composer owns the queue UI; starters are hand-rolled
+                  inside it because the SDK starter chip is not exported. */}
+              <AgentInterface.Composer>
+                <ChatComposer starters={starters} />
+              </AgentInterface.Composer>
+              {/* Non-slot child: stays mounted on route views so the queue keeps
+                  dispatching while the composer is unmounted. */}
+              <QueueDispatch />
+              {/* Non-slot child: the split pane docks right of the thread region. */}
+              <SplitPane />
+              <AgentInterface.Sidebar>
+                <ChatSidebarContents
+                  links={links}
+                  email={account.email}
+                  tenant={account.tenant}
+                  systemRoles={account.systemRoles}
+                  openPath={openSurfaceLink}
+                />
+              </AgentInterface.Sidebar>
+              <AgentInterface.Route path="/dashboard">
+                <RouteView onExit={() => navigate(undefined)}>
+                  <OverviewView />
+                </RouteView>
+              </AgentInterface.Route>
+              <AgentInterface.Route path="/users">
+                <RouteView onExit={() => navigate(undefined)}>
+                  {usersBoot === undefined ? null : detailId === null ? (
+                    <UsersView
+                      boot={usersBoot}
+                      onSelectUser={(id) => {
+                        // Row selection keeps filters and page in the URL.
+                        surfaceNav({
+                          path: usersPath({ ...usersBoot.filters, user: id }),
+                          detailId: id,
+                          replace: true,
+                        });
+                      }}
+                    />
+                  ) : (
+                    <UserDetailPanel
+                      id={detailId}
+                      onBack={() =>
+                        surfaceNav({
+                          path: usersPath({ ...usersBoot.filters, user: null }),
+                          detailId: null,
+                          replace: true,
+                        })
+                      }
+                    />
+                  )}
+                </RouteView>
+              </AgentInterface.Route>
+              <AgentInterface.Route path="/system/settings">
+                <RouteView onExit={() => navigate(undefined)}>
+                  <SettingsView initial={settingsBoot} />
+                </RouteView>
+              </AgentInterface.Route>
+              <AgentInterface.Route path="/account">
+                <RouteView onExit={() => navigate(undefined)}>
+                  <AccountView />
+                </RouteView>
+              </AgentInterface.Route>
+            </AgentInterface>
+          </ChatModelProvider>
+        </ChatQueueProvider>
+      </PaneStateProvider>
     </ShellNavProvider>
   );
 }
