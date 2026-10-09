@@ -18,8 +18,10 @@ import {
   type ReactNode,
 } from "react";
 
+import { PaneBody } from "@/components/chat/pane-body";
 import { clampPaneRatio, paneAllows } from "@/lib/pane-state";
 import { usePaneStore } from "@/lib/pane-state-context";
+import { paneTitle } from "@/lib/pane-views";
 import {
   isPaneOverlayViewport,
   PANE_KEYBOARD_STEP,
@@ -214,7 +216,7 @@ export function SplitPane(): ReactNode {
   if (!openedOnce) return null;
 
   const basis = `${clampPaneRatio(state.ratio, containerWidth) * 100}%`;
-  const title = state.kind === "chat" ? "chat" : (state.viewPath ?? "pane");
+  const title = paneTitle(state);
 
   return (
     <>
@@ -258,7 +260,14 @@ export function SplitPane(): ReactNode {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="taipan-pane__body">Pane contents land in ticket 05.</div>
+        <div
+          className={cn(
+            "taipan-pane__body",
+            state.kind === "chat" && "taipan-pane__body--flush",
+          )}
+        >
+          <PaneBody />
+        </div>
       </aside>
     </>
   );

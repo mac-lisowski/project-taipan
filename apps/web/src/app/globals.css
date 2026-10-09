@@ -288,6 +288,29 @@
   font-size: 13px;
   color: var(--muted-foreground);
 }
+/* Chat kind fills the pane edge to edge; the nested SDK owns its own
+ * scroll areas, so padding and outer scrolling only get in the way. */
+.taipan-pane__body--flush {
+  padding: 0;
+  overflow: hidden;
+}
+/* Sticky host for the lazy-mounted pane chat; hidden beats display:flex
+ * the same way .taipan-pane[hidden] does above. */
+.taipan-pane__chat {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.taipan-pane__chat[hidden] {
+  display: none;
+}
+/* View kind column: same max width the SDK gives route views so a wide
+ * overlay pane keeps a readable measure. */
+.taipan-pane__view {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+}
 
 /* Window-splitter look copied from the SDK's internal, unexported
  * resizable separator onto app-owned class names. */

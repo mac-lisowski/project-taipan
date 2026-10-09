@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  AgentInterface,
-  type PromptTemplate,
-  type Theme,
-} from "@openuidev/react-ui";
+import { AgentInterface } from "@openuidev/react-ui";
 import { AssistantMessage } from "@/components/chat/assistant-message";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatModelSwitcher } from "@/components/chat/chat-model-switcher";
@@ -29,6 +25,12 @@ import { UsersView } from "@/components/users/users-view";
 import { SplitPane } from "@/components/chat/split-pane";
 import { chatLLM, chatStorage } from "@/lib/chat-config";
 import { chatModelStore } from "@/lib/chat-model";
+import {
+  brandDark,
+  brandLight,
+  promptTemplates,
+  starters,
+} from "@/lib/chat-presets";
 import { ChatModelProvider } from "@/lib/chat-model-context";
 import { chatQueue } from "@/lib/chat-queue";
 import { ChatQueueProvider } from "@/lib/chat-queue-context";
@@ -39,53 +41,6 @@ import { ShellNavProvider } from "@/lib/shell-nav-context";
 import { usersPath, type UsersBoot } from "@/lib/users-list";
 import type { SwitchRead } from "@/lib/system-settings";
 import { useThemeMode } from "@/lib/use-theme";
-
-// Taipan green drives the OpenUI accents; dark mode takes a lighter shade.
-const brandLight: Theme = {
-  interactiveAccentDefault: "oklch(0.58 0.15 155)",
-  interactiveAccentHover: "oklch(0.63 0.15 155)",
-  interactiveAccentPressed: "oklch(0.53 0.15 155)",
-  textBrand: "oklch(0.44 0.12 155)",
-  borderAccent: "oklch(0.58 0.15 155)",
-};
-
-const brandDark: Theme = {
-  interactiveAccentDefault: "oklch(0.72 0.17 155)",
-  interactiveAccentHover: "oklch(0.77 0.17 155)",
-  interactiveAccentPressed: "oklch(0.67 0.17 155)",
-  textBrand: "oklch(0.82 0.15 155)",
-  borderAccent: "oklch(0.72 0.17 155)",
-  // Dark green needs dark text; the SDK default assumes its blue accent.
-  textAccentPrimary: "oklch(0.145 0 0)",
-};
-
-const starters = [
-  {
-    displayText: "Summarize",
-    prompt: "Summarize the key points of our conversation so far.",
-  },
-  {
-    displayText: "Draft an update",
-    prompt: "Draft a short status update I can send to my team.",
-  },
-  {
-    displayText: "Plan a task",
-    prompt: "Help me break a large task into smaller steps.",
-  },
-];
-
-// Fill-in-the-blank chip; a completion is appended to the stem, so it carries only the tail.
-const promptTemplates: PromptTemplate[] = [
-  {
-    displayText: "Explain a page",
-    prompt: "Explain how the ",
-    completions: [
-      { displayText: "users list", prompt: "users list works." },
-      { displayText: "system settings", prompt: "system settings page works." },
-      { displayText: "account page", prompt: "account page works." },
-    ],
-  },
-];
 
 const LINK_ICONS: Record<string, ReactNode> = {
   "/dashboard": <LayoutDashboard className="h-4 w-4" />,
