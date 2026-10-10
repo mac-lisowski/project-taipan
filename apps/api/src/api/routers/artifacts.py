@@ -7,10 +7,11 @@ routes map service errors to status codes and emit the SDK shape.
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from storage import ObjectStore
 
 from api import artifacts
+from api.artifacts import download as artifact_download
 from api.authz import Principal, current_principal
 from api.config import get_config
 from api.db import DbSession
@@ -88,6 +89,23 @@ def update_artifact(
     except artifacts.NotFound as exc:
         raise HTTPException(status_code=404, detail="artifact not found") from exc
     return _summary(row)
+
+
+@router.get("/{artifact_id}/download")
+def download_artifact(
+    artifact_id: UUID, db: DbSession, principal: PrincipalSession, store: StoreDep
+) -> Response:
+    try:
+        filename, media_type, payload = artifact_download.build(
+            db, store, artifact_id, principal=principal
+        )
+    except (artifacts.NotFound, artifacts.ObjectMissing) as exc:
+        raise HTTPException(status_code=404, detail="artifact not found") from exc
+    return Response(
+        content=payload,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.delete("/{artifact_id}", status_code=204)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useArtifactStorage } from "@openuidev/react-headless";
+import { useArtifactStorage, useThreadList } from "@openuidev/react-headless";
 import {
   EditableTable,
   IconButton,
@@ -10,14 +10,21 @@ import {
   type EditableTableColumn,
   type EditableTableRow,
 } from "@openuidev/react-ui";
-import { Check, FileText, Table2, Trash2 } from "lucide-react";
+import { Check, Download, FileText, Table2, Trash2 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import {
+  artifactDownloadUrl,
   deleteArtifact,
+  findArtifactSummary,
   peekArtifactSummary,
 } from "@/lib/artifact-storage";
-import type { ArtifactDraft, ArtifactRow } from "@/lib/artifact-renderers";
+import {
+  DOCUMENT_TYPE,
+  TABLE_TYPE,
+  type ArtifactDraft,
+  type ArtifactRow,
+} from "@/lib/artifact-renderers";
 
 const ARTIFACTS_PREFIX = "artifacts/";
 
@@ -73,9 +80,21 @@ export function ArtifactActual({
 }): ReactNode {
   const { path } = useNav();
   const storage = useArtifactStorage();
+  const selectedThreadId = useThreadList((state) => state.selectedThreadId);
   const artifactId = artifactIdFromPath(path);
   const editable = artifactId !== null && storage !== null;
   const summary = artifactId === null ? undefined : peekArtifactSummary(artifactId);
+  // The canonical path carries the id; in the in-thread detailed view the
+  // stored id only resolves when the summary was listed at least once.
+  const storedId =
+    artifactId ??
+    (selectedThreadId === null
+      ? null
+      : (findArtifactSummary({
+          threadId: selectedThreadId,
+          title: draft.title,
+          type: draft.kind === "table" ? TABLE_TYPE : DOCUMENT_TYPE,
+        })?.id ?? null));
   const [markdown, setMarkdown] = useState(draft.markdown);
   const [rows, setRows] = useState<ArtifactRow[]>(draft.rows);
   const [dirty, setDirty] = useState(false);
@@ -106,32 +125,46 @@ export function ArtifactActual({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {summary?.threadId === "" && <style>{DEAD_THREAD_CSS}</style>}
-      {editable && (
+      {(editable || storedId !== null) && (
         <div className="flex items-center justify-end gap-1.5 border-b border-border px-3 py-2">
-          <button
-            type="button"
-            onClick={() => void save()}
-            disabled={!dirty || saving}
-            className="rounded-md border border-border px-3 py-1 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save"}
-          </button>
-          {confirming ? (
-            <IconButton
-              variant="tertiary"
-              size="small"
-              icon={<Check size="1em" />}
-              aria-label="confirm delete"
-              onClick={() => void remove()}
-            />
-          ) : (
-            <IconButton
-              variant="tertiary"
-              size="small"
-              icon={<Trash2 size="1em" />}
-              aria-label="delete artifact"
-              onClick={() => setConfirming(true)}
-            />
+          {storedId !== null && (
+            <a
+              href={artifactDownloadUrl(storedId)}
+              download
+              aria-label="download artifact"
+              className="rounded-md border border-border px-3 py-1 text-xs font-medium transition-colors hover:bg-accent"
+            >
+              <Download size="1em" className="inline" /> Download
+            </a>
+          )}
+          {editable && (
+            <>
+              <button
+                type="button"
+                onClick={() => void save()}
+                disabled={!dirty || saving}
+                className="rounded-md border border-border px-3 py-1 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+              {confirming ? (
+                <IconButton
+                  variant="tertiary"
+                  size="small"
+                  icon={<Check size="1em" />}
+                  aria-label="confirm delete"
+                  onClick={() => void remove()}
+                />
+              ) : (
+                <IconButton
+                  variant="tertiary"
+                  size="small"
+                  icon={<Trash2 size="1em" />}
+                  aria-label="delete artifact"
+                  onClick={() => setConfirming(true)}
+                />
+              )}
+            </>
           )}
         </div>
       )}

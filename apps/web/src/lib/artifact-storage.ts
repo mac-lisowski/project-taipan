@@ -19,6 +19,30 @@ export function peekArtifactSummary(id: string): ArtifactSummary | undefined {
   return seen.get(id);
 }
 
+// In-thread views have no stored id in the nav path; the summary cache is
+// the only link from a streamed tool call back to its artifact row.
+export function findArtifactSummary(match: {
+  threadId: string;
+  title: string;
+  type: string;
+}): ArtifactSummary | undefined {
+  for (const summary of seen.values()) {
+    if (
+      summary.threadId === match.threadId &&
+      summary.title === match.title &&
+      summary.type === match.type
+    ) {
+      return summary;
+    }
+  }
+  return undefined;
+}
+
+// Anchors hit the BFF route directly; the api streams an attachment.
+export function artifactDownloadUrl(id: string): string {
+  return `${ARTIFACTS_URL}/${encodeURIComponent(id)}/download`;
+}
+
 function remember(summary: ArtifactSummary): void {
   if (seen.size >= SEEN_MAX) {
     const oldest = seen.keys().next().value;

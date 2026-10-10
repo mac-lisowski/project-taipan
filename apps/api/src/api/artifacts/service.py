@@ -33,6 +33,8 @@ from api.files.service import store_bytes
 from api.models import ChatArtifact, File
 
 __all__ = [
+    "DOCUMENT_TYPE",
+    "TABLE_TYPE",
     "InvalidCursor",
     "NotFound",
     "ObjectMissing",
@@ -46,6 +48,10 @@ __all__ = [
 
 PURPOSE = "artifact"
 CONTENT_TYPE = "application/json"
+# The artifact kinds the save_artifact tool may produce; downloads map
+# each kind to its export format.
+DOCUMENT_TYPE = "taipan_document"
+TABLE_TYPE = "taipan_table"
 DEFAULT_PAGE = 50
 MAX_PAGE = 200
 

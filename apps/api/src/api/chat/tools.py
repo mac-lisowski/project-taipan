@@ -32,8 +32,8 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 SAVE_ARTIFACT_NAME = "save_artifact"
-DOCUMENT_TYPE = "taipan_document"
-TABLE_TYPE = "taipan_table"
+DOCUMENT_TYPE = artifacts.DOCUMENT_TYPE
+TABLE_TYPE = artifacts.TABLE_TYPE
 
 SAVE_ARTIFACT_TOOL = {
     "type": "function",

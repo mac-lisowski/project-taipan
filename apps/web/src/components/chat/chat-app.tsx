@@ -197,6 +197,9 @@ export function ChatApp({
               <QueueDispatch />
               {/* Non-slot child: the split pane docks right of the thread region. */}
               <SplitPane />
+              {/* Per-thread artifact rail; the header toggle appears only
+                  when the thread registered artifacts. */}
+              <AgentInterface.Workspace />
               <AgentInterface.Sidebar>
                 <ChatSidebarContents
                   links={links}

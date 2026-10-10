@@ -110,6 +110,7 @@ delete while a live artifact references it. Deleting a thread sets
 | Read      | `GET /api/artifacts/{id}`  | summary plus content                        |
 | Update    | `PATCH /api/artifacts/{id}`| content only, bumps version                 |
 | Delete    | `DELETE /api/artifacts/{id}`| owner scoped; removes file row and object  |
+| Download  | `GET /api/artifacts/{id}/download` | owner scoped; `.md` for documents, `.csv` for tables |
 
 All endpoints scope by `principal.user_id` and stamp `tenant_id`, same as
 threads. The SDK contract maps: list returns `{artifacts, nextCursor}`,
@@ -135,6 +136,13 @@ affordance.
   through the same storage object.
 - Sidebar gains `<AgentInterface.ArtifactNav />`; `labels.artifacts` reads
   "Documents". Auto-open stays on (at most one new version per stream).
+- The thread view mounts `<AgentInterface.Workspace />`, the SDK's
+  per-thread rail listing artifacts registered in the active thread; a
+  header toggle appears once the thread has any. Both chat surfaces get it.
+- A Download button sits in the artifact view wherever a stored id resolves:
+  the canonical `artifacts/{category}/{id}` path carries it; the in-thread
+  detailed view matches the summary cache on `threadId` + title + type.
+  The anchor hits the BFF, which relays `Content-Disposition` verbatim.
 
 ```mermaid
 flowchart LR

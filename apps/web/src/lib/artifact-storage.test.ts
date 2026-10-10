@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ARTIFACTS_URL,
+  artifactDownloadUrl,
   artifactStorage,
   deleteArtifact,
+  findArtifactSummary,
   peekArtifactSummary,
 } from "./artifact-storage";
 
@@ -130,5 +132,44 @@ describe("deleteArtifact", () => {
     stubFetch(() => new Response("nope", { status: 404 }));
 
     await expect(deleteArtifact("missing")).rejects.toThrow("404");
+  });
+});
+
+describe("artifactDownloadUrl", () => {
+  it("points at the BFF download route with an encoded id", () => {
+    expect(artifactDownloadUrl("a1")).toBe(`${ARTIFACTS_URL}/a1/download`);
+    expect(artifactDownloadUrl("a/b")).toBe(`${ARTIFACTS_URL}/a%2Fb/download`);
+  });
+});
+
+describe("findArtifactSummary", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("matches a seen summary on thread, title and type", async () => {
+    stubFetch(() => json({ artifacts: [SUMMARY] }));
+    await artifactStorage.list();
+
+    const hit = findArtifactSummary({
+      threadId: "t1",
+      title: "Report",
+      type: "taipan_document",
+    });
+
+    expect(hit?.id).toBe("a1");
+  });
+
+  it("returns undefined when any field differs", async () => {
+    stubFetch(() => json({ artifacts: [SUMMARY] }));
+    await artifactStorage.list();
+
+    for (const probe of [
+      { threadId: "t2", title: "Report", type: "taipan_document" },
+      { threadId: "t1", title: "Other", type: "taipan_document" },
+      { threadId: "t1", title: "Report", type: "taipan_table" },
+    ]) {
+      expect(findArtifactSummary(probe)).toBeUndefined();
+    }
   });
 });

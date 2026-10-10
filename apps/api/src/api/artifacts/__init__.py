@@ -1,6 +1,8 @@
 """Artifacts package: chat artifact persistence over the files registry."""
 
 from api.artifacts.service import (
+    DOCUMENT_TYPE,
+    TABLE_TYPE,
     InvalidCursor,
     NotFound,
     ObjectMissing,
@@ -13,6 +15,8 @@ from api.artifacts.service import (
 )
 
 __all__ = [
+    "DOCUMENT_TYPE",
+    "TABLE_TYPE",
     "InvalidCursor",
     "NotFound",
     "ObjectMissing",

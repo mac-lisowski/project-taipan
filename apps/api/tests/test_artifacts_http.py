@@ -231,6 +231,7 @@ def test_other_users_artifacts_404_everywhere(client, session_factory):
         == 404
     )
     assert client.delete(f"/api/artifacts/{aid}").status_code == 404
+    assert client.get(f"/api/artifacts/{aid}/download").status_code == 404
     # The refused writes and deletes left the object in place.
     assert len(store.list_objects()) == 1
 

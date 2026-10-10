@@ -70,6 +70,7 @@ export function PaneChat(): ReactNode {
               nothing else on kind switches. No Sidebar slot: the SDK
               default sidebar is the thread picker this chat wants. */}
           <QueueDispatch />
+          <AgentInterface.Workspace />
         </AgentInterface>
       </ChatModelProvider>
     </ChatQueueProvider>
