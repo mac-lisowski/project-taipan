@@ -1,0 +1,17 @@
+[project]
+name = "messaging"
+version = "0.1.0"
+description = "Messaging seam: publish/subscribe interface with fake and NATS adapters"
+requires-python = ">=3.12"
+dependencies = [
+    "nats-py>=2.9.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9,<1"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "paho-mqtt>=2.1",
+]

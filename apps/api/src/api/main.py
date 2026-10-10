@@ -9,6 +9,7 @@ from api.db import Base, SessionLocal
 from api.field_crypto import build_and_register_field_crypto
 from api.files.store import build_object_store
 from api.mail import build_email_sender
+from api.messaging import build_messaging
 from api.middleware import RequestSizeLimitMiddleware, TenantScopeMiddleware
 from api.models.encrypted_string import EncryptedString, get_field_crypto, set_field_crypto
 from api.routers import (
@@ -17,6 +18,7 @@ from api.routers import (
     chat_router,
     email_webhooks_router,
     files_router,
+    health_router,
     password_change_router,
     password_reset_router,
     profiles_router,
@@ -50,6 +52,9 @@ async def lifespan(app: FastAPI):
     app.state.email_sender = build_email_sender(get_config(), session_factory=SessionLocal)
     # One object store for the process; routes reach it through get_object_store.
     app.state.object_store = build_object_store(get_config())
+    # Picks the broker adapter once from server config. Routes use it
+    # through get_messaging and never see the URL.
+    app.state.messaging = build_messaging(get_config())
     if _encrypted_columns_exist() and get_field_crypto() is None:
         raise RuntimeError("EncryptedString columns exist but no crypto module is registered")
     yield
@@ -64,6 +69,8 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(TenantScopeMiddleware)
 app.include_router(users_router, prefix="/api")
+# Health sits at the root: operator probes do not use the API prefix.
+app.include_router(health_router)
 app.include_router(profiles_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(setup_router, prefix="/api")

@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from crypto.envelope import is_valid_key_id
+from messaging import STORE_MODES
 
 DEFAULT_DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/app"
 DEFAULT_REDIS_URL = "redis://localhost:6379/0"
@@ -40,6 +41,10 @@ DEFAULT_S3_SECRET_KEY = "taipan-dev-secret"
 DEFAULT_S3_BUCKET = "taipan"
 DEFAULT_S3_REGION = "us-east-1"
 DEFAULT_FILES_MAX_BYTES = 10 * 1024 * 1024
+DEFAULT_BROKER_URL = "nats://localhost:4222"
+# Per-stream JetStream storage; the mode vocabulary lives in messaging.
+JETSTREAM_STORES = STORE_MODES
+DEFAULT_JETSTREAM_STORE = "file"
 
 
 @dataclass(frozen=True)
@@ -102,11 +107,18 @@ class StorageConfig:
 
 
 @dataclass(frozen=True)
+class MsgConfig:
+    broker_url: str = DEFAULT_BROKER_URL
+    jetstream_store: str = DEFAULT_JETSTREAM_STORE
+
+
+@dataclass(frozen=True)
 class Config:
     db: DbConfig
     store: StoreConfig
     crypto: CryptoConfig
     mail: MailConfig
+    msg: MsgConfig
     server: ServerConfig
     chat: ChatConfig
     storage: StorageConfig
@@ -193,6 +205,12 @@ class Config:
         resend_api_key = e.get("API_RESEND_API_KEY", "")
         mail_from = e.get("API_MAIL_FROM", DEFAULT_MAIL_FROM)
         resend_webhook_secret = e.get("API_RESEND_WEBHOOK_SECRET", "")
+        broker_url = e.get("API_BROKER_URL", DEFAULT_BROKER_URL)
+        if not broker_url.strip():
+            raise ValueError("API_BROKER_URL must be non-empty")
+        jetstream_store = e.get("API_JETSTREAM_STORE", DEFAULT_JETSTREAM_STORE)
+        if jetstream_store not in JETSTREAM_STORES:
+            raise ValueError("API_JETSTREAM_STORE must be 'file' or 'memory'")
         if resend_api_key and not mail_from.strip():
             raise ValueError("API_MAIL_FROM must be non-empty when API_RESEND_API_KEY is set")
 
@@ -220,6 +238,7 @@ class Config:
                 # An empty var would build a relative link the renderer rejects.
                 app_base_url=e.get("API_APP_BASE_URL") or DEFAULT_APP_BASE_URL,
             ),
+            msg=MsgConfig(broker_url=broker_url.strip(), jetstream_store=jetstream_store),
             server=ServerConfig(host=host, port=port),
             chat=ChatConfig(
                 # An empty var falls back to the default, like the web base URL.

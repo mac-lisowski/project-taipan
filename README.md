@@ -216,6 +216,7 @@ graph LR
 ## Docs
 
 - `docs/devcontainer.md` - devcontainer topology and troubleshooting.
+- `docs/messaging.md` - NATS broker vars, naming, ports, edge bridging.
 - `docs/infisical.md` - Infisical/KMS operator guide.
 - `docs/extensible-user-entity.md` - Pattern A extension-table recipe.
 - `docs/adr/` - architecture decision records.

@@ -219,3 +219,39 @@
   one module store (lib/share-state.ts) since both header slots mount a
   copy. Worktree pruned: .scratch tickets + HTML reports went with it.
   473 pytest + 280 vitest green at merge time.
+- Branch: feat/nats-jetstream (PR #38 open), rebased onto dev after the
+  storage/chat-files merges. NATS JetStream spec IMPLEMENTED. 8 tickets
+  in .scratch/nats-jetstream/issues/ with HTML reports.
+- Feature: packages/messaging (seam.py Message/Messaging/MessagingError +
+  subject grammar + define_stream; fake.py FakeBroker; nats.py NatsBroker
+  lazy bounded connect + durable pull consumers; nats_streams.py StreamOps
+  mixin replay/ensure_stream). MsgConfig 6th frozen group: API_BROKER_URL
+  (nats://localhost:4222) + API_JETSTREAM_STORE (file|memory, per-stream
+  StreamConfig.storage). Factory build_messaging defaults NatsBroker,
+  FakeBroker explicit. GET /health at root reports broker.connected
+  (cached only, no ping). Compose nats in both stacks (nats:2.15-alpine,
+  docker/nats/nats.conf, volumes, ports 4222/8222/1883 host only).
+  Railway: docker/nats/Dockerfile + nats-railway.conf (no MQTT).
+  docs/messaging.md + commit-convention.md regenerated (messaging scope).
+- Verification: root pytest 470 passed 10 skipped (live nats tier RUNS
+  against compose broker on 4222; 1 paho skip). ruff clean; falsegreen
+  0 high 3 low C16 (uuid namespace convention). code-review two-axis
+  CLEAN after repair round (6 fixes: vocab single-sourced in messaging
+  STORE_MODES/RETENTIONS, fake replay wildcard membership bug, headers
+  field dropped, dead_letter required kwarg, live-test conftest dedup,
+  stale docstring). httpx2 + pyyaml added to apps/api deps.
+- Rebase note: additive conflicts in config/main/routers/schemas/pyprojects
+  (union both sides), uv.lock regenerated via `uv lock`, compose keeps
+  nats+minio services and both volumes.
+- Compose broker project-taipan-nats-jetstream-nats-1 intentionally left
+  RUNNING (healthy) on 4222/8222/1883 from the worktree stack; live
+  tests use it. Stop with docker compose -f docker-compose.yaml down
+  (keeps natsdata volume).
+- Gotchas: nats-py has no retry_on_failed_connect (initial connect
+  blocks; bounded wait_for + background-at-first-use pattern); JetStream
+  DLQ is app-level (metadata num_delivered >= cap, then publish + term);
+  replay = ordered consumer with quiet-window end; member dev groups
+  (paho) do not install under root uv run (use uv run --with paho-mqtt).
+- Next: spec moves to docs/specs/implemented/nats-jetstream/ at merge
+  (git mv + PR status line per implement-spec). Real job types and event
+  schemas are the follow-up spec; edge bridging stays off.
