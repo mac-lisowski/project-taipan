@@ -1,5 +1,15 @@
 # Current state
 
+- chat-files extras on feat/chat-files (PR #53): Workspace slot mounted
+  on both chat surfaces (per-thread artifact rail, header toggle auto-
+  appears); GET /api/artifacts/{id}/download streams .md (documents) /
+  .csv (tables) via api/artifacts/download.py; Download button in
+  ArtifactActual resolves stored id from canonical path or
+  findArtifactSummary(threadId+title+type) off-path. DOCUMENT_TYPE/
+  TABLE_TYPE constants moved to artifacts.service (tools.py aliases).
+  View tests split to components/chat/artifact-views.test.tsx (300 LOC
+  cap). SYSTEM_PROMPT now tells the model about save_artifact; tool
+  content arg gained anyOf [string, array<object>]. 609 api + 437 web.
 - chat-files implementation COMPLETE on feat/chat-files, uncommitted
   (user said no commit/push/branch). All 8 tickets done + HTML reports
   in .scratch/chat-files/issues/. Two review rounds run on the full
