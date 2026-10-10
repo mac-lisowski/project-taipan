@@ -138,8 +138,7 @@
   (PR #46), chat-queued-messages (PR #47), chat-model-switcher
   (PR #48), chat-thread-sharing (PR #49). Status lines flipped;
   email-at-rest link to platform-key-provisioning repointed.
-  docs/specs/planned/ now holds nats-jetstream (PR #38 open),
-  chat-artifacts, chat-attachments, email-at-rest. Both chat specs
+  docs/specs/planned/ now holds only email-at-rest. The two chat specs
   revised to final form (no phased deferrals): attachments are
   files-registry-backed taipan_file parts with vision gating via
   /model/info; artifacts persist tool_calls, edit+delete in the
@@ -219,9 +218,9 @@
   one module store (lib/share-state.ts) since both header slots mount a
   copy. Worktree pruned: .scratch tickets + HTML reports went with it.
   473 pytest + 280 vitest green at merge time.
-- Branch: feat/nats-jetstream (PR #38 open), rebased onto dev after the
-  storage/chat-files merges. NATS JetStream spec IMPLEMENTED. 8 tickets
-  in .scratch/nats-jetstream/issues/ with HTML reports.
+- nats-jetstream MERGED to dev (PR #38 squash 9fa3330) after rebase onto
+  post-storage/chat-files dev. Spec moved to
+  docs/specs/implemented/nats-jetstream/ with Status flipped.
 - Feature: packages/messaging (seam.py Message/Messaging/MessagingError +
   subject grammar + define_stream; fake.py FakeBroker; nats.py NatsBroker
   lazy bounded connect + durable pull consumers; nats_streams.py StreamOps
@@ -252,6 +251,6 @@
   DLQ is app-level (metadata num_delivered >= cap, then publish + term);
   replay = ordered consumer with quiet-window end; member dev groups
   (paho) do not install under root uv run (use uv run --with paho-mqtt).
-- Next: spec moves to docs/specs/implemented/nats-jetstream/ at merge
+- Done: spec moved to docs/specs/implemented/nats-jetstream/ at merge
   (git mv + PR status line per implement-spec). Real job types and event
   schemas are the follow-up spec; edge bridging stays off.

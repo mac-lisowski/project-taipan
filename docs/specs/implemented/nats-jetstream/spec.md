@@ -1,6 +1,6 @@
 # Spec: NATS JetStream messaging on Railway
 
-Status: planned.
+Status: implemented.
 
 Seam: one messaging seam owns publish, subscribe, and queue shapes over an injected NATS link. The API config seam owns the broker URL. Routers and workers stay thin.
 
