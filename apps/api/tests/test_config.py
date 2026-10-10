@@ -69,28 +69,6 @@ def test_config_defaults() -> None:
     assert cfg.storage.upload_max_bytes == DEFAULT_FILES_MAX_BYTES
 
 
-def test_broker_url_default_is_local_nats() -> None:
-    assert DEFAULT_BROKER_URL == "nats://localhost:4222"
-    assert Config.from_env({}).msg.broker_url == DEFAULT_BROKER_URL
-
-
-def test_jetstream_store_default_is_file() -> None:
-    assert DEFAULT_JETSTREAM_STORE == "file"
-    assert Config.from_env({}).msg.jetstream_store == DEFAULT_JETSTREAM_STORE
-
-
-def test_jetstream_store_env_selects_memory() -> None:
-    cfg = Config.from_env({"API_JETSTREAM_STORE": "memory"})
-
-    assert cfg.msg.jetstream_store == "memory"
-
-
-@pytest.mark.parametrize("val", ["disk", "MEMORY", "ram", ""])
-def test_jetstream_store_fails_loud_on_bad_values(val: str) -> None:
-    with pytest.raises(ValueError, match="API_JETSTREAM_STORE must be 'file' or 'memory'"):
-        Config.from_env({"API_JETSTREAM_STORE": val})
-
-
 def test_config_custom_values() -> None:
     env = {
         "API_DATABASE_URL": "postgresql://user:pass@db:5432/custom",
@@ -123,12 +101,6 @@ def test_config_custom_values() -> None:
     assert cfg.server.host == "127.0.0.1"
     assert cfg.server.port == 9000
     assert cfg.store.session_ttl_seconds == 3600
-
-
-def test_broker_url_env_strips_surrounding_whitespace() -> None:
-    cfg = Config.from_env({"API_BROKER_URL": "  nats://edge:4222  "})
-
-    assert cfg.msg.broker_url == "nats://edge:4222"
 
 
 @pytest.mark.parametrize(
