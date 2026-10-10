@@ -1,5 +1,7 @@
 # Chat artifacts
 
+Status: implemented.
+
 ## Problem Statement
 
 Assistant answers live only inside message bubbles. A report, table, or

@@ -1,5 +1,7 @@
 # Chat composer attachments
 
+Status: implemented.
+
 ## Problem Statement
 
 The chat composer accepts text only. Users cannot attach a file to ask

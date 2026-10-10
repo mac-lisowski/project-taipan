@@ -1,5 +1,13 @@
 # Current state
 
+- chat-files MERGED to dev (PR #53 squash cd6338c). Both specs moved to
+  docs/specs/implemented/ with Status flipped. Final fix round added
+  resolveArtifactId (content-match disambiguation for same-title/type
+  duplicates, replaces findArtifactSummary first-hit) +
+  use-stored-artifact-id.ts hook, and mobile artifact access via
+  globals.css (workspace toggle resurfaced as floating button since the
+  SDK hides the whole thread header on mobile; workspace rail widened
+  294px -> 100%; detailed view already covers inset:0).
 - chat-files extras on feat/chat-files (PR #53): Workspace slot mounted
   on both chat surfaces (per-thread artifact rail, header toggle auto-
   appears); GET /api/artifacts/{id}/download streams .md (documents) /
