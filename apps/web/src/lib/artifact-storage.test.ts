@@ -5,8 +5,8 @@ import {
   artifactDownloadUrl,
   artifactStorage,
   deleteArtifact,
-  findArtifactSummary,
   peekArtifactSummary,
+  resolveArtifactId,
 } from "./artifact-storage";
 
 const SUMMARY = {
@@ -142,34 +142,76 @@ describe("artifactDownloadUrl", () => {
   });
 });
 
-describe("findArtifactSummary", () => {
+describe("resolveArtifactId", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("matches a seen summary on thread, title and type", async () => {
-    stubFetch(() => json({ artifacts: [SUMMARY] }));
+  const MATCH = {
+    threadId: "t1",
+    title: "Report",
+    type: "taipan_document",
+    content: { markdown: "# body" },
+  };
+
+  it("returns the only matching summary without a content fetch", async () => {
+    const fetchMock = stubFetch(() => json({ artifacts: [SUMMARY] }));
     await artifactStorage.list();
+    fetchMock.mockClear();
 
-    const hit = findArtifactSummary({
-      threadId: "t1",
-      title: "Report",
-      type: "taipan_document",
-    });
-
-    expect(hit?.id).toBe("a1");
+    await expect(resolveArtifactId(MATCH)).resolves.toBe("a1");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("returns undefined when any field differs", async () => {
+  it("disambiguates same-key duplicates by stored content", async () => {
+    const older = { ...SUMMARY, id: "dup-old" };
+    const newer = { ...SUMMARY, id: "dup-new" };
+    stubFetch((url) => {
+      if (url === ARTIFACTS_URL) return json({ artifacts: [older, newer] });
+      if (url.endsWith("/dup-old"))
+        return json({ ...older, content: { markdown: "old" } });
+      if (url.endsWith("/dup-new"))
+        return json({ ...newer, content: { markdown: "new" } });
+      return new Response("nope", { status: 404 });
+    });
+    await artifactStorage.list();
+
+    const id = await resolveArtifactId({
+      ...MATCH,
+      content: { markdown: "new" },
+    });
+
+    expect(id).toBe("dup-new");
+  });
+
+  it("returns undefined when no duplicate carries the draft content", async () => {
+    const older = { ...SUMMARY, id: "dup-old2" };
+    const newer = { ...SUMMARY, id: "dup-new2" };
+    stubFetch((url) => {
+      if (url === ARTIFACTS_URL) return json({ artifacts: [older, newer] });
+      if (url.endsWith("/dup-old2"))
+        return json({ ...older, content: { markdown: "x" } });
+      if (url.endsWith("/dup-new2"))
+        return json({ ...newer, content: { markdown: "y" } });
+      return new Response("nope", { status: 404 });
+    });
+    await artifactStorage.list();
+
+    await expect(resolveArtifactId(MATCH)).resolves.toBeUndefined();
+  });
+
+  it("returns undefined when nothing matches the key", async () => {
     stubFetch(() => json({ artifacts: [SUMMARY] }));
     await artifactStorage.list();
 
-    for (const probe of [
-      { threadId: "t2", title: "Report", type: "taipan_document" },
-      { threadId: "t1", title: "Other", type: "taipan_document" },
-      { threadId: "t1", title: "Report", type: "taipan_table" },
-    ]) {
-      expect(findArtifactSummary(probe)).toBeUndefined();
-    }
+    await expect(
+      resolveArtifactId({ ...MATCH, title: "Nope" }),
+    ).resolves.toBeUndefined();
+    await expect(
+      resolveArtifactId({ ...MATCH, threadId: "t2" }),
+    ).resolves.toBeUndefined();
+    await expect(
+      resolveArtifactId({ ...MATCH, type: "taipan_table" }),
+    ).resolves.toBeUndefined();
   });
 });

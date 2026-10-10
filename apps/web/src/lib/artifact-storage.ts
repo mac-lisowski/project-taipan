@@ -19,20 +19,29 @@ export function peekArtifactSummary(id: string): ArtifactSummary | undefined {
   return seen.get(id);
 }
 
-// In-thread views have no stored id in the nav path; the summary cache is
-// the only link from a streamed tool call back to its artifact row.
-export function findArtifactSummary(match: {
+// Off-path views link a draft to its stored row via the seen summaries;
+// duplicates get a content check so the download never resolves wrong.
+export async function resolveArtifactId(match: {
   threadId: string;
   title: string;
   type: string;
-}): ArtifactSummary | undefined {
-  for (const summary of seen.values()) {
-    if (
+  content: unknown;
+}): Promise<string | undefined> {
+  const candidates = [...seen.values()].filter(
+    (summary) =>
       summary.threadId === match.threadId &&
       summary.title === match.title &&
-      summary.type === match.type
-    ) {
-      return summary;
+      summary.type === match.type,
+  );
+  if (candidates.length === 0) return undefined;
+  if (candidates.length === 1) return candidates[0]?.id;
+  const wanted = JSON.stringify(match.content);
+  for (const candidate of candidates) {
+    try {
+      const artifact = await artifactStorage.get(candidate.id);
+      if (JSON.stringify(artifact.content) === wanted) return candidate.id;
+    } catch {
+      // A failed fetch only skips that candidate.
     }
   }
   return undefined;

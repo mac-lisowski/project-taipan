@@ -1,6 +1,6 @@
 "use client";
 
-import { useArtifactStorage, useThreadList } from "@openuidev/react-headless";
+import { useArtifactStorage } from "@openuidev/react-headless";
 import {
   EditableTable,
   IconButton,
@@ -16,15 +16,10 @@ import { useState, type ReactNode } from "react";
 import {
   artifactDownloadUrl,
   deleteArtifact,
-  findArtifactSummary,
   peekArtifactSummary,
 } from "@/lib/artifact-storage";
-import {
-  DOCUMENT_TYPE,
-  TABLE_TYPE,
-  type ArtifactDraft,
-  type ArtifactRow,
-} from "@/lib/artifact-renderers";
+import { useStoredArtifactId } from "@/lib/use-stored-artifact-id";
+import type { ArtifactDraft, ArtifactRow } from "@/lib/artifact-renderers";
 
 const ARTIFACTS_PREFIX = "artifacts/";
 
@@ -80,21 +75,10 @@ export function ArtifactActual({
 }): ReactNode {
   const { path } = useNav();
   const storage = useArtifactStorage();
-  const selectedThreadId = useThreadList((state) => state.selectedThreadId);
   const artifactId = artifactIdFromPath(path);
   const editable = artifactId !== null && storage !== null;
   const summary = artifactId === null ? undefined : peekArtifactSummary(artifactId);
-  // The canonical path carries the id; in the in-thread detailed view the
-  // stored id only resolves when the summary was listed at least once.
-  const storedId =
-    artifactId ??
-    (selectedThreadId === null
-      ? null
-      : (findArtifactSummary({
-          threadId: selectedThreadId,
-          title: draft.title,
-          type: draft.kind === "table" ? TABLE_TYPE : DOCUMENT_TYPE,
-        })?.id ?? null));
+  const storedId = useStoredArtifactId(draft, artifactId);
   const [markdown, setMarkdown] = useState(draft.markdown);
   const [rows, setRows] = useState<ArtifactRow[]>(draft.rows);
   const [dirty, setDirty] = useState(false);

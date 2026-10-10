@@ -117,9 +117,8 @@ describe("artifact actual views", () => {
     await artifactStorage.list();
     renderNode(documentRenderer.actual(draft, controls()));
 
-    expect(
-      screen.getByRole("link", { name: /download/i }).getAttribute("href"),
-    ).toBe("/api/artifacts/a1/download");
+    const link = await screen.findByRole("link", { name: /download/i });
+    expect(link.getAttribute("href")).toBe("/api/artifacts/a1/download");
   });
 
   it("edits markdown and saves through artifact storage update", async () => {
