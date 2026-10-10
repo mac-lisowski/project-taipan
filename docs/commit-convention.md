@@ -31,7 +31,8 @@ App and package scopes come from the repo itself (`apps/*`,
 `packages/*`) and the hook picks them up on its own:
 
 <!-- conventions:areas:start -->
-`api`, `cli`, `core`, `crypto`, `email`, `kms`, `web`.
+`api`, `cli`, `core`, `crypto`, `email`, `kms`, `storage`,
+`web`.
 <!-- conventions:areas:end -->
 
 Generic scopes for repo-wide areas:
