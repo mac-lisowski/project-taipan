@@ -4,15 +4,19 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from storage import ObjectStore
 
 from api import chat
 from api.authz import Principal, current_principal
 from api.chat.gateway import GatewayDep, GatewayError
 from api.chat.models import ModelCatalogDep
+from api.config import get_config
 from api.db import DbSession
+from api.files.store import get_object_store
 from api.schemas import CompletionIn
 
 PrincipalSession = Annotated[Principal, Depends(current_principal)]
+StoreDep = Annotated[ObjectStore, Depends(get_object_store)]
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -29,6 +33,7 @@ async def complete(
     principal: PrincipalSession,
     gateway: GatewayDep,
     catalog: ModelCatalogDep,
+    store: StoreDep,
 ) -> StreamingResponse:
     try:
         thread = chat.threads.get(db, principal.user_id, payload.thread_id)
@@ -47,8 +52,35 @@ async def complete(
                 status_code=422,
                 detail=f"unknown model {payload.model!r}; allowed: {', '.join(sorted(allowed))}",
             )
+    flags = await catalog.capabilities(payload.model or get_config().chat.chat_model)
+    try:
+        # History keeps the binary parts verbatim; only the gateway copy resolves.
+        resolved = chat.attachments.resolve_parts(
+            db, store, principal=principal, messages=incoming, flags=flags
+        )
+    except chat.complete.MessageCapError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    # Tools advertise only when the model can call them; tool_choice needs its
+    # own flag. The sink rides along so closed calls can upsert artifacts.
+    tools = [chat.tools.SAVE_ARTIFACT_TOOL] if flags.get("function_calling") else None
+    sink = (
+        chat.tools.ArtifactSink(
+            store=store, principal=principal, bucket=get_config().storage.s3_bucket
+        )
+        if tools is not None
+        else None
+    )
     upstream = chat.complete.stream_reply(
-        db, thread, incoming, gateway.stream(chat.complete.prepare(incoming), payload.model)
+        db,
+        thread,
+        incoming,
+        gateway.stream(
+            chat.complete.prepare(resolved),
+            payload.model,
+            tools=tools,
+            tool_choice="auto" if flags.get("tool_choice") else None,
+        ),
+        sink=sink,
     )
     try:
         # First pull opens the gateway connection, so a dead gateway fails here.

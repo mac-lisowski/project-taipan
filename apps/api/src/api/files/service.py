@@ -16,12 +16,14 @@ from typing import BinaryIO, Protocol
 from uuid import UUID
 
 from crypto import tenant_scope
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from storage import ObjectStore
 
 from api.authz import Principal
 from api.config import get_config
 from api.files.errors import (
+    InUse,
     NotFound,
     ObjectMissing,
     PurposeNotAllowed,
@@ -47,6 +49,7 @@ __all__ = [
     "CHUNK_BYTES",
     "DEFAULT_PAGE",
     "MAX_PAGE",
+    "InUse",
     "InvalidCursor",
     "NotFound",
     "ObjectMissing",
@@ -164,7 +167,12 @@ def delete(session: Session, store: ObjectStore, file_id: UUID, *, principal: Pr
         raise NotFound(file_id)
     bucket, key = row.bucket, row.object_key
     session.delete(row)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        # RESTRICT FKs (chat_artifacts.file_id) turn a generic delete into 409.
+        session.rollback()
+        raise InUse(file_id) from exc
     discard(store, bucket, key)
 
 

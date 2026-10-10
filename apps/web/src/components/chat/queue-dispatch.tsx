@@ -4,6 +4,23 @@ import { useThread, useThreadList } from "@openuidev/react-headless";
 import { useEffect, useRef } from "react";
 
 import { useChatQueueStore } from "@/lib/chat-queue-context";
+import type { MessagePart } from "@/lib/attachments";
+
+// Run attribution keys on the text the user typed: a parts message joins
+// its text parts so a queued attachment send still counts as started.
+function userText(content: unknown): string | null {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return null;
+  return content
+    .filter(
+      (part): part is { type: "text"; text: string } =>
+        typeof part === "object" &&
+        part !== null &&
+        (part as { type?: unknown }).type === "text",
+    )
+    .map((part) => part.text)
+    .join("");
+}
 
 // Non-slot <AgentInterface> child (slots.rest): stays mounted on Route
 // views where the composer unmounts.
@@ -27,9 +44,7 @@ export function QueueDispatch(): null {
     if (isRunning) {
       if (!wasRunning) {
         const lastUser = messages.findLast((m) => m.role === "user");
-        queue.noteRunStarted(
-          typeof lastUser?.content === "string" ? lastUser.content : null,
-        );
+        queue.noteRunStarted(userText(lastUser?.content));
       }
       return;
     }
@@ -38,7 +53,8 @@ export function QueueDispatch(): null {
       threadId: selectedThreadId,
       // processMessage never rejects and resolves at run end; .catch guards
       // the QueueSend contract, not the SDK.
-      send: (text) => processMessage({ role: "user", content: text }).catch(() => {}),
+      send: (content: string | MessagePart[]) =>
+        processMessage({ role: "user", content }).catch(() => {}),
     });
   }, [queue, isRunning, messages, selectedThreadId, processMessage]);
 

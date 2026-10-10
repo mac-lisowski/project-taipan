@@ -4,10 +4,12 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from storage import ObjectStore
 
 from api import chat
 from api.authz import Principal, current_principal
 from api.db import DbSession
+from api.files.store import get_object_store
 from api.models import ChatQueuedMessage, ChatThread
 from api.schemas import (
     QueueCreate,
@@ -22,6 +24,7 @@ from api.schemas import (
 )
 
 PrincipalSession = Annotated[Principal, Depends(current_principal)]
+StoreDep = Annotated[ObjectStore, Depends(get_object_store)]
 
 router = APIRouter(prefix="/threads", tags=["chat"])
 
@@ -144,10 +147,12 @@ def delete_queued_message(entry_id: UUID, db: DbSession, principal: PrincipalSes
 
 
 @router.post("/shares/create/{thread_id}", response_model=ShareCreateRead)
-def create_share(thread_id: UUID, db: DbSession, principal: PrincipalSession) -> ShareCreateRead:
+def create_share(
+    thread_id: UUID, db: DbSession, principal: PrincipalSession, store: StoreDep
+) -> ShareCreateRead:
     try:
         _share, token = chat.shares.create_or_refresh(
-            db, principal.user_id, principal.tenant_id, thread_id
+            db, principal.user_id, principal.tenant_id, thread_id, store=store
         )
     except chat.threads.NotFound as exc:
         raise HTTPException(status_code=404, detail="thread not found") from exc

@@ -14,6 +14,7 @@ from api.files.policies import (
 from api.files.reads import DEFAULT_PAGE, MAX_PAGE, InvalidCursor, list_page
 from api.files.service import (
     CHUNK_BYTES,
+    InUse,
     NotFound,
     ObjectMissing,
     PurposeNotAllowed,
@@ -37,6 +38,7 @@ __all__ = [
     "POLICIES",
     "SCOPE_TENANT",
     "SCOPE_USER",
+    "InUse",
     "InvalidCursor",
     "NotFound",
     "ObjectMissing",

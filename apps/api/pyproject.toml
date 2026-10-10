@@ -15,6 +15,7 @@ dependencies = [
     "kms",
     "psycopg[binary]>=3.3.6",
     "pwdlib[argon2]>=0.3.1",
+    "pypdf>=5.0",
     "python-multipart>=0.0.20",
     "redis>=5.0",
     "sqlalchemy>=2.1.3",

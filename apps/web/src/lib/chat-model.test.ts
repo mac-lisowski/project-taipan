@@ -42,6 +42,24 @@ describe("model list load", () => {
     expect(snap.currentId).toBe("fast");
   });
 
+  it("keeps the capability flags the API sends on each entry", async () => {
+    stubStorage();
+    stubModelsFetch(() => ({
+      body: [
+        { id: "smart", name: "Smart", vision: true, pdf_input: true },
+        { id: "plain", name: "Plain", vision: false, pdf_input: false },
+      ],
+    }));
+    const state = await freshState();
+
+    await state.chatModelStore.load();
+
+    const smart = state.chatModelStore.getSnapshot().models[0];
+    expect(smart?.vision).toBe(true);
+    expect(smart?.pdf_input).toBe(true);
+    expect(state.chatModelStore.getSnapshot().models[1]?.vision).toBe(false);
+  });
+
   it("restores a stored pick that is still in the list", async () => {
     stubStorage({ "taipan-chat-model": "smart" });
     stubModelsFetch(() => ({ body: MODELS }));

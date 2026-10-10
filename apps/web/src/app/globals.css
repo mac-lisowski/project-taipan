@@ -213,6 +213,49 @@
   }
 }
 
+/* Mobile artifacts: the SDK hides the whole thread header on mobile,
+ * which takes the workspace toggle with it. Resurface only the toggle as
+ * a floating button over the composer, and let the rail cover the
+ * viewport; the detailed artifact view already overlays inset:0. */
+.openui-agent-container--mobile .openui-agent-thread-header {
+  display: flex;
+  position: absolute;
+  right: var(--openui-space-m);
+  bottom: 88px;
+  z-index: 50;
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+.openui-agent-container--mobile .openui-agent-thread-header__title,
+.openui-agent-container--mobile
+  .openui-agent-thread-header__actions
+  > *:not(:has(.openui-agent-thread-header__workspace-toggle-button)) {
+  display: none;
+}
+.openui-agent-container--mobile .openui-agent-thread-header__actions {
+  pointer-events: auto;
+}
+/* The toggle is a direct actions child (tooltip uses asChild), so the
+ * :not(:has()) hide above would hit it; this equal-weight rule wins on
+ * order. It stays hidden on its own when a detailed view is active. */
+.openui-agent-container--mobile
+  .openui-agent-thread-header__actions
+  > .openui-agent-thread-header__workspace-toggle-button {
+  display: inline-flex;
+}
+.openui-agent-container--mobile
+  .openui-agent-thread-container--detailed-view-active
+  .openui-agent-thread-header__workspace-toggle-button {
+  display: none;
+}
+.openui-agent-container--mobile .openui-agent-workspace-sidebar,
+.openui-agent-container--mobile .openui-agent-workspace-sidebar--collapsed {
+  width: 100%;
+}
+
 /* Split pane: a rest-slot flex sibling docked right of the SDK thread
  * region inside .openui-agent-container. */
 .taipan-pane {

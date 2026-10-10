@@ -33,13 +33,23 @@ class FakeGateway:
         self.error = error
         self.calls: list[list[dict]] = []
         self.models: list[str | None] = []
+        self.tools: list[list[dict] | None] = []
+        self.tool_choices: list[str | None] = []
         self.close_calls = 0
 
-    def stream(self, messages: list[dict], model: str | None = None):
+    def stream(
+        self,
+        messages: list[dict],
+        model: str | None = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | None = None,
+    ):
         # Not async def: like the real gateway, the call only builds the
         # generator and does no work until the first iteration.
         self.calls.append(messages)
         self.models.append(model)
+        self.tools.append(tools)
+        self.tool_choices.append(tool_choice)
         return self._iter()
 
     async def _iter(self):
@@ -183,8 +193,12 @@ def test_midstream_gateway_failure_emits_error_event_and_keeps_history(client, f
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/event-stream")
     assert b'"error"' in resp.content
+    # The client saw the partial reply, so history keeps it too.
     stored = client.get(f"/api/threads/get/{thread_id}").json()
-    assert stored == [{"role": "user", "content": "kept"}]
+    assert stored == [
+        {"role": "user", "content": "kept"},
+        {"role": "assistant", "content": "Ahoy captain"},
+    ]
 
 
 def test_unconfigured_gateway_fails_fast_with_env_name(client, monkeypatch):

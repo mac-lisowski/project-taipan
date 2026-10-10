@@ -2,6 +2,7 @@
 # whose module was imported; create_all silently skips the rest.
 from api.models.auth_session import AuthSession
 from api.models.chat import (
+    ChatArtifact,
     ChatMessage,
     ChatQueuedMessage,
     ChatThread,
@@ -26,6 +27,7 @@ from api.models.user_tenant_role import UserTenantRole
 
 __all__ = [
     "AuthSession",
+    "ChatArtifact",
     "ChatMessage",
     "ChatQueuedMessage",
     "ChatThread",

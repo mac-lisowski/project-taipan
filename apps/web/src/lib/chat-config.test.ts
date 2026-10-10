@@ -1,5 +1,7 @@
+import type * as ReactHeadless from "@openuidev/react-headless";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { artifactStorage } from "@/lib/artifact-storage";
 import { stubStorage } from "@/lib/storage-stub.testsupport";
 import {
   recordingFetch,
@@ -7,14 +9,13 @@ import {
 } from "@/lib/upstream-proxy.testsupport";
 
 // The SDK factories are mocked so the test can pin the exact wiring the
-// config module hands to AgentInterface.
+// config module hands to AgentInterface. openAIMessageFormat stays real:
+// the round-trip tests pin that the wrapper undoes its binary collapse.
 const mocks = vi.hoisted(() => {
   const ADAPTER = { stream: true };
-  const FORMAT = { wire: true };
   const innerListThreads = vi.fn(async () => ({ threads: [], nextCursor: undefined }));
   return {
     ADAPTER,
-    FORMAT,
     fetchLLM: vi.fn(() => ({ kind: "llm" })),
     innerListThreads,
     restStorage: vi.fn(() => ({ kind: "storage", thread: { listThreads: innerListThreads } })),
@@ -22,14 +23,17 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("@openuidev/react-headless", () => ({
-  fetchLLM: mocks.fetchLLM,
-  restStorage: mocks.restStorage,
-  openAIAdapter: mocks.openAIAdapter,
-  openAIMessageFormat: mocks.FORMAT,
-}));
+vi.mock("@openuidev/react-headless", async (importOriginal) => {
+  const actual = await importOriginal<typeof ReactHeadless>();
+  return {
+    fetchLLM: mocks.fetchLLM,
+    restStorage: mocks.restStorage,
+    openAIAdapter: mocks.openAIAdapter,
+    openAIMessageFormat: actual.openAIMessageFormat,
+  };
+});
 
-import { chatLLM, chatStorage } from "./chat-config";
+import { chatLLM, chatMessageFormat, chatStorage } from "./chat-config";
 
 describe("chat client config", () => {
   afterEach(() => {
@@ -44,7 +48,7 @@ describe("chat client config", () => {
     expect(mocks.fetchLLM).toHaveBeenCalledWith({
       url: "/api/chat",
       streamAdapter: mocks.ADAPTER,
-      messageFormat: mocks.FORMAT,
+      messageFormat: chatMessageFormat,
       fetch: expect.any(Function),
     });
   });
@@ -53,8 +57,12 @@ describe("chat client config", () => {
     chatStorage();
     expect(mocks.restStorage).toHaveBeenCalledWith({
       baseUrl: "/api/threads",
-      messageFormat: mocks.FORMAT,
+      messageFormat: chatMessageFormat,
     });
+  });
+
+  it("attaches the hand-written artifact storage to the composed storage", () => {
+    expect(chatStorage().artifact).toBe(artifactStorage);
   });
 });
 

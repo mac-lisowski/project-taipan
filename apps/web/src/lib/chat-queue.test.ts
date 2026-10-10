@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createChatQueueStore, type QueueRow } from "./chat-queue";
+import type { MessagePart } from "./attachments";
 
 const THREAD = "11111111-1111-1111-1111-111111111111";
 const OTHER = "22222222-2222-2222-2222-222222222222";
@@ -40,9 +41,9 @@ function stubFetch(responder: (call: Call) => Response) {
   return { impl, calls };
 }
 
-function makeSend(sent: string[]) {
-  return vi.fn((text: string) => {
-    sent.push(text);
+function makeSend(sent: (string | MessagePart[])[]) {
+  return vi.fn((content: string | MessagePart[]) => {
+    sent.push(content);
     return Promise.resolve();
   });
 }
@@ -162,7 +163,7 @@ describe("chat-queue store", () => {
     );
     const store = createChatQueueStore(impl);
     await store.hydrate(THREAD);
-    const sent: string[] = [];
+    const sent: (string | MessagePart[])[] = [];
     const send = makeSend(sent);
 
     store.handleRunEnd({ send, threadId: THREAD });
@@ -189,7 +190,7 @@ describe("chat-queue store", () => {
     const { impl, calls } = stubFetch(() => json([makeRow("a", 1, "first")]));
     const store = createChatQueueStore(impl);
     await store.hydrate(THREAD);
-    const sent: string[] = [];
+    const sent: (string | MessagePart[])[] = [];
     const send = makeSend(sent);
 
     store.dispatchHead({ send });
@@ -205,7 +206,7 @@ describe("chat-queue store", () => {
     const { impl } = stubFetch(() => json([makeRow("a", 1, "first"), makeRow("b", 2, "second")]));
     const store = createChatQueueStore(impl);
     await store.hydrate(THREAD);
-    const sent: string[] = [];
+    const sent: (string | MessagePart[])[] = [];
     const send = makeSend(sent);
 
     store.dispatchHead({ send });
@@ -223,7 +224,7 @@ describe("chat-queue store", () => {
     const { impl, calls } = stubFetch(() => json([makeRow("a", 1, "first")]));
     const store = createChatQueueStore(impl);
     await store.hydrate(THREAD);
-    const sent: string[] = [];
+    const sent: (string | MessagePart[])[] = [];
     const send = makeSend(sent);
 
     store.dispatchHead({ send });

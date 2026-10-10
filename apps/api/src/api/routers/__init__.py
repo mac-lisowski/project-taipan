@@ -1,3 +1,4 @@
+from api.routers.artifacts import router as artifacts_router
 from api.routers.auth import router as auth_router
 from api.routers.chat import router as chat_router
 from api.routers.email_webhooks import router as email_webhooks_router
@@ -13,6 +14,7 @@ from api.routers.threads import router as threads_router
 from api.routers.users import router as users_router
 
 __all__ = [
+    "artifacts_router",
     "auth_router",
     "chat_router",
     "email_webhooks_router",

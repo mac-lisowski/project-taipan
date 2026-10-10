@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Check, ListOrdered, Pencil, X } from "lucide-react";
+import { ArrowUp, Check, ListOrdered, Paperclip, Pencil, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import type { ChatQueueSnapshot, QueueRow } from "@/lib/chat-queue";
@@ -100,6 +100,7 @@ function QueueRowItem({
       <li className={`${rowClass} text-muted-foreground`}>
         <span className={badgeClass}>{position}</span>
         <span className="min-w-0 flex-1 truncate">{row.content.text}</span>
+        <PartsBadge row={row} />
         <span className="shrink-0 italic">sending…</span>
       </li>
     );
@@ -112,6 +113,7 @@ function QueueRowItem({
       <span className="min-w-0 flex-1 truncate" title={row.content.text}>
         {row.content.text}
       </span>
+      <PartsBadge row={row} />
       {failed ? <span className="shrink-0 text-destructive">failed</span> : null}
       <button
         type="button"
@@ -130,6 +132,21 @@ function QueueRowItem({
         <X className="h-3 w-3" />
       </button>
     </li>
+  );
+}
+
+// Attachment marker for a queued row carrying binary parts.
+function PartsBadge({ row }: { row: QueueRow }): ReactNode {
+  const count = row.content.parts?.length ?? 0;
+  if (count === 0) return null;
+  return (
+    <span
+      className="flex shrink-0 items-center gap-0.5 text-muted-foreground"
+      title={`${count} attachment${count === 1 ? "" : "s"}`}
+    >
+      <Paperclip className="h-3 w-3" />
+      <span className="tabular-nums">{count}</span>
+    </span>
   );
 }
 

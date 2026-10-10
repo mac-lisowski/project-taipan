@@ -78,6 +78,7 @@ export function ChatSidebarContents({
         <div className="openui-agent-sidebar-primary-actions">
           <AgentInterface.NewChatButton />
         </div>
+        <AgentInterface.ArtifactNav />
         {links.length > 0 && (
           <nav
             aria-label="App"
