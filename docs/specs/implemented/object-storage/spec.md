@@ -1,6 +1,6 @@
 # Object storage
 
-Status: planned.
+Status: implemented.
 
 Seam: one storage package owns every object byte. Callers use a small
 store port. An S3-compatible adapter serves dev (MinIO) and prod

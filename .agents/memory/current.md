@@ -27,9 +27,9 @@
   (PR #48), chat-thread-sharing (PR #49). Status lines flipped;
   email-at-rest link to platform-key-provisioning repointed.
   docs/specs/planned/ now holds nats-jetstream (PR #38 open),
-  chat-artifacts, chat-attachments, email-at-rest, object-storage.
-- object-storage IMPLEMENTED on feat/object-storage (uncommitted, not
-  pushed; branch off dev). Spec: docs/specs/planned/object-storage/,
+  chat-artifacts, chat-attachments, email-at-rest.
+- object-storage MERGED to dev (PR #52). Spec moved to
+  docs/specs/implemented/object-storage/ with Status flipped,
   amended during impl (chainguard/minio digest pin replaces pulled
   minio/minio+mc images, lazy bucket creation replaces mc init, list
   param is cursor not after). Eight tickets under

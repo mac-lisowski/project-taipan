@@ -1,6 +1,6 @@
 # Files: scope column + RESTRICT, never CASCADE
 
-From the object-storage spec (docs/specs/planned/object-storage/).
+From the object-storage spec (docs/specs/implemented/object-storage/).
 
 - `files` rows carry `scope` (`user` | `tenant`). Private files die
   with the user; tenant files survive the uploader while the tenant
