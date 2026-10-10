@@ -27,7 +27,11 @@
   (PR #48), chat-thread-sharing (PR #49). Status lines flipped;
   email-at-rest link to platform-key-provisioning repointed.
   docs/specs/planned/ now holds nats-jetstream (PR #38 open),
-  chat-artifacts, chat-attachments, email-at-rest.
+  chat-artifacts, chat-attachments, email-at-rest. Both chat specs
+  revised to final form (no phased deferrals): attachments are
+  files-registry-backed taipan_file parts with vision gating via
+  /model/info; artifacts persist tool_calls, edit+delete in the
+  workspace, and survive thread delete via SET NULL.
 - object-storage MERGED to dev (PR #52). Spec moved to
   docs/specs/implemented/object-storage/ with Status flipped,
   amended during impl (chainguard/minio digest pin replaces pulled
