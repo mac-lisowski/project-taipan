@@ -46,3 +46,6 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [git-grep gates need git add -N on new files](learnings/git-grep-gates-need-add-n.md)
 - [OpenUI SDK pane hooks](learnings/openui-sdk-pane-hooks.md)
 - [Review stamp binds to the session checkout, not a worktree](learnings/worktree-commit-stamp.md)
+- [Request commit happens in the get_db teardown](learnings/commit-boundary-teardown.md)
+- [BFF proxy strips Content-Length both directions](learnings/bff-strips-content-length.md)
+- [BFF proxy aborts upstream calls at 30 s](learnings/bff-upstream-timeout.md)

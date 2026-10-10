@@ -27,3 +27,4 @@ Why things are the way they are. One decision per file in
 - [UI components come from shadcn registries](decisions/ui-registry.md)
 - [One platform KMS key, per-tenant keys dropped](decisions/platform-key-only.md)
 - [Queue row deleted at run start, attributed by text match](decisions/queue-row-delete-on-start.md)
+- [Files: scope column + RESTRICT, never CASCADE](decisions/files-scope-not-cascade.md)

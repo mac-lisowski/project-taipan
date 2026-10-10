@@ -61,16 +61,31 @@ plain OpenAI-compatible relay. So:
 One migration adds `chat_artifacts` (extension table):
 
 - `id` UUID pk, `user_id` FK users cascade, `tenant_id` text, `thread_id`
-  FK chat threads cascade, `type` text, `title` text, `content` JSONB,
-  `version` int, created and updated timestamps.
+  FK chat threads cascade, `type` text, `title` text, `file_id` UUID FK
+  files restrict, `version` int, created and updated timestamps.
 - Indexes: `(user_id, type, updated_at)` for keyset listing, title search
   for the `name` filter.
 - Update bumps `version`. Delete is ours only (the SDK interface has none).
 
-The stored `content` is pinned to the response shape the browser storage
-path feeds the parser: `{"markdown": str}` for documents, `{"rows": [...]}`
-for tables. The one parser normalizes both this shape and the tool-call
-`args` shape (`{title, type, content}`).
+Artifact bytes never sit in Postgres. Each row points at a `files`
+registry row from the object-storage spec (purpose `artifact`, scope
+`user`, key prefix `artifacts/{tenant_id}/`), written through its
+service-level store call. The object body is pinned to the response
+shape the browser storage path feeds the parser: `{"markdown": str}`
+for documents, `{"rows": [...]}` for tables, serialized as JSON at
+`application/json`.
+The one parser normalizes both this shape and the tool-call `args`
+shape (`{title, type, content}`); the API read endpoint assembles the
+same response server side.
+
+Lifecycle: create writes the object, then the file and artifact rows in
+one transaction. Update writes a new object, swaps `file_id`, bumps
+`version`, and deletes the old object after commit. Deletes, including
+the thread cascade, collect `file_id`s first so file rows and objects
+are removed too. On user delete the artifacts service removes the
+user's rows before the files purge runs (the object-storage spec owns
+the ordering). `ON DELETE RESTRICT` on `file_id` blocks a generic file
+delete while a live artifact references it.
 
 ### API endpoints
 
@@ -100,18 +115,21 @@ get returns the full artifact, update takes `{id, content}`.
 ```mermaid
 flowchart LR
   M[model] -->|tool call save_artifact| S[SSE stream]
-  S --> P[API buffers, upserts artifact row]
+  S --> P[API buffers stream]
   S -->|bytes unchanged| SDK[SDK tool card + renderer]
-  P --> DB[(chat_artifacts)]
+  P --> F[files service: object + rows]
+  F --> DB[(chat_artifacts + files)]
+  F --> O[(S3 artifacts/)]
   SDK --> W[workspace rail + nav]
 ```
 
 ## Testing Decisions
 
 - API HTTP tests: list paging and filters, owner isolation, version bump on
-  update, cascade delete with thread, tool-call accumulation from a canned
-  SSE fixture, artifact upsert at stream close, SSE byte pass-through with
-  tool deltas present.
+  update, cascade delete with thread removing file rows and objects,
+  tool-call accumulation from a canned SSE fixture, artifact upsert at
+  stream close, content assembled from the object on read, old object
+  deleted on update, SSE byte pass-through with tool deltas present.
 - BFF tests: relay and cookie forwarding.
 - Web Vitest: `artifactStorage` request shapes against a stubbed fetch;
   renderer parser mapping for both types.
@@ -122,8 +140,9 @@ flowchart LR
   follow-up).
 - Artifacts surviving thread deletion (cascade is intentional).
 - Tenant-wide or shared artifacts.
-- Encrypting artifact content (chat messages are plaintext JSONB today;
-  a repo-wide field-encryption pass covers both later).
+- Encrypting artifact content (object bytes are plaintext at rest, like
+  chat messages in JSONB today; a repo-wide at-rest pass covers both
+  later).
 
 ## Open Questions
 

@@ -13,7 +13,7 @@ Phase 1 only: images as data URLs. A custom composer slot adds a file
 picker with draft previews. Sent images travel as `binary` parts, render in
 the thread, reach LiteLLM as `image_url` parts, and survive reloads after a
 storage round-trip fix. Size caps and a mime allowlist are enforced end to
-end. Arbitrary files are a separate later spec.
+end. Arbitrary files ride the object-storage registry through a later spec.
 
 ## User Stories
 
@@ -102,8 +102,10 @@ flowchart LR
 
 ## Out of Scope
 
-- Non-image files (documents, audio, video): needs an upload endpoint and
-  reference storage; separate spec.
+- Non-image files (documents, audio, video) and storing image bytes as
+  objects instead of data URLs: the object-storage spec owns the files
+  registry and upload endpoint; a follow-up spec wires the composer to
+  it.
 - Image generation.
 - Attachments in shared threads beyond what the snapshot carries.
 

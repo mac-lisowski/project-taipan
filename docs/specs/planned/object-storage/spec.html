@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spec visual - Object storage</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+<style>
+  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm">
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">One object seam, bytes out of Postgres</h1>
+    <p class="text-slate-500">Visual companion to <code>spec.md</code>.
+      A storage package owns object bytes; the api owns file rows and
+      the proxy endpoints; MinIO is dev, Railway/AWS S3 is prod.</p>
+  </header>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">The seam: ObjectStore port, two adapters</h2>
+    <div class="mermaid">
+flowchart LR
+  subgraph api[api app]
+    R["files router<br>/api/files"] --> S["files service<br>policies, sha256, rows"]
+    S --> DB[("files table<br>metadata only")]
+  end
+  S --> P{{"ObjectStore port<br>put get delete"}}
+  subgraph pkg[packages/storage]
+    P --> S3["S3ObjectStore<br>minio SDK"]
+    P --> FK["FakeObjectStore<br>dict, tests"]
+  end
+  S3 --> MIN[("MinIO dev")]
+  S3 --> AWS[("Railway bucket / AWS S3 prod")]
+    </div>
+    <p class="text-xs text-slate-500 mt-2">Config builds the S3
+    adapter; tests swap app.state for the fake. Callers never see a
+    vendor client.</p>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Where each byte lives</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        <p class="lbl mb-2">Postgres: files row</p>
+        <ul class="list-disc ml-5 space-y-1">
+          <li>id uuid pk, tenant_id, scope user|tenant</li>
+          <li>created_by_user_id null, RESTRICT (attribution)</li>
+          <li>purpose, bucket, object_key (unique)</li>
+          <li>filename, content_type, size_bytes, sha256</li>
+        </ul>
+      </div>
+      <div>
+        <p class="lbl mb-2">S3: immutable object</p>
+        <ul class="list-disc ml-5 space-y-1">
+          <li>key = purpose-prefix/tenant_id/file_uuid</li>
+          <li>one bucket, purpose prefixes (attachments/, artifacts/)</li>
+          <li>user-scope dies with user; tenant-scope while tenant lives</li>
+          <li>object then row then commit; failure deletes the object</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Request flow (proxy, no browser-to-S3)</h2>
+    <div class="mermaid">
+flowchart LR
+  W[browser] -->|session cookie, multipart| BFF[BFF catch-all]
+  BFF --> API2["POST /api/files"]
+  API2 --> CHK["policy: purpose, mime, size"]
+  CHK --> PUT["put -> S3, sha256 while streaming"]
+  PUT --> ROW["insert files row"]
+  W -->|"GET /api/files/id/content"| BFF
+  BFF --> GET["row lookup, owner scoped"]
+  GET --> STR["stream object bytes<br>nosniff, attachment"]
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <h2 class="font-bold mb-4">Test seam: same port, two adapters</h2>
+    <div class="mermaid">
+flowchart TB
+  CT["conformance suite<br>put/get/stat/delete contract"]
+  CT --> FKT["FakeObjectStore always"]
+  CT --> LVT["S3ObjectStore when MinIO reachable<br>skip otherwise, like Postgres tests"]
+  HT["API HTTP tests<br>app.state -> fake"]
+  HT --> AS["upload row+object, headers,<br>owner isolation, 413/415, delete order"]
+    </div>
+    <p class="text-xs text-slate-500 mt-2">Tests cross the port only.
+    No test stubs the minio SDK itself.</p>
+  </section>
+
+  <section class="bg-slate-800 text-slate-100 rounded-xl p-6">
+    <h2 class="font-bold mb-2">Deferred on purpose</h2>
+    <p class="text-slate-300">Presigned URLs, dedup, quotas, GC sweep,
+    encryption at rest, public reads. The proxy path costs Railway
+    service egress on uploads; presigned PUT is the documented
+    follow-up once a real consumer needs it.</p>
+  </section>
+</div>
+</body>
+</html>
