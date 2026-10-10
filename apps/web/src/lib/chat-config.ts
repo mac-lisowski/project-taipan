@@ -3,11 +3,15 @@ import {
   openAIAdapter,
   openAIMessageFormat,
   restStorage,
+  type BinaryInputContent,
   type ChatStorage,
+  type Message,
+  type MessageFormat,
   type Thread,
   type ThreadStorage,
 } from "@openuidev/react-headless";
 
+import { artifactStorage } from "./artifact-storage";
 import { chatModelStore, type ChatModelStore } from "./chat-model";
 
 // Browser-facing BFF routes only: the API upstream is never addressed here.
@@ -45,13 +49,68 @@ function modelBodyFetch(store: ChatModelStore): typeof fetch {
   return wrapped;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isBinaryPart(part: unknown): part is BinaryInputContent {
+  return (
+    isRecord(part) &&
+    part.type === "binary" &&
+    typeof part.mimeType === "string"
+  );
+}
+
+// openAIMessageFormat maps user content parts 1:1, so an index zip restores binary slots.
+function withBinaryOutbound(source: Message, wire: unknown): unknown {
+  if (source.role !== "user" || !Array.isArray(source.content)) return wire;
+  if (!isRecord(wire) || !Array.isArray(wire.content)) return wire;
+  const converted = wire.content;
+  return {
+    ...wire,
+    content: source.content.map((part, i) =>
+      isBinaryPart(part) ? part : (converted[i] ?? part),
+    ),
+  };
+}
+
+function withBinaryInbound(message: Message, raw: unknown): Message {
+  if (message.role !== "user" || !Array.isArray(message.content)) {
+    return message;
+  }
+  if (!isRecord(raw) || !Array.isArray(raw.content)) return message;
+  const source = raw.content;
+  return {
+    ...message,
+    content: message.content.map((part, i) => {
+      const stored = source[i];
+      return isBinaryPart(stored) ? stored : part;
+    }),
+  };
+}
+
+// The API resolves binary parts server side and stores wire dicts verbatim; the SDK format collapses them.
+export const chatMessageFormat: MessageFormat = {
+  toApi(messages) {
+    const wire = openAIMessageFormat.toApi(messages);
+    const list = Array.isArray(wire) ? wire : [];
+    return messages.map((message, i) => withBinaryOutbound(message, list[i]));
+  },
+  fromApi(data) {
+    const raw = Array.isArray(data) ? data : [];
+    return openAIMessageFormat
+      .fromApi(data)
+      .map((message, i) => withBinaryInbound(message, raw[i]));
+  },
+};
+
 // The default is the main surface's singleton; a pane hands in its own
 // store so its completions carry its own pick.
 export function chatLLM(store: ChatModelStore = chatModelStore) {
   return fetchLLM({
     url: CHAT_COMPLETION_URL,
     streamAdapter: openAIAdapter(),
-    messageFormat: openAIMessageFormat,
+    messageFormat: chatMessageFormat,
     fetch: modelBodyFetch(store),
   });
 }
@@ -60,7 +119,7 @@ export function chatLLM(store: ChatModelStore = chatModelStore) {
 export function chatStorage(seed: ThreadSeed | null = null): ChatStorage {
   const inner = restStorage({
     baseUrl: THREADS_BASE_URL,
-    messageFormat: openAIMessageFormat,
+    messageFormat: chatMessageFormat,
   });
   let pending: ThreadSeed | null = seed;
   const thread: ThreadStorage = {
@@ -74,5 +133,5 @@ export function chatStorage(seed: ThreadSeed | null = null): ChatStorage {
       return inner.thread.listThreads(cursor);
     },
   };
-  return { ...inner, thread };
+  return { ...inner, thread, artifact: artifactStorage };
 }

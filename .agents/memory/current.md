@@ -1,5 +1,99 @@
 # Current state
 
+- chat-files implementation COMPLETE on feat/chat-files, uncommitted
+  (user said no commit/push/branch). All 8 tickets done + HTML reports
+  in .scratch/chat-files/issues/. Two review rounds run on the full
+  diff: r1 two-axis code-review -> fixed tool_calls leaking upstream
+  on reload (complete.py prepare/_upstream_safe strips them; stored
+  history keeps verbatim), mid-stream GatewayError now _persist-s the
+  partial reply before error_event, files.delete IntegrityError ->
+  InUse -> 409 (artifact-owned file), tools.py index-less fragment
+  folding, TYPE_CHECKING Principal, SEEN_MAX=500 cap on
+  artifact-storage seen map, spec amended (title-search index never
+  landed; ilike can't use btree anyway). r2 verify -> 2 minors fixed:
+  CompletionMessageIn null content now assistant-only
+  (model_validator), _persist failure in the mid-stream branch no
+  longer swallows error_event (try/except + log). Full suite 748
+  passed / 15 skipped; web 432 vitest, lint, tsc green; all hard
+  gates pass; falsegreen 0 high. Remaining accepted risks:
+  attachments _Budget over-rejects near 200k (safe direction), share
+  snapshot puts attachment lines before text.
+- chat-files ticket 08 (artifacts web) DONE on feat/chat-files,
+  uncommitted. New lib/artifact-storage.ts (ArtifactStorage
+  {list,get,update} over /api/artifacts + deleteArtifact +
+  peekArtifactSummary cache so views see threadId the parser never
+  gets), lib/artifact-renderers.tsx (shared ArtifactDraft props; parser
+  reads partialJSONParse args while streaming, registers meta only on
+  strict-JSON closed args because ctx.isStreaming never clears without
+  a tool result; meta.id = FNV-1a hash of kind+title, the call id never
+  reaches the parser; two renderers share toolName save_artifact -
+  first registration wins so both must handle both kinds;
+  artifactSurface = defineArtifactCategories Documents+Tables spread on
+  AgentInterface), components/chat/artifact-views.tsx (preview card;
+  actual resolves stored id from useNav path artifacts/{cat}/{id} -
+  editable there via textarea/EditableTable + save + two-tap delete,
+  read-only in the in-thread detailed view; dead-thread artifacts hide
+  the SDK's unconditional "Go to thread" via an inline style).
+  chat-config attaches artifact storage; ArtifactNav in sidebar;
+  labels tabs.artifacts/defaultCategory "Documents"; auto-open on
+  (removed artifactAutoOpen={false} in chat-app + pane-chat). BFF
+  /api/artifacts[[...path]] route + /artifacts[[...slug]] page for
+  reload survival. Step 5 finding: openAIMessageFormat.fromApi keeps
+  tool_calls verbatim - no wrapper change needed (pinned by test).
+  chat-config.test.ts split at the cap: format cases moved to
+  chat-config-format.test.ts. Gates: 432 vitest, lint, tsc, build,
+  size, bff, unreached (git add -N on new files so git-grep sees
+  untracked importers), docker, falsegreen + J1-J6 clean. HTML report
+  written. No commit made.
+- chat-files ticket 07 (completion tools) DONE on feat/chat-files,
+  uncommitted. New api/chat/tools.py: SAVE_ARTIFACT_TOOL schema,
+  ArtifactSink (store+principal+bucket), collect_calls folds
+  delta.tool_calls fragments per index (name+arguments concatenated),
+  save_calls maps args to {"markdown"|"rows"} bodies and calls
+  artifacts.create per call (malformed/wrong-shape args warn+skip,
+  create failure logs+continues). gateway.stream gained tools +
+  tool_choice kwargs (tool_choice only rides with tools). complete.py
+  stream_reply takes optional sink; _persist appends assistant message
+  when text OR calls exist, stores verbatim tool_calls, commits, then
+  saves artifacts after the commit so upsert failure can't cost
+  history. routers/chat.py wires tools under function_calling,
+  tool_choice=auto under tool_choice, sink only when tools advertised.
+  Tests: test_chat_tools.py (11) + 3 gateway tests; FakeGateway records
+  tools/tool_choices. Gates: 603 pytest + 2 skip on app_test_a07, ruff,
+  size, falsegreen + J1-J6 clean. Ticket Status done, HTML report
+  written. No commit made.
+- chat-files ticket 02 (attachment resolution) DONE on feat/chat-files,
+  uncommitted. New api/chat/attachments.py resolve_parts maps user
+  binary parts per model flags (image+vision->image_url data URL,
+  pdf+pdf_input->file part, pdf->pypdf text, text/plain->text, else
+  marker); complete.py gained MAX_BINARY_PARTS=5 (checked in validate)
+  + MAX_RESOLVED_BYTES=20MiB (charged in resolver _Budget with a 200k
+  text allowance); routers/chat.py resolves flags via
+  catalog.capabilities(model or default) and sends resolved copies to
+  the gateway while history keeps parts verbatim; shares._snapshot
+  flattens binary parts (create_or_refresh takes store kwarg, snapshot
+  resolves as thread owner via synthetic Principal; is_shared/read_
+  snapshot unchanged); ChatMessageIn.content str|list; _derive_title
+  reads first text part. pypdf added to api deps + lockfile. Tests:
+  test_chat_attachments.py + test_chat_attachments_http.py (18 tests,
+  split for the 300-LOC gate, deterministic uuids for falsegreen).
+  Gates: 588 pytest + 2 skip on app_test_a02, ruff, size, falsegreen
+  green. Ticket Status done, HTML report written. No commit made.
+  Deviation: dropped the sketched bucket param (row.bucket is truth).
+- chat-files ticket 01 (model capabilities) DONE on feat/chat-files,
+  uncommitted, shared worktree with parallel agents on tickets 02-08.
+  ModelCatalog fetches /model/info beside /v1/models per TTL window;
+  entries carry vision/pdf_input/function_calling/tool_choice, non-chat
+  mode filtered, capabilities(model_id) accessor added; ChatModel type
+  gained the two optional flags. Fail closed on info, fail open on
+  listing (a failed info refetch re-lists filtered deployments for one
+  window). New apps/api/tests/chat/ subdir; api_testsupport imports
+  work via the parent conftest (see learnings). Gates green: 543 pytest
+  + 2 skip (parallel agent's TDD-red test_artifacts_service.py excluded
+  from full-suite runs - it breaks collection), 37 vitest, ruff, size,
+  bff, falsegreen. Ran with API_TEST_URL=.../app_test_a01 plus
+  API_TEST_ADMIN_URL (conftest wants both). Ticket Status done, HTML
+  report written. No commit made.
 - users-list-ssr MERGED to dev (PR #50 squash 9b748af); spec in
   docs/specs/implemented/users-list-ssr/ with Status flipped. Spec
   review commit e01d327; q-trim contract line added during review. API:

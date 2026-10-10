@@ -76,8 +76,9 @@ One migration adds `chat_artifacts` (extension table):
   UUID FK chat threads `ON DELETE SET NULL` nullable, `type` text, `title`
   text, `file_id` UUID FK files restrict, `version` int, created and
   updated timestamps.
-- Indexes: `(user_id, type, updated_at)` for keyset listing, title search
-  for the `name` filter.
+- Index: `(user_id, type, updated_at)` for keyset listing. The `name`
+  filter is an ilike substring match; artifact counts per user stay small
+  enough that no dedicated search index is warranted.
 - Update bumps `version`. Delete is exposed in the workspace UI and the API.
 
 Artifact bytes never sit in Postgres. Each row points at a `files`
@@ -113,6 +114,9 @@ delete while a live artifact references it. Deleting a thread sets
 All endpoints scope by `principal.user_id` and stamp `tenant_id`, same as
 threads. The SDK contract maps: list returns `{artifacts, nextCursor}`,
 get returns the full artifact, update takes `{id, content}`.
+`ArtifactSummary.threadId` is a required string in the SDK type; rows
+whose thread is gone return `""`, which hides the "go to thread"
+affordance.
 
 ### Web
 

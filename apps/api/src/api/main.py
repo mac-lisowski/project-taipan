@@ -12,6 +12,7 @@ from api.mail import build_email_sender
 from api.middleware import RequestSizeLimitMiddleware, TenantScopeMiddleware
 from api.models.encrypted_string import EncryptedString, get_field_crypto, set_field_crypto
 from api.routers import (
+    artifacts_router,
     auth_router,
     chat_router,
     email_webhooks_router,
@@ -75,6 +76,7 @@ app.include_router(public_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(email_webhooks_router, prefix="/api")
 app.include_router(files_router, prefix="/api")
+app.include_router(artifacts_router, prefix="/api")
 
 
 @app.get("/")

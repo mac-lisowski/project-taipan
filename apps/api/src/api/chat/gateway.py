@@ -34,22 +34,34 @@ class Gateway:
         self._model = model
         self._transport = transport
 
-    async def stream(self, messages: list[dict], model: str | None = None) -> AsyncIterator[bytes]:
+    async def stream(
+        self,
+        messages: list[dict],
+        model: str | None = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | None = None,
+    ) -> AsyncIterator[bytes]:
         client = httpx2.AsyncClient(
             timeout=httpx2.Timeout(READ_TIMEOUT_SECONDS, connect=CONNECT_TIMEOUT_SECONDS),
             transport=self._transport,
         )
+        body: dict = {
+            # None keeps the configured default; the route enforces membership.
+            "model": self._model if model is None else model,
+            "stream": True,
+            "messages": messages,
+        }
+        if tools is not None:
+            # tool_choice without tools means nothing; it only rides along.
+            body["tools"] = tools
+            if tool_choice is not None:
+                body["tool_choice"] = tool_choice
         try:
             async with client.stream(
                 "POST",
                 f"{self._url}/v1/chat/completions",
                 headers={"Authorization": f"Bearer {self._api_key}"},
-                json={
-                    # None keeps the configured default; the route enforces membership.
-                    "model": self._model if model is None else model,
-                    "stream": True,
-                    "messages": messages,
-                },
+                json=body,
             ) as response:
                 # Fail here: a non-200 body is JSON, not SSE; callers send one error event.
                 if response.status_code != 200:

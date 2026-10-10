@@ -13,7 +13,7 @@ vision input.
 The composer gains an attachment row. Drafts upload through
 `POST /api/files` (purpose `attachment`) and render as thumbnails or
 file chips from `/api/files/{id}/content`. A sent message stores
-`taipan_file` parts (file_id, filename, mime) next to its text part in
+`binary` parts (file_id, filename, mime) next to its text part in
 the JSONB history. At completion time the API resolves each reference:
 images become `image_url` data URLs for vision-capable models, text and
 PDF become extracted text parts, and anything a model cannot take
@@ -54,16 +54,19 @@ degrades to a text marker instead of breaking the thread.
 
 ### Message part shape
 
+The AG-UI `InputContent` schema already types a `binary` part, so the
+message carries the SDK-native shape instead of an invented type:
+
 ```json
-{"type": "taipan_file", "file_id": "<uuid>", "filename": "note.png", "mime_type": "image/png"}
+{"type": "binary", "mimeType": "image/png", "id": "<file uuid>", "filename": "note.png", "url": "/api/files/<id>/content"}
 ```
 
+- `id` holds the files-registry row id; `url` is the session-proxied
+  content route for display. No bytes travel in the part.
 - Stored verbatim in `chat_threads.history` JSONB. The text the user
   typed stays a normal `text` part.
-- Renderer maps `taipan_file` to `<img src="/api/files/{id}/content">`
-  for `image/*` (already served inline) or a download chip (filename,
-  size, GET content) for the rest. No SDK change needed if the web
-  pre-transforms parts before render.
+- Renderer maps `binary` parts to `<img src=".../content">` for
+  `image/*` or a download chip (filename) for the rest.
 
 ### Custom composer
 
@@ -72,7 +75,7 @@ degrades to a text marker instead of breaking the thread.
   max 5 attachments per message; drafts show thumbnails/chips with
   remove while uploads are in flight.
 - Sends with attachments call `processMessage` with a parts array
-  (text part first, then `taipan_file` parts). A spike confirms
+  (text part first, then `binary` parts). A spike confirms
   `processMessage` accepts array content before build-out.
 - Attach state reads the selected model's `vision` flag (below):
   `image/*` picks are refused with an explanatory hint when the model
@@ -99,8 +102,9 @@ degrades to a text marker instead of breaking the thread.
 
 ### API-side resolution
 
-- `chat.complete.prepare` gains the resolved model's vision flag and an
-  object-store-backed resolver. Each `taipan_file` part becomes:
+- `chat.complete.prepare` gains the resolved model's flags and an
+  object-store-backed resolver. Each `binary` part carrying an `id`
+  becomes:
   - `image/*` + vision model: `{"type": "image_url", "image_url":
     {"url": "data:<mime>;base64,<bytes>"}}` fetched via `files.open` as
     the uploader.
@@ -117,7 +121,7 @@ degrades to a text marker instead of breaking the thread.
 - Resolution failures (missing file, store down) produce the marker,
   never a 500; the marker keeps history honest about what the model
   saw.
-- Caps: at most 5 `taipan_file` parts per user message, resolved binary
+- Caps: at most 5 `binary` parts per user message, resolved binary
   bytes (images plus native PDFs) ≤ 20 MiB total per request since
   base64 inflates ~33% on the wire, resolved text bytes ≤ 200k chars
   counting toward the existing total.
@@ -136,7 +140,7 @@ degrades to a text marker instead of breaking the thread.
 
 ### Shared threads
 
-- Public share snapshots resolve `taipan_file` parts at snapshot build:
+- Public share snapshots resolve `binary` parts at snapshot build:
   images embed as data URLs inside the snapshot (bounded by the same
   per-message count), other files render as name chips. Public viewers
   hold no session, so no live `/api/files` link is emitted.
@@ -145,14 +149,14 @@ degrades to a text marker instead of breaking the thread.
 
 This spec owns the custom composer slot. Queued messages serialize the
 parts array the composer builds: attachment drafts upload at pick
-time, so a queued send already carries `taipan_file` parts and needs no
+time, so a queued send already carries `binary` parts and needs no
 upload machinery of its own.
 
 ```mermaid
 flowchart LR
   C[custom composer] -->|upload| F["POST /api/files"]
   F --> S3[(S3 attachments/)]
-  C -->|taipan_file parts| P[processMessage]
+  C -->|binary parts| P[processMessage]
   P --> B[BFF relay]
   B --> A["API: resolve parts<br>image+vision -> image_url<br>pdf+pdf_input -> file part<br>text/pdf -> text<br>else -> marker"]
   A -->|model catalog /model/info| V[vision flag]

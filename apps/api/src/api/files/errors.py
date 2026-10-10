@@ -25,3 +25,7 @@ class ObjectMissing(Exception):
 
 class NotFound(Exception):
     """No visible file with this id for the principal."""
+
+
+class InUse(Exception):
+    """A consumer row (e.g. an artifact) still references this file."""

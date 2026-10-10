@@ -33,6 +33,54 @@ async def test_stream_posts_openai_shape_and_yields_raw_bytes():
 
 
 @pytest.mark.anyio
+async def test_stream_sends_tools_and_tool_choice_when_passed():
+    seen = {}
+    tools = [{"type": "function", "function": {"name": "save_artifact"}}]
+
+    async def handler(request):
+        seen["body"] = json.loads(request.content)
+        return httpx2.Response(200, content=CANNED)
+
+    b"".join(
+        [
+            chunk
+            async for chunk in _gateway(handler).stream(MESSAGES, tools=tools, tool_choice="auto")
+        ]
+    )
+
+    assert seen["body"]["tools"] == tools
+    assert seen["body"]["tool_choice"] == "auto"
+
+
+@pytest.mark.anyio
+async def test_stream_without_tools_sends_neither_key():
+    seen = {}
+
+    async def handler(request):
+        seen["body"] = json.loads(request.content)
+        return httpx2.Response(200, content=CANNED)
+
+    b"".join([chunk async for chunk in _gateway(handler).stream(MESSAGES)])
+
+    assert "tools" not in seen["body"]
+    assert "tool_choice" not in seen["body"]
+
+
+@pytest.mark.anyio
+async def test_tool_choice_without_tools_is_dropped():
+    seen = {}
+
+    async def handler(request):
+        seen["body"] = json.loads(request.content)
+        return httpx2.Response(200, content=CANNED)
+
+    b"".join([chunk async for chunk in _gateway(handler).stream(MESSAGES, tool_choice="auto")])
+
+    assert "tools" not in seen["body"]
+    assert "tool_choice" not in seen["body"]
+
+
+@pytest.mark.anyio
 async def test_stream_with_explicit_model_overrides_the_configured_one():
     seen = {}
 

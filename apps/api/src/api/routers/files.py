@@ -111,6 +111,8 @@ def delete_file(file_id: UUID, db: DbSession, principal: PrincipalSession, store
         files.delete(db, store, file_id, principal=principal)
     except files.NotFound as exc:
         raise HTTPException(status_code=404, detail="file not found") from exc
+    except files.InUse as exc:
+        raise HTTPException(status_code=409, detail="file is still referenced") from exc
 
 
 def _open(

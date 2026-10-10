@@ -3,6 +3,7 @@
 import { AgentInterface } from "@openuidev/react-ui";
 import { AssistantMessage } from "@/components/chat/assistant-message";
 import { ChatComposer } from "@/components/chat/chat-composer";
+import { UserMessage } from "@/components/chat/message-attachments";
 import { ChatModelSwitcher } from "@/components/chat/chat-model-switcher";
 import { QueueDispatch } from "@/components/chat/queue-dispatch";
 import { RouteView } from "@/components/chat/route-view";
@@ -23,6 +24,7 @@ import { SettingsView } from "@/components/settings/settings-view";
 import { UserDetailPanel } from "@/components/users/user-detail-panel";
 import { UsersView } from "@/components/users/users-view";
 import { SplitPane } from "@/components/chat/split-pane";
+import { artifactSurface } from "@/lib/artifact-renderers";
 import { chatLLM, chatStorage } from "@/lib/chat-config";
 import { chatModelStore } from "@/lib/chat-model";
 import {
@@ -163,13 +165,16 @@ export function ChatApp({
               llm={llm}
               storage={storage}
               agentName="taipan"
-              components={{ AssistantMessage }}
+              components={{ AssistantMessage, UserMessage }}
               starters={starters}
               theme={{ mode, lightTheme: brandLight, darkTheme: brandDark }}
               path={path}
               onNavigate={openSurfaceLink}
-              // No artifact renderer may claim the detailed-view slot.
-              artifactAutoOpen={false}
+              {...artifactSurface}
+              labels={{
+                defaultCategory: "Documents",
+                tabs: { artifacts: "Documents" },
+              }}
             >
               <AgentInterface.MobileHeader
                 logo={<TMark />}

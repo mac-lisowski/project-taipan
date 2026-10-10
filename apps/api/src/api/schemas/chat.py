@@ -1,7 +1,7 @@
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from api.models.chat import TITLE_MAX
 
@@ -11,7 +11,7 @@ class ChatMessageIn(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     role: Literal["user", "assistant", "system"]
-    content: str
+    content: str | list[Any]
 
 
 class CompletionMessageIn(BaseModel):
@@ -19,7 +19,15 @@ class CompletionMessageIn(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     role: Literal["user", "assistant", "system"]
-    content: str | list[Any]
+    # Replayed tool-only replies carry content null; prepare normalizes.
+    content: str | list[Any] | None = None
+
+    @model_validator(mode="after")
+    def _null_only_for_assistant(self) -> "CompletionMessageIn":
+        # A null user/system message would reach the gateway and 400 there.
+        if self.role != "assistant" and self.content is None:
+            raise ValueError("content is required")
+        return self
 
 
 class CompletionIn(BaseModel):
@@ -56,7 +64,7 @@ class ThreadUpdate(BaseModel):
 
 
 class QueueContent(BaseModel):
-    # extra="allow" keeps the content dict verbatim; parts keys fit later.
+    # extra="allow" keeps the content dict verbatim; parts keys ride through.
     model_config = ConfigDict(extra="allow")
 
     text: str = Field(min_length=1)

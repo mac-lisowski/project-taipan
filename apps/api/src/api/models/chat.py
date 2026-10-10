@@ -1,4 +1,4 @@
-"""Chat storage tables: threads, their messages, and share snapshots."""
+"""Chat storage tables: threads, their messages, share snapshots, artifacts."""
 
 import uuid
 from datetime import datetime
@@ -97,6 +97,39 @@ class ChatQueuedMessage(Base):
 
     thread: Mapped["ChatThread"] = relationship()
     user: Mapped["User"] = relationship()
+
+
+class ChatArtifact(Base):
+    """Extension table: one user's saved artifact; bytes live behind files.
+
+    ``file_id`` is RESTRICT on purpose: the file row and its object must
+    die with the artifact through the artifacts service, never alone.
+    ``thread_id`` is SET NULL so deliverables outlive their thread.
+    """
+
+    __tablename__ = "chat_artifacts"
+    __table_args__ = (
+        CheckConstraint("version >= 1", name="ck_chat_artifacts_version"),
+        # The list page keysets on (user_id, updated_at); type joins the prefix.
+        Index("ix_chat_artifacts_user_type_updated", "user_id", "type", "updated_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    tenant_id: Mapped[str] = mapped_column(Text)
+    thread_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("chat_threads.id", ondelete="SET NULL")
+    )
+    type: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("files.id", ondelete="RESTRICT"))
+    version: Mapped[int] = mapped_column(server_default=text("1"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class ChatThreadShare(Base):

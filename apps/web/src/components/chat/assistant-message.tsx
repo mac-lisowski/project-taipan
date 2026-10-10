@@ -21,7 +21,8 @@ const components: Components = {
   },
 };
 
-// Default assistant path skips remark-gfm; no tools are wired, so no timeline here.
+// Default assistant path skips remark-gfm; tool activity lives in the SDK
+// timeline around this slot, not inside the message body.
 export function AssistantMessage({
   message,
 }: {

@@ -49,3 +49,4 @@ Durable lessons, gotchas, user preferences. One topic per file in
 - [Request commit happens in the get_db teardown](learnings/commit-boundary-teardown.md)
 - [BFF proxy strips Content-Length both directions](learnings/bff-strips-content-length.md)
 - [BFF proxy aborts upstream calls at 30 s](learnings/bff-upstream-timeout.md)
+- [A new tests/ subdirectory imports api_testsupport for free](learnings/test-subdir-syspath.md)

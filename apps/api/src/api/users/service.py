@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from storage import ObjectStore
 
 from api import sessions
+from api.artifacts import service as artifacts
 from api.credentials import (
     WeakPassword,
     ensure_acceptable,
@@ -147,6 +148,9 @@ def remove(
         raise SelfChange(user_id)
     _ensure_not_last_active_owner(session, user)
     sessions.revoke_all(user_id)
+    # RESTRICT on chat_artifacts.file_id blocks the files purge while a
+    # live artifact references the file row, so artifacts die first.
+    artifacts.purge_user(session, store, user_id=user_id)
     # RESTRICT on files.created_by_user_id forces this before the user row
     # goes: it purges private rows and nulls the tenant rows' attribution.
     detach_user(session, store, user_id=user_id)

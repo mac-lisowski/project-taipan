@@ -6,6 +6,9 @@ export interface ChatModel {
   id: string;
   name: string;
   default?: boolean;
+  // Capability flags from the API catalog; absent reads as unsupported.
+  vision?: boolean;
+  pdf_input?: boolean;
 }
 
 export type ChatModelStatus = "idle" | "loading" | "ready" | "error";

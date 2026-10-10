@@ -1,21 +1,27 @@
 // Server-backed send queue for one thread: rows live behind the BFF, this
 // store mirrors them and runs the falling-edge dispatch loop.
 
+import type { MessagePart } from "@/lib/attachments";
+
 export type QueueRow = {
   id: string;
   threadId: string;
   seq: number;
-  content: { text: string };
+  // `parts` holds attachment binary parts only; QueueContent on the API is
+  // extra="allow" so the key rides through verbatim.
+  content: { text: string; parts?: MessagePart[] };
   createdAt: number;
 };
 
-export type QueueSend = (text: string) => Promise<void>;
+export type QueueSend = (content: string | MessagePart[]) => Promise<void>;
 
 export type QueueNotice = "enqueue-failed" | "sync-failed";
 
 export type QueueDispatch = {
   id: string;
   text: string;
+  /** The exact content passed to send; retries replay it as-is. */
+  content: string | MessagePart[];
   attempts: number;
   /** noteRunStarted observed a rising edge carrying this dispatch's text. */
   started: boolean;
@@ -91,7 +97,9 @@ export function createChatQueueStore(fetchImpl: typeof fetch = fetch) {
   }
 
   // Returns whether the row was stored so the caller can drop its draft.
-  async function enqueue(text: string): Promise<boolean> {
+  // `parts` carries attachment binary parts; the composer already uploaded
+  // them, so a queued send needs no upload machinery of its own.
+  async function enqueue(text: string, parts?: MessagePart[]): Promise<boolean> {
     const threadId = snapshot.threadId;
     if (!threadId) return false;
     return request(
@@ -106,12 +114,19 @@ export function createChatQueueStore(fetchImpl: typeof fetch = fetch) {
       {
         method: "POST",
         headers: JSON_HEADERS,
-        body: JSON.stringify({ threadId, content: { text } }),
+        body: JSON.stringify({
+          threadId,
+          content: parts?.length ? { text, parts } : { text },
+        }),
       },
     );
   }
 
   async function update(id: string, text: string): Promise<void> {
+    // The API replaces content wholesale, so a parts row re-sends them or
+    // the attachments would silently drop on edit.
+    const parts = snapshot.rows.find((r) => r.id === id)?.content.parts;
+    const content = parts?.length ? { text, parts } : { text };
     await request(
       `/update/${id}`,
       "sync-failed",
@@ -119,7 +134,7 @@ export function createChatQueueStore(fetchImpl: typeof fetch = fetch) {
         const updated = (await res.json()) as QueueRow;
         set({ rows: snapshot.rows.map((r) => (r.id === id ? updated : r)) });
       },
-      { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify({ content: { text } }) },
+      { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify({ content }) },
     );
   }
 
@@ -156,11 +171,22 @@ export function createChatQueueStore(fetchImpl: typeof fetch = fetch) {
   function dispatchHead({ send }: { send: QueueSend }): void {
     const head = snapshot.rows[0];
     if (!snapshot.threadId || !head || snapshot.dispatch) return;
+    // A parts row rebuilds the message the composer would have sent:
+    // text part first, then one binary part per attachment.
+    const content: string | MessagePart[] = head.content.parts?.length
+      ? [{ type: "text", text: head.content.text }, ...head.content.parts]
+      : head.content.text;
     set({
-      dispatch: { id: head.id, text: head.content.text, attempts: 1, started: false },
+      dispatch: {
+        id: head.id,
+        text: head.content.text,
+        content,
+        attempts: 1,
+        started: false,
+      },
       failedId: null,
     });
-    void send(head.content.text).catch(() => {});
+    void send(content).catch(() => {});
   }
 
   // The coordinator calls this on a rising edge whose last user message is
@@ -189,7 +215,7 @@ export function createChatQueueStore(fetchImpl: typeof fetch = fetch) {
       // then keep the row and flag it for a manual send.
       if (active.attempts < MAX_ATTEMPTS) {
         set({ dispatch: { ...active, attempts: active.attempts + 1 } });
-        void end.send(active.text).catch(() => {});
+        void end.send(active.content).catch(() => {});
         return;
       }
       set({ dispatch: null, failedId: active.id });

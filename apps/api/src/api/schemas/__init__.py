@@ -1,3 +1,9 @@
+from api.schemas.artifacts import (
+    ArtifactListOut,
+    ArtifactOut,
+    ArtifactPatch,
+    ArtifactSummaryOut,
+)
 from api.schemas.auth import (
     ActivateIn,
     ForgotIn,
@@ -35,6 +41,10 @@ from api.schemas.user import (
 
 __all__ = [
     "ActivateIn",
+    "ArtifactListOut",
+    "ArtifactOut",
+    "ArtifactPatch",
+    "ArtifactSummaryOut",
     "CompletionIn",
     "FileOut",
     "FilePageOut",

@@ -57,10 +57,23 @@ def _derive_title(messages: list[dict]) -> str:
     for message in messages:
         if message["role"] != "user":
             continue
-        text = message["content"].strip()
+        text = _content_text(message.get("content"))
         if text:
             return text[:TITLE_MAX]
     return FALLBACK_TITLE
+
+
+def _content_text(content: object) -> str:
+    """First text of a message: the string itself, or its first text part."""
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                text = part.get("text")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+    return ""
 
 
 def list_page(

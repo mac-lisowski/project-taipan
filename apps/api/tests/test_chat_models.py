@@ -11,6 +11,14 @@ from api_testsupport import (
     signin,
 )
 
+# Every model reports all-false flags when /model/info carries no data.
+FALSE_FLAGS = {
+    "vision": False,
+    "pdf_input": False,
+    "function_calling": False,
+    "tool_choice": False,
+}
+
 
 def _respond(payload, hits, status=200):
     async def handler(request):
@@ -40,12 +48,15 @@ async def test_list_maps_gateway_ids_and_marks_the_configured_default():
     models = await catalog.list()
 
     assert models == [
-        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True},
-        {"id": "llama-3", "name": "llama-3"},
+        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True, **FALSE_FLAGS},
+        {"id": "llama-3", "name": "llama-3", **FALSE_FLAGS},
     ]
     assert hits[0].url.host == "gw.local"
     assert hits[0].url.path == "/v1/models"
     assert hits[0].headers["authorization"] == "Bearer secret-key"
+    # Capability flags ride the same bearer on the info endpoint.
+    assert hits[1].url.path == "/model/info"
+    assert hits[1].headers["authorization"] == "Bearer secret-key"
 
 
 @pytest.mark.anyio
@@ -55,8 +66,8 @@ async def test_list_appends_the_default_when_the_gateway_lacks_it():
     models = await catalog.list()
 
     assert models == [
-        {"id": "llama-3", "name": "llama-3"},
-        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True},
+        {"id": "llama-3", "name": "llama-3", **FALSE_FLAGS},
+        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True, **FALSE_FLAGS},
     ]
     assert sum(1 for model in models if model.get("default")) == 1
 
@@ -70,7 +81,8 @@ async def test_list_reuses_the_cached_listing_inside_the_ttl():
     second = await catalog.list()
 
     assert second == first
-    assert len(hits) == 1
+    # One listing fetch plus one info fetch per TTL window.
+    assert len(hits) == 2
 
 
 @pytest.mark.anyio
@@ -81,6 +93,8 @@ async def test_list_refetches_once_the_ttl_expires():
 
     async def handler(request):
         hits.append(request)
+        if request.url.path == "/model/info":
+            return httpx2.Response(200, json={"data": []})
         return httpx2.Response(200, json=next(responses))
 
     catalog = model_catalog(handler, ttl_seconds=60, clock=clock)
@@ -89,10 +103,10 @@ async def test_list_refetches_once_the_ttl_expires():
 
     models = await catalog.list()
 
-    assert len(hits) == 2
+    assert sum(1 for hit in hits if hit.url.path == "/v1/models") == 2
     assert models == [
-        {"id": "fresh-model", "name": "fresh-model"},
-        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True},
+        {"id": "fresh-model", "name": "fresh-model", **FALSE_FLAGS},
+        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True, **FALSE_FLAGS},
     ]
 
 
@@ -104,6 +118,8 @@ async def test_failed_refresh_keeps_the_last_good_listing():
     )
 
     async def handler(request):
+        if request.url.path == "/model/info":
+            return httpx2.Response(200, json={"data": []})
         outcome = next(outcomes)
         if isinstance(outcome, Exception):
             raise outcome
@@ -119,7 +135,7 @@ async def test_failed_refresh_keeps_the_last_good_listing():
 
     # A failure must not refresh the timestamp: the next call retries and recovers.
     recovered = await catalog.list()
-    assert recovered[0] == {"id": "back", "name": "back"}
+    assert recovered[0] == {"id": "back", "name": "back", **FALSE_FLAGS}
 
 
 @pytest.mark.anyio
@@ -129,21 +145,27 @@ async def test_cold_failure_serves_only_the_default_model():
 
     catalog = model_catalog(handler)
 
-    assert await catalog.list() == [{"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True}]
+    assert await catalog.list() == [
+        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True, **FALSE_FLAGS}
+    ]
 
 
 @pytest.mark.anyio
 async def test_non_200_listing_counts_as_a_failed_fetch():
     catalog = model_catalog(_respond({"error": "nope"}, [], status=503))
 
-    assert await catalog.list() == [{"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True}]
+    assert await catalog.list() == [
+        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True, **FALSE_FLAGS}
+    ]
 
 
 @pytest.mark.anyio
 async def test_non_listing_data_counts_as_a_failed_fetch():
     catalog = model_catalog(_respond({"data": 5}, []))
 
-    assert await catalog.list() == [{"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True}]
+    assert await catalog.list() == [
+        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True, **FALSE_FLAGS}
+    ]
 
 
 def test_models_endpoint_serves_the_catalog(client, catalog_override):
@@ -155,8 +177,8 @@ def test_models_endpoint_serves_the_catalog(client, catalog_override):
 
     assert resp.status_code == 200
     assert resp.json() == [
-        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True},
-        {"id": "llama-3", "name": "llama-3"},
+        {"id": "gpt-4o-mini", "name": "gpt-4o-mini", "default": True, **FALSE_FLAGS},
+        {"id": "llama-3", "name": "llama-3", **FALSE_FLAGS},
     ]
 
 

@@ -13,8 +13,11 @@ from uuid import UUID, uuid4
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
+from storage import ObjectStore
 
-from api.chat import threads
+from api.authz import Principal
+from api.chat import attachments, threads
+from api.chat.complete import MAX_BINARY_PARTS
 from api.config import get_config
 from api.models import ChatThread, ChatThreadShare
 
@@ -88,17 +91,64 @@ def _owned_thread(session: Session, user_id: int, tenant_id: str, thread_id: UUI
     return thread
 
 
-def _snapshot(thread: ChatThread) -> list[dict]:
+def _snapshot(session: Session, store: ObjectStore, thread: ChatThread) -> list[dict]:
     """Project to the public shape: system prompts and extra keys never leave."""
+    # Binary parts resolve with the owner's visibility; reads need no roles.
+    principal = Principal(user_id=thread.user_id, email="", tenant_id=thread.tenant_id, roles=())
     return [
-        {"role": row.role, "content": row.content.get("content")}
+        {
+            "role": row.role,
+            "content": _snapshot_content(session, store, principal, row.content.get("content")),
+        }
         for row in thread.messages
         if row.role != "system"
     ]
 
 
+def _snapshot_content(
+    session: Session, store: ObjectStore, principal: Principal, content: object
+) -> object:
+    """Binary parts flatten to markdown lines the share page already renders."""
+    if not isinstance(content, list) or not any(
+        isinstance(part, dict) and part.get("type") == "binary" for part in content
+    ):
+        return content
+    attachment_lines: list[str] = []
+    texts: list[str] = []
+    embedded = 0
+    for part in content:
+        if not isinstance(part, dict):
+            continue
+        if part.get("type") == "binary":
+            embedded += 1
+            if embedded <= MAX_BINARY_PARTS:
+                attachment_lines.append(_attachment_line(session, store, principal, part))
+            else:
+                attachment_lines.append(f"Attachment: {_part_name(part)}")
+        elif part.get("type") == "text" and isinstance(part.get("text"), str):
+            texts.append(part["text"])
+    return "\n".join([*attachment_lines, *texts])
+
+
+def _attachment_line(session: Session, store: ObjectStore, principal: Principal, part: dict) -> str:
+    """Images embed as data URLs; every other file renders as a name line."""
+    name = _part_name(part)
+    fetched = attachments.fetch_bytes(session, store, part.get("id"), principal)
+    if fetched is None:
+        return f"Attachment: {name}"
+    row, data = fetched
+    mime = (row.content_type or "").lower()
+    if mime.startswith("image/"):
+        return f"![](data:{mime};base64,{base64.b64encode(data).decode()})"
+    return f"Attachment: {row.filename or name}"
+
+
+def _part_name(part: dict) -> str:
+    return str(part.get("filename") or "attachment")
+
+
 def create_or_refresh(
-    session: Session, user_id: int, tenant_id: str, thread_id: UUID
+    session: Session, user_id: int, tenant_id: str, thread_id: UUID, *, store: ObjectStore
 ) -> tuple[ChatThreadShare, str]:
     """Return the live share and its URL token, creating or refreshing it."""
     thread = _owned_thread(session, user_id, tenant_id, thread_id)
@@ -111,7 +161,7 @@ def create_or_refresh(
         share = None
     if share is None:
         share_id = uuid4()
-        snapshot = _snapshot(thread)
+        snapshot = _snapshot(session, store, thread)
         # A flush IntegrityError deactivates the session (a savepoint cannot
         # recover it), so ON CONFLICT scoped to the live-share index absorbs the race.
         session.execute(
@@ -138,7 +188,7 @@ def create_or_refresh(
             share.snapshot = snapshot
             share.title = thread.title
     else:
-        share.snapshot = _snapshot(thread)
+        share.snapshot = _snapshot(session, store, thread)
         share.title = thread.title
     token = _token_for(share.id)
     digest = _hash(token)

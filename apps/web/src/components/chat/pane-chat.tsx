@@ -11,9 +11,11 @@ import { useMemo, type ReactNode } from "react";
 
 import { AssistantMessage } from "@/components/chat/assistant-message";
 import { ChatComposer } from "@/components/chat/chat-composer";
+import { UserMessage } from "@/components/chat/message-attachments";
 import { ChatModelSwitcher } from "@/components/chat/chat-model-switcher";
 import { Brand, TMark } from "@/components/chat/chat-sidebar";
 import { QueueDispatch } from "@/components/chat/queue-dispatch";
+import { artifactSurface } from "@/lib/artifact-renderers";
 import { chatLLM, chatStorage } from "@/lib/chat-config";
 import { createChatModelStore } from "@/lib/chat-model";
 import { ChatModelProvider } from "@/lib/chat-model-context";
@@ -45,10 +47,10 @@ export function PaneChat(): ReactNode {
           llm={llm}
           storage={storage}
           agentName="taipan"
-          components={{ AssistantMessage }}
+          components={{ AssistantMessage, UserMessage }}
           starters={starters}
           theme={{ mode, lightTheme: brandLight, darkTheme: brandDark }}
-          artifactAutoOpen={false}
+          {...artifactSurface}
         >
           <AgentInterface.MobileHeader
             logo={<TMark />}
