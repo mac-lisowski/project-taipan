@@ -49,7 +49,13 @@ SAVE_ARTIFACT_TOOL = {
                     "description": (
                         "Markdown string for taipan_document; array of row "
                         "objects for taipan_table."
-                    )
+                    ),
+                    # The schema can't tie the shape to `type`, but anyOf still
+                    # steers generation away from scalars and nested junk.
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "array", "items": {"type": "object"}},
+                    ],
                 },
             },
             "required": ["title", "type", "content"],
