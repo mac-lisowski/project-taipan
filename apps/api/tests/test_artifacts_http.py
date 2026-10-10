@@ -253,6 +253,7 @@ def test_routes_require_a_session(client):
 
 def test_generic_files_delete_on_an_artifact_file_is_409(client, session_factory):
     signin(client, "guard@x.com")
+    _use_store(client)
     artifact_id = _seed(client, session_factory, "guard@x.com")
     with session_factory() as db:
         file_id = db.scalar(
