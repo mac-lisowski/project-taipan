@@ -9,6 +9,7 @@ dependencies = [
     "cli",
     "crypto",
     "email",
+    "storage",
 ]
 
 [tool.uv.sources]
@@ -18,6 +19,7 @@ cli = { workspace = true }
 crypto = { workspace = true }
 email = { workspace = true }
 kms = { workspace = true }
+storage = { workspace = true }
 
 # Workspace members: shared libraries live in packages/, runnable apps in apps/
 [tool.uv.workspace]

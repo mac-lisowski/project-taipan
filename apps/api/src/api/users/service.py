@@ -8,6 +8,7 @@ from crypto import tenant_scope
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
+from storage import ObjectStore
 
 from api import sessions
 from api.credentials import (
@@ -17,6 +18,7 @@ from api.credentials import (
     hash_password,
     verify_password,
 )
+from api.files.lifecycle import detach_tenant, detach_user
 from api.models import (
     Role,
     SystemRole,
@@ -133,17 +135,28 @@ def get_by_email(session: Session, email: str) -> User | None:
     return session.scalar(select(User).where(User.email == email))
 
 
-def remove(session: Session, user_id: int, caller_id: int) -> None:
+def remove(
+    session: Session,
+    user_id: int,
+    caller_id: int,
+    *,
+    store: ObjectStore,
+) -> None:
     user = get(session, user_id)
     if user_id == caller_id:
         raise SelfChange(user_id)
     _ensure_not_last_active_owner(session, user)
     sessions.revoke_all(user_id)
+    # RESTRICT on files.created_by_user_id forces this before the user row
+    # goes: it purges private rows and nulls the tenant rows' attribution.
+    detach_user(session, store, user_id=user_id)
     # The personal tenant and its data key belong to the account; both go
     # when one exists.
     tenant_id = session.scalar(select(UserTenant.tenant_id).where(UserTenant.user_id == user_id))
     session.delete(user)
     if tenant_id is not None:
+        # The dying tenant's files go before its key and row.
+        detach_tenant(session, store, tenant_id=tenant_id)
         session.execute(sa_delete(TenantDek).where(TenantDek.tenant_id == tenant_id))
         session.execute(sa_delete(Tenant).where(Tenant.id == tenant_id))
     session.flush()

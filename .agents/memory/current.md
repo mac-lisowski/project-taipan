@@ -28,25 +28,38 @@
   email-at-rest link to platform-key-provisioning repointed.
   docs/specs/planned/ now holds nats-jetstream (PR #38 open),
   chat-artifacts, chat-attachments, email-at-rest, object-storage.
-- object-storage spec drafted at docs/specs/planned/object-storage/
-  (spec.md + spec.html, uncommitted on dev). Foundation for
-  attachments + artifacts: packages/storage ObjectStore port
-  (put/get/delete), S3ObjectStore on the minio python SDK,
-  FakeObjectStore; files table (tenant_id, scope user|tenant,
-  created_by_user_id null RESTRICT, purpose, bucket, object_key,
-  filename, content_type, size_bytes, sha256; no status col);
-  /api/files session endpoints proxying up/download
-  (upload cap 10 MiB to fit the BFF 30 s upstream budget, ASGI
-  byte-counted since BFF strips Content-Length); MinIO + mc init in
-  both compose files; python-multipart new api dep; service commits
-  inside its calls (get_db teardown commit is too late). Scope model:
-  user-delete order = consumer rows -> detach_user (purge private,
-  null tenant uploaders) -> user row -> detach_tenant per deleted
-  tenant -> tenant row; users.remove already deletes the personal
-  Tenant + DEK; detaches wrap tenant_scope(victim). chat-artifacts
-  amended: content JSONB -> file_id FK files RESTRICT, object per
-  version under artifacts/ prefix, diagram updated. chat-attachments
-  amended: upload endpoint resolves to this spec.
+- object-storage IMPLEMENTED on feat/object-storage (uncommitted, not
+  pushed; branch off dev). Spec: docs/specs/planned/object-storage/,
+  amended during impl (chainguard/minio digest pin replaces pulled
+  minio/minio+mc images, lazy bucket creation replaces mc init, list
+  param is cursor not after). Eight tickets under
+  .scratch/object-storage/issues/, all Status done with HTML reports.
+  Built: packages/storage (ObjectStore port, S3ObjectStore minio SDK
+  lazy client + ensure_bucket once per bucket, FakeObjectStore);
+  api/files package (policies attachment browser/artifact
+  service-only, service store_upload/store_bytes/delete, reads
+  get/open/list_page keyset, lifecycle detach_user/detach_tenant +
+  discard, errors, store composition root); files table migration
+  3650287efea4 (scope CHECK, private-needs-uploader CHECK, RESTRICT
+  uploader, unique bucket+key, partial tenant index); /api/files five
+  session routes + ASGI byte-count middleware; users.remove takes
+  store (bucket param dropped post-review, row.bucket is truth);
+  MinIO in both compose files. Two review rounds: r1 fixed 9
+  (transport errors past StorageError, bucket data clump, unscoped
+  private deletes, metadata GET hitting S3, __enter__ dunders, dup
+  discard/CHUNK_BYTES, 300 LOC split listing.py -> reads.py +
+  errors.py); r2 fixed 3 (visible rename, discard moved into
+  lifecycle.py to keep users.service FastAPI-free, hardcoded test
+  bucket). Gates: 677 pytest + 12 skipped (3 stable runs), 532 api,
+  28 storage with live MinIO leg, ruff/format/size/bff/docker green,
+  falsegreen + test-smell clean. Gotchas: parallel api test agents
+  need own app_test_aNN DB (conftest DROP SCHEMA per session);
+  full-suite flake earlier was a shared-DB collision, not a bug;
+  project-taipan-minio-1 left running on 9000/9001 for the live leg;
+  an earlier agent ran `compose down -v` and wiped the stopped
+  project-taipan stack's volumes (running mivia-* untouched).
+  Next: commit + push when user asks; then chat-artifacts and
+  chat-attachments consumers land on api.files.
 - split-screen spec amended post-review (per-instance queue/model
   stores, users-view BFF adapter, /system/settings path, third
   nav-conversion site, DOM smoke test resolves the no-DOM-test
@@ -63,9 +76,9 @@
   (squash af65709); spec moved to implemented/. b33057e had bundled
   a write-pseudocode skill; excised in 0536844 (skill files +
   AGENTS.md rule 15 + skill wirings reverted).
-- Next: implement object-storage spec (to-tickets -> .scratch) or
-  Spec B (email-at-rest), user picks. feat/users-list-ssr and
-  feat/split-screen deletable locally and on origin.
+- Next: commit object-storage when asked, or Spec B (email-at-rest);
+  chat-artifacts/chat-attachments consumers come after storage lands.
+  feat/users-list-ssr and feat/split-screen deletable locally and on origin.
 - Open ops: API_APP_BASE_URL still missing in prod API env;
   project-taipan-db-1 zombie container; registration,
   typed-system-settings and password-reset worktrees deletable;

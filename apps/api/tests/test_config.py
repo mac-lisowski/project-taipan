@@ -7,6 +7,7 @@ from api.config import (
     DEFAULT_DATABASE_URL,
     DEFAULT_DEK_CACHE_L1_TTL,
     DEFAULT_DEK_CACHE_TTL,
+    DEFAULT_FILES_MAX_BYTES,
     DEFAULT_HOST,
     DEFAULT_INFISICAL_URL,
     DEFAULT_KMS_BREAKER_COOLDOWN,
@@ -14,6 +15,11 @@ from api.config import (
     DEFAULT_MAIL_FROM,
     DEFAULT_PORT,
     DEFAULT_REDIS_URL,
+    DEFAULT_S3_ACCESS_KEY,
+    DEFAULT_S3_BUCKET,
+    DEFAULT_S3_ENDPOINT,
+    DEFAULT_S3_REGION,
+    DEFAULT_S3_SECRET_KEY,
     DEFAULT_SESSION_TTL_SECONDS,
     Config,
     get_config,
@@ -30,6 +36,7 @@ def test_config_holds_only_the_expected_groups() -> None:
         "mail",
         "server",
         "chat",
+        "storage",
     ]
 
 
@@ -49,6 +56,12 @@ def test_config_defaults() -> None:
     assert cfg.mail.mail_from_address == DEFAULT_MAIL_FROM
     assert cfg.server.host == DEFAULT_HOST
     assert cfg.server.port == DEFAULT_PORT
+    assert cfg.storage.s3_endpoint == DEFAULT_S3_ENDPOINT
+    assert cfg.storage.s3_access_key == DEFAULT_S3_ACCESS_KEY
+    assert cfg.storage.s3_secret_key == DEFAULT_S3_SECRET_KEY
+    assert cfg.storage.s3_bucket == DEFAULT_S3_BUCKET
+    assert cfg.storage.s3_region == DEFAULT_S3_REGION
+    assert cfg.storage.upload_max_bytes == DEFAULT_FILES_MAX_BYTES
 
 
 def test_config_custom_values() -> None:
@@ -101,6 +114,8 @@ def test_config_custom_values() -> None:
         ("API_SESSION_TTL_SECONDS", "0", "must be at least 1 second"),
         ("API_CHAT_MODELS_TTL_SECONDS", "0", "must be at least 1 second"),
         ("API_CHAT_MODELS_TTL_SECONDS", "abc", "must be an integer"),
+        ("API_FILES_MAX_BYTES", "abc", "must be an integer"),
+        ("API_FILES_MAX_BYTES", "0", "must be at least 1"),
     ],
 )
 def test_config_fails_loud_on_invalid_env(key: str, val: str, match: str) -> None:
@@ -158,6 +173,36 @@ def test_empty_chat_env_vars_fall_back_to_defaults() -> None:
     assert cfg.chat.chat_model == "gpt-4o-mini"
 
 
+def test_storage_config_defaults() -> None:
+    # Literals, not constants: the dev defaults are the spec's pinned
+    # values and must equal ticket 07's MinIO root user and password.
+    cfg = Config.from_env({})
+    assert cfg.storage.s3_endpoint == "http://localhost:9000"
+    assert cfg.storage.s3_access_key == "taipan"
+    assert cfg.storage.s3_secret_key == "taipan-dev-secret"
+    assert cfg.storage.s3_bucket == "taipan"
+    assert cfg.storage.s3_region == "us-east-1"
+    assert cfg.storage.upload_max_bytes == 10485760
+
+
+def test_storage_config_custom_values() -> None:
+    env = {
+        "API_S3_ENDPOINT": "https://bucket.railway.app",
+        "API_S3_ACCESS_KEY": "AKIAEXAMPLE",
+        "API_S3_SECRET_KEY": "s3-secret",
+        "API_S3_BUCKET": "prod-bucket",
+        "API_S3_REGION": "auto",
+        "API_FILES_MAX_BYTES": "2048",
+    }
+    cfg = Config.from_env(env)
+    assert cfg.storage.s3_endpoint == "https://bucket.railway.app"
+    assert cfg.storage.s3_access_key == "AKIAEXAMPLE"
+    assert cfg.storage.s3_secret_key == "s3-secret"
+    assert cfg.storage.s3_bucket == "prod-bucket"
+    assert cfg.storage.s3_region == "auto"
+    assert cfg.storage.upload_max_bytes == 2048
+
+
 def test_same_env_yields_equal_config() -> None:
     env = {
         "API_DATABASE_URL": "postgresql://user:pass@db:5432/custom",
@@ -181,6 +226,7 @@ def test_config_has_no_test_url_fields() -> None:
         ("mail", "mail_from_address"),
         ("server", "port"),
         ("chat", "chat_model"),
+        ("storage", "s3_bucket"),
     ],
 )
 def test_groups_are_frozen(group: str, field: str) -> None:

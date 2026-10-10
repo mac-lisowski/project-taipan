@@ -26,6 +26,25 @@ services:
       timeout: 3s
       retries: 10
 
+  # Object store. chainguard/minio pinned by digest: MinIO removed its
+  # Docker images, and Chainguard publishes no versioned tag, only
+  # latest, so a digest is the only reproducible pin (MinIO
+  # RELEASE.2026-09-22T19-25-18Z). No healthcheck: the image is
+  # shell-less (no curl, no bash). No minio-init service: the API
+  # creates the bucket on first upload.
+  minio:
+    image: chainguard/minio@sha256:7df55d002b698e4494a131b848dd553361bbe58b7e19f62d9623c29af1ba9ccf
+    command: ["server", "--console-address", ":9001", "/data"]
+    environment:
+      # Dev-only defaults, committed like POSTGRES_PASSWORD.
+      MINIO_ROOT_USER: taipan
+      MINIO_ROOT_PASSWORD: taipan-dev-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
   # Dedicated Postgres for Infisical - mirrors the cloud setup where
   # the secrets store gets its own instance, not a db inside app pg.
   # No host port: only the infisical service talks to it.
@@ -103,5 +122,6 @@ services:
 
 volumes:
   pgdata:
+  minio-data:
   infisical-pgdata:
   litellm-pgdata:

@@ -22,6 +22,7 @@ from api.schemas.chat import (
     ThreadRead,
     ThreadUpdate,
 )
+from api.schemas.files import FileOut, FilePageOut
 from api.schemas.profile import ProfileCreate, ProfileRead, ProfileUpdate
 from api.schemas.system import RegistrationSwitchIn, RegistrationSwitchOut
 from api.schemas.user import (
@@ -35,6 +36,8 @@ from api.schemas.user import (
 __all__ = [
     "ActivateIn",
     "CompletionIn",
+    "FileOut",
+    "FilePageOut",
     "ForgotIn",
     "MeOut",
     "PasswordChangeIn",

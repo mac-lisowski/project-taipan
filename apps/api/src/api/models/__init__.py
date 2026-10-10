@@ -14,6 +14,7 @@ from api.models.email_suppression import (
     EmailWebhookEvent,
 )
 from api.models.encrypted_string import EncryptedString
+from api.models.files import File
 from api.models.profile import UserProfile
 from api.models.system_setting import SystemSetting
 from api.models.tenant import Tenant
@@ -33,6 +34,7 @@ __all__ = [
     "EmailSuppression",
     "EmailWebhookEvent",
     "EncryptedString",
+    "File",
     "Role",
     "SystemRole",
     "SystemSetting",

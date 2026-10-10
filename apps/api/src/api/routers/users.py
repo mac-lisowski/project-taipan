@@ -1,10 +1,12 @@
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from storage import ObjectStore
 
 from api import users
 from api.authz import Principal, require_system_owner
 from api.db import DbSession
+from api.files.store import get_object_store
 from api.models import User
 from api.schemas import UserActivationUpdate, UserCreate, UserDetailOut, UserOut, UserPageOut
 from api.users import listing
@@ -68,9 +70,10 @@ def delete_user(
     user_id: int,
     db: DbSession,
     principal: Annotated[Principal, Depends(require_system_owner)],
+    store: Annotated[ObjectStore, Depends(get_object_store)],
 ) -> None:
     try:
-        users.remove(db, user_id, principal.user_id)
+        users.remove(db, user_id, principal.user_id, store=store)
     except users.NotFound as exc:
         raise HTTPException(status_code=404, detail="user not found") from exc
     except users.SelfChange as exc:
