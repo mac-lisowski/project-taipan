@@ -57,7 +57,8 @@ specs amend their storage sections to consume the registry.
 13. As an operator, I want a sha256 recorded per object, so that
     corruption is detectable and dedup is possible later.
 14. As an operator, I want MinIO in compose, so that
-    `docker compose up` gives a working store with a created bucket.
+    `docker compose up` gives a working store; the api creates the
+    bucket on first write.
 15. As an operator, I want prod set by env only, so that no code change
     is needed to reach a Railway bucket or AWS S3.
 16. As a maintainer, I want metadata in Postgres and bytes in S3, so
@@ -188,7 +189,7 @@ specs amend their storage sections to consume the registry.
   400 unknown purpose or disallowed scope.
 - `GET /api/files`: list of files the principal may read (own
   `user`-scope plus same-tenant `tenant`-scope), `purpose` and `scope`
-  filters, `after`/`limit` keyset paging, newest first.
+  filters, `cursor`/`limit` keyset paging, newest first.
 - `GET /api/files/{id}`: metadata, scope-aware visibility.
 - `GET /api/files/{id}/content`: streams the object. `Content-Type`
   and `Content-Length` come from the row, never the client (the BFF
@@ -213,11 +214,14 @@ specs amend their storage sections to consume the registry.
 
 ### Docker
 
-- Root compose gains `minio` (API on 9000, console on 9001, named
-  volume, healthcheck) and a one-shot `minio-init` service (`minio/mc`)
-  that creates the configured bucket once MinIO is healthy. Dev-only
+- Root compose gains a digest-pinned `chainguard/minio` service (API
+  on 9000, console on 9001, named volume). MinIO pulled its official
+  `minio/minio` and `minio/mc` images from Docker Hub and Quay, so the
+  plan of record changed: no `mc` init service, no in-container
+  healthcheck (the Chainguard image is shell-less), and the api's S3
+  adapter creates the bucket lazily on first `put` instead. Dev-only
   root credentials committed like the Postgres password.
-- The devcontainer compose mirrors both services with no host ports.
+- The devcontainer compose mirrors the service with no host ports.
 - Prod needs no container: a Railway bucket (S3-compatible,
   Tigris-backed) or AWS S3 differs only in env vars.
 

@@ -15,8 +15,10 @@ dependencies = [
     "kms",
     "psycopg[binary]>=3.3.6",
     "pwdlib[argon2]>=0.3.1",
+    "python-multipart>=0.0.20",
     "redis>=5.0",
     "sqlalchemy>=2.1.3",
+    "storage",
     "uvicorn>=0.54.0",
 ]
 
@@ -25,6 +27,7 @@ core = { workspace = true }
 crypto = { workspace = true }
 email = { workspace = true }
 kms = { workspace = true }
+storage = { workspace = true }
 
 [project.scripts]
 api = "api.main:main"

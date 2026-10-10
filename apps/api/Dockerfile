@@ -22,6 +22,7 @@ COPY packages/core/pyproject.toml packages/core/pyproject.toml
 COPY packages/kms/pyproject.toml packages/kms/pyproject.toml
 COPY packages/crypto/pyproject.toml packages/crypto/pyproject.toml
 COPY packages/email/pyproject.toml packages/email/pyproject.toml
+COPY packages/storage/pyproject.toml packages/storage/pyproject.toml
 RUN uv sync --frozen --no-dev --package api --no-install-workspace
 
 # Editable installs keep db_cli.py's parents[2] lookup of alembic.ini working.
@@ -29,6 +30,7 @@ COPY packages/core packages/core
 COPY packages/kms packages/kms
 COPY packages/crypto packages/crypto
 COPY packages/email packages/email
+COPY packages/storage packages/storage
 COPY apps/api apps/api
 RUN uv sync --frozen --no-dev --package api \
     && chmod +x apps/api/entrypoint.sh \

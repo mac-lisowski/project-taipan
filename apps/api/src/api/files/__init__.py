@@ -1,0 +1,63 @@
+"""Files package: purpose policies, service surface, and store wiring."""
+
+from api.files.policies import (
+    POLICIES,
+    SCOPE_TENANT,
+    SCOPE_USER,
+    Policy,
+    check_mime,
+    check_size,
+    key_for,
+    policy_for,
+    sanitize_filename,
+)
+from api.files.reads import DEFAULT_PAGE, MAX_PAGE, InvalidCursor, list_page
+from api.files.service import (
+    CHUNK_BYTES,
+    NotFound,
+    ObjectMissing,
+    PurposeNotAllowed,
+    ScopeNotAllowed,
+    TooLarge,
+    UnsupportedType,
+    delete,
+    detach_tenant,
+    detach_user,
+    get,
+    open,
+    store_bytes,
+    store_upload,
+)
+from api.files.store import build_object_store, get_object_store
+
+__all__ = [
+    "CHUNK_BYTES",
+    "DEFAULT_PAGE",
+    "MAX_PAGE",
+    "POLICIES",
+    "SCOPE_TENANT",
+    "SCOPE_USER",
+    "InvalidCursor",
+    "NotFound",
+    "ObjectMissing",
+    "Policy",
+    "PurposeNotAllowed",
+    "ScopeNotAllowed",
+    "TooLarge",
+    "UnsupportedType",
+    "build_object_store",
+    "check_mime",
+    "check_size",
+    "delete",
+    "detach_tenant",
+    "detach_user",
+    "get",
+    "get_object_store",
+    "key_for",
+    "list_page",
+    "open",
+    "policy_for",
+    "sanitize_filename",
+    "store_bytes",
+    "store_upload",
+]

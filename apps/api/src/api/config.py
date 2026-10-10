@@ -2,7 +2,7 @@
 
 Loads environment variables in one place and validates them eagerly.
 Fields group by concern so callers read `cfg.db.database_url`, not a
-flat bag of fourteen names.
+flat bag of env names.
 """
 
 from __future__ import annotations
@@ -31,6 +31,15 @@ DEFAULT_APP_BASE_URL = "http://localhost:3000"
 DEFAULT_LITELLM_URL = "http://localhost:4000"
 DEFAULT_CHAT_MODEL = "gpt-4o-mini"
 DEFAULT_CHAT_MODELS_TTL_SECONDS = 60
+# Dev defaults match ticket 07's MinIO service and root credentials, so
+# `docker compose up` needs no override. Prod points the same vars at a
+# Railway bucket or AWS S3.
+DEFAULT_S3_ENDPOINT = "http://localhost:9000"
+DEFAULT_S3_ACCESS_KEY = "taipan"
+DEFAULT_S3_SECRET_KEY = "taipan-dev-secret"
+DEFAULT_S3_BUCKET = "taipan"
+DEFAULT_S3_REGION = "us-east-1"
+DEFAULT_FILES_MAX_BYTES = 10 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -83,6 +92,16 @@ class ChatConfig:
 
 
 @dataclass(frozen=True)
+class StorageConfig:
+    s3_endpoint: str = DEFAULT_S3_ENDPOINT
+    s3_access_key: str = DEFAULT_S3_ACCESS_KEY
+    s3_secret_key: str = DEFAULT_S3_SECRET_KEY
+    s3_bucket: str = DEFAULT_S3_BUCKET
+    s3_region: str = DEFAULT_S3_REGION
+    upload_max_bytes: int = DEFAULT_FILES_MAX_BYTES
+
+
+@dataclass(frozen=True)
 class Config:
     db: DbConfig
     store: StoreConfig
@@ -90,6 +109,7 @@ class Config:
     mail: MailConfig
     server: ServerConfig
     chat: ChatConfig
+    storage: StorageConfig
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Config:
@@ -162,6 +182,13 @@ class Config:
             lo=1,
             range_msg="API_CHAT_MODELS_TTL_SECONDS must be at least 1 second",
         )
+        upload_max_bytes = _parse_int(
+            e,
+            "API_FILES_MAX_BYTES",
+            DEFAULT_FILES_MAX_BYTES,
+            lo=1,
+            range_msg="API_FILES_MAX_BYTES must be at least 1",
+        )
 
         resend_api_key = e.get("API_RESEND_API_KEY", "")
         mail_from = e.get("API_MAIL_FROM", DEFAULT_MAIL_FROM)
@@ -201,6 +228,14 @@ class Config:
                 chat_model=e.get("API_CHAT_MODEL") or DEFAULT_CHAT_MODEL,
                 chat_models_ttl_seconds=chat_models_ttl,
                 share_token_secret=e.get("API_SHARE_TOKEN_SECRET", ""),
+            ),
+            storage=StorageConfig(
+                s3_endpoint=e.get("API_S3_ENDPOINT", DEFAULT_S3_ENDPOINT),
+                s3_access_key=e.get("API_S3_ACCESS_KEY", DEFAULT_S3_ACCESS_KEY),
+                s3_secret_key=e.get("API_S3_SECRET_KEY", DEFAULT_S3_SECRET_KEY),
+                s3_bucket=e.get("API_S3_BUCKET", DEFAULT_S3_BUCKET),
+                s3_region=e.get("API_S3_REGION", DEFAULT_S3_REGION),
+                upload_max_bytes=upload_max_bytes,
             ),
         )
 

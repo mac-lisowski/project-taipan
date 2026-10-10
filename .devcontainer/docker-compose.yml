@@ -28,6 +28,8 @@ services:
       API_REDIS_URL: redis://redis:6379/0
       # Self-hosted secrets/KMS service, reachable on this network.
       API_INFISICAL_URL: http://infisical:8080
+      # Object store, reachable on this network.
+      API_S3_ENDPOINT: http://minio:9000
       # testcontainers spawns into the sibling dind daemon.
       DOCKER_HOST: tcp://dind:2375
     depends_on:
@@ -37,6 +39,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_started
 
   # Docker-in-Docker daemon for testcontainers. Privileged by design.
   # TLS off: only reachable on this private compose network.
@@ -60,6 +64,22 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # Object store. chainguard/minio pinned by digest: MinIO removed its
+  # Docker images, and Chainguard publishes no versioned tag, only
+  # latest, so a digest is the only reproducible pin (MinIO
+  # RELEASE.2026-09-22T19-25-18Z). No host ports: parity with db, the
+  # root stack owns 9000/9001. No healthcheck: the image is shell-less
+  # (no curl, no bash). No minio-init service: the API creates the
+  # bucket on first upload.
+  minio:
+    image: chainguard/minio@sha256:7df55d002b698e4494a131b848dd553361bbe58b7e19f62d9623c29af1ba9ccf
+    command: ["server", "--console-address", ":9001", "/data"]
+    environment:
+      MINIO_ROOT_USER: taipan
+      MINIO_ROOT_PASSWORD: taipan-dev-secret
+    volumes:
+      - devcontainer-minio-data:/data
 
   db:
     image: pgvector/pgvector:pg17
@@ -141,6 +161,7 @@ services:
 
 volumes:
   devcontainer-pgdata:
+  devcontainer-minio-data:
   devcontainer-venv:
   devcontainer-uvcache:
   devcontainer-dind:
